@@ -613,17 +613,34 @@ function renderPendingFiles(kind){
   const el=$(kind==="capture"?"captureFileList":kind==="source"?"sourceFileList":"threadFileList");if(!el)return;
   el.innerHTML=(state.pendingFiles[kind]||[]).map(f=>`<div class="selected-file"><span>${f.type.startsWith("image/")?"🖼️":f.type.startsWith("audio/")?"🎙️":"🎥"} ${esc(f.name)}</span><span>${humanSize(f.size)}</span></div>`).join("");
 }
+async function compressImage(file,maxDim=2048,quality=0.85){
+  // 클릭 시 확대해도 선명하도록 긴 변 2048px까지 유지, 그 이하는 원본 유지
+  if(!file.type.startsWith("image/")||file.type==="image/gif")return file;
+  try{
+    const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
+    const long=Math.max(bmp.width,bmp.height);
+    const scale=long>maxDim?maxDim/long:1;
+    if(scale===1&&file.size<1024*1024){bmp.close&&bmp.close();return file;}
+    const w=Math.round(bmp.width*scale),h=Math.round(bmp.height*scale);
+    const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+    canvas.getContext("2d").drawImage(bmp,0,0,w,h);bmp.close&&bmp.close();
+    const blob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",quality));
+    if(!blob||blob.size>=file.size)return file; // 오히려 커지면 원본 사용
+    return new File([blob],file.name.replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }catch(e){console.warn("이미지 압축 실패, 원본 업로드",e);return file;}
+}
 async function uploadFiles(files,fragmentId){
   if(!files?.length)return [];
   if(!state.firebase.connected||!state.firebase.storage)throw new Error("Firebase Storage가 연결되지 않았습니다.");
   const {api,storage,uid}=state.firebase;const out=[];
   for(const file of files){
-    const safe=file.name.replace(/[^\w.\-가-힣]/g,"_");
+    const up=await compressImage(file);
+    const safe=(up.name||file.name).replace(/[^\w.\-가-힣]/g,"_");
     const path=`users/${uid}/fragments/${fragmentId}/${Date.now()}-${uid.slice(0,6)}-${safe}`;
     const ref=api.ref(storage,path);
-    await api.uploadBytes(ref,file,{contentType:file.type});
+    await api.uploadBytes(ref,up,{contentType:up.type});
     const url=await api.getDownloadURL(ref);
-    out.push({name:file.name,type:file.type,size:file.size,url,path});
+    out.push({name:file.name,type:up.type,size:up.size,url,path});
   }
   return out;
 }
@@ -685,26 +702,27 @@ async function beginGoogleAuth(){
   const provider=new api.GoogleAuthProvider();
   provider.setCustomParameters({prompt:"select_account"});
   const current=auth.currentUser;
-  const isMobile=window.matchMedia("(pointer:coarse)").matches || window.innerWidth<720;
   const wasAnonymous=!!current?.isAnonymous;
   try{
-    if(isMobile){
-      localStorage.setItem(GOOGLE_LINK_PENDING,wasAnonymous?"link":"signin");
-      if(wasAnonymous)await api.linkWithRedirect(current,provider);
-      else await api.signInWithRedirect(auth,provider);
-      return;
+    let result;
+    if(wasAnonymous){
+      try{ result=await api.linkWithPopup(current,provider); }
+      catch(err){
+        if(err.code==="auth/credential-already-in-use"||err.code==="auth/account-exists-with-different-credential"){
+          const cred=api.GoogleAuthProvider.credentialFromError(err);
+          if(!cred)throw err;
+          result=await api.signInWithCredential(auth,cred); // 이미 이 Google 계정으로 만든 텃밭으로 로그인(다른 기기)
+        }else throw err;
+      }
+    }else{
+      result=await api.signInWithPopup(auth,provider);
     }
-    const result=wasAnonymous?await api.linkWithPopup(current,provider):await api.signInWithPopup(auth,provider);
     await activateFirebaseUser(result.user,{pushLocalKeys:wasAnonymous});
-    if(wasAnonymous)toast("기존 텃밭을 Google 계정에 연결했습니다. ☁️");
-    else toast("Google 계정으로 동기화를 시작했습니다. ☁️");
+    toast(wasAnonymous?"Google 계정에 연결했습니다. ☁️":"Google 계정으로 동기화를 시작했습니다. ☁️");
   }catch(e){
     console.error(e);
-    if(e.code==="auth/credential-already-in-use"||e.code==="auth/account-exists-with-different-credential"){
-      toast("이 Google 계정은 이미 다른 Firebase 계정에 연결되어 있습니다.");
-    }else if(e.code!=="auth/popup-closed-by-user"){
-      toast("Google 계정 연결에 실패했습니다.");
-    }
+    if(e.code!=="auth/popup-closed-by-user"&&e.code!=="auth/cancelled-popup-request")
+      toast("Google 로그인 실패: "+(e.code||e.message||""));
   }
 }
 async function signOutGarden(){
@@ -726,8 +744,7 @@ async function connectFirebase(){
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js")]);
-    if(state.firebase.app&&state.firebase.api?.deleteApp)await state.firebase.api.deleteApp(state.firebase.app);
-    const app=appApi.initializeApp(config,"garden-"+Date.now()),
+    const app=appApi.getApps().find(a=>a.name==="garden")||appApi.initializeApp(config,"garden"),
           auth=authApi.getAuth(app),db=fireApi.getFirestore(app),storage=storageApi.getStorage(app);
     state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi},user:null,ready:true};
 
