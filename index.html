@@ -405,7 +405,7 @@
         <button class="btn primary" id="runApiSearch" type="button">검색</button>
       </div>
       <div class="search-results" id="apiSearchResults"></div>
-      <div class="helper">책은 알라딘과 Google Books를 동시에 검색하고 알라딘 결과를 우선 표시합니다. 검색 결과 위에서 각 API가 몇 건을 반환했는지도 바로 확인할 수 있습니다.</div>
+      <div class="helper">책은 알라딘(Firebase 검색 서버)과 Google Books를 동시에 검색하고 알라딘 결과를 우선 표시합니다. 검색 결과 위에서 각 검색처의 건수와 실제 오류를 바로 확인할 수 있습니다.</div>
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
@@ -497,10 +497,9 @@
     <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
     <div class="settings-card">
       <strong>🔎 콘텐츠 검색 API</strong>
-      <div class="helper">국내 책은 알라딘을 우선 사용합니다. Google 계정을 연결하면 알라딘/TMDB/YouTube 설정도 내 Firebase 계정에 동기화되어 다른 기기에서 다시 입력할 필요가 없습니다.</div>
-      <div class="field"><label for="aladinKeyInput">알라딘 TTB Key</label><input class="input" id="aladinKeyInput" placeholder="알라딘 OpenAPI 인증키"></div>
+      <div class="helper">📚 알라딘 검색은 브라우저에서 직접 호출하지 않고 Firebase Function을 통해 호출합니다. TTB Key는 서버 Secret에 보관합니다.<br>Google Books는 아래 Google API Key를 사용합니다. 같은 키로 YouTube를 함께 쓸 수 있으며 Google Cloud에서 Books API와 YouTube Data API v3가 모두 허용되어 있어야 합니다.</div>
       <div class="field"><label for="tmdbKeyInput">TMDB API Read Token 또는 v3 API Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
-      <div class="field"><label for="youtubeKeyInput">YouTube Data API Key</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
+      <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
       <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
       <div class="api-status" id="apiStatus"></div>
     </div>
@@ -531,6 +530,7 @@
 
 <script>
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
+const BOOK_SEARCH_PROXY="https://us-central1-idea-pocket-56063.cloudfunctions.net/bookSearch";
 const DEFAULT_FIREBASE_CONFIG={
   apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
   authDomain:"idea-pocket-56063.firebaseapp.com",
@@ -593,10 +593,9 @@ async function loadCloudApiKeys({pushLocal=false}={}){
 }
 function renderApiSettings(){
   const k=getApiKeys();
-  $("aladinKeyInput").value=k.aladin||"";
   $("tmdbKeyInput").value=k.tmdb||"";
   $("youtubeKeyInput").value=k.youtube||"";
-  $("apiStatus").innerHTML=`<span class="api-badge ${k.aladin?"ok":""}">알라딘 ${k.aladin?"설정됨":"TTB Key 필요"}</span><span class="api-badge ok">Google Books 보조</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
+  $("apiStatus").innerHTML=`<span class="api-badge ok">알라딘 · Firebase Function</span><span class="api-badge ${k.youtube?"ok":""}">Google Books ${k.youtube?"키 설정됨":"Google API Key 필요"}</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
 }
 function humanSize(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB"}
 function validateMediaFile(file){
@@ -1073,7 +1072,9 @@ function renderBookSearchResults(results,providerLabel){
   }).join("");
 }
 async function googleBooksSearch(query){
-  const url=`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books`;
+  const key=getApiKeys().youtube;
+  if(!key)throw new Error("설정에서 Google API Key를 입력해주세요. 이 키는 Google Books와 YouTube가 함께 사용합니다.");
+  const url=`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books&key=${encodeURIComponent(key)}`;
   const r=await fetch(url,{headers:{Accept:"application/json"}});
   if(!r.ok){
     let detail="";
@@ -1094,10 +1095,15 @@ async function googleBooksSearch(query){
   });
 }
 async function aladinBookSearch(query){
-  const data=await aladinJsonpSearch(query);
-  const raw=Array.isArray(data?.item)?data.item:
-            Array.isArray(data?.channel?.item)?data.channel.item:[];
-  return raw.map(x=>({
+  const r=await fetch(`${BOOK_SEARCH_PROXY}?q=${encodeURIComponent(query)}`,{
+    headers:{Accept:"application/json"}
+  });
+  let d=null;
+  try{d=await r.json()}catch{}
+  if(!r.ok||!d?.ok){
+    throw new Error(d?.error||`알라딘 검색 서버 ${r.status}`);
+  }
+  return (d.items||[]).map(x=>({
     kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
     creator:x.author||"",publisher:x.publisher||"",pubDate:x.pubDate||"",
     image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
@@ -1152,10 +1158,7 @@ async function searchBooksCombined(query){
   const box=$("apiSearchResults");
   box.innerHTML='<div class="helper">알라딘과 Google Books를 함께 검색 중…</div>';
 
-  const hasAladin=!!getApiKeys().aladin;
-  const aladinPromise=hasAladin
-    ? aladinBookSearch(query)
-    : Promise.reject(new Error("TTB Key 미설정"));
+  const aladinPromise=aladinBookSearch(query);
   const googlePromise=googleBooksSearch(query);
 
   const [a,g]=await Promise.allSettled([aladinPromise,googlePromise]);
@@ -1472,7 +1475,9 @@ $("deleteAllProjects").addEventListener("click",deleteAllProjects);
 $("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("saveApiKeys").addEventListener("click",async()=>{
-  const keys={aladin:$("aladinKeyInput").value.trim(),tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
+  const old=getApiKeys();
+  const keys={...old,tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
+  delete keys.aladin;
   localStorage.setItem(API_KEY_STORE,JSON.stringify(keys));
   if(state.firebase.connected&&!state.firebase.user?.isAnonymous)await saveCloudApiKeys(keys);
   renderApiSettings();
