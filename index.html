@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
-  <title>생각의 텃밭 · V0.3</title>
+  <title>생각의 텃밭 · V0.4</title>
   <style>
     :root{
       --bg:#f5f2e9; --panel:#fffdf8; --panel2:#efede5; --text:#24251f; --muted:#77786f;
@@ -49,15 +49,15 @@
     .thought{margin-top:10px;background:var(--accent3);border-radius:15px;padding:12px 13px;color:#324f3e;line-height:1.55;white-space:pre-wrap}
     .source-line{border-left:3px solid var(--accent);padding-left:11px;margin:9px 0;color:#55564e;line-height:1.55;white-space:pre-wrap}
     .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
-    .empty{text-align:center;padding:30px 16px;border:1px dashed var(--line);border-radius:22px;color:var(--muted);background:rgba(255,253,248,.45)}
+    .empty{text-align:center;padding:30px 16px;border:1px dashed var(--line);border-radius:22px;color:var(--muted);background:rgba(255,253,248,.45);width:100%;grid-column:1/-1}
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px}
     .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:12px}
     .input,.textarea,.select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:15px;padding:12px 13px;color:var(--text)}
     .textarea{min-height:108px;resize:vertical;line-height:1.55}.helper{margin-top:5px;color:var(--muted);font-size:.73rem;line-height:1.45}
     .field{margin-top:13px}.field label{display:block;font-size:.77rem;font-weight:820;margin-bottom:6px}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-    .library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .source-card{display:grid;grid-template-columns:68px 1fr;gap:12px;align-items:center}
+    .library-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(290px,100%),1fr));gap:10px;width:100%}
+    .source-card{display:grid;grid-template-columns:68px minmax(0,1fr);gap:12px;align-items:center;min-width:0;width:100%}
     .cover{width:68px;height:92px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:2rem;border:1px solid var(--line);overflow:hidden}
     .cover img{width:100%;height:100%;object-fit:cover}
     .source-title{font-weight:850;letter-spacing:-.03em;line-height:1.4}.source-sub{font-size:.77rem;color:var(--muted);margin-top:4px}
@@ -132,17 +132,46 @@
     }
     .post-save-btn>span{grid-row:1/3;font-size:1.3rem}.post-save-btn b{font-size:.88rem}.post-save-btn small{color:var(--muted);font-size:.72rem;margin-top:2px}
 
-    @media(max-width:680px){.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
+
+    .app{padding-bottom:92px}
+    .danger-text{color:var(--danger)!important}
+    .dashboard-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    .dashboard-stat{border:1px solid var(--line);background:var(--panel);border-radius:20px;padding:16px;text-align:left;cursor:pointer;min-width:0}
+    .dashboard-stat span,.dashboard-stat small{display:block;color:var(--muted);font-size:.72rem}
+    .dashboard-stat strong{display:block;font-size:1.55rem;margin:5px 0;letter-spacing:-.04em}
+    .home-dashboard-head{margin-top:8px}
+    .menu-trigger{
+      position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);
+      z-index:42;border:1px solid var(--line);background:rgba(255,253,248,.96);backdrop-filter:blur(16px);
+      border-radius:999px;padding:9px 15px;box-shadow:0 12px 35px rgba(44,46,38,.14);
+      display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--muted);font-size:.76rem;font-weight:800
+    }
+    .menu-trigger-icon{font-size:1rem;transition:.22s}
+    .menu-trigger.open .menu-trigger-icon{transform:rotate(180deg)}
+    .nav-sheet{
+      position:fixed;left:50%;bottom:0;transform:translate(-50%,110%);
+      width:min(100%,920px);z-index:40;background:rgba(255,253,248,.98);backdrop-filter:blur(22px);
+      border:1px solid var(--line);border-bottom:0;border-radius:28px 28px 0 0;
+      padding:10px 16px calc(70px + env(safe-area-inset-bottom));
+      box-shadow:0 -18px 50px rgba(44,46,38,.14);transition:transform .24s ease
+    }
+    .nav-sheet.open{transform:translate(-50%,0)}
+    .nav-sheet-handle{width:38px;height:4px;border-radius:99px;background:var(--line);margin:0 auto 12px}
+    .nav-sheet-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px}
+    .sheet-nav{border:0;background:transparent;border-radius:16px;padding:10px 5px;cursor:pointer;color:var(--muted);display:flex;flex-direction:column;gap:5px;align-items:center}
+    .sheet-nav span{font-size:1.25rem}.sheet-nav b{font-size:.68rem}.sheet-nav.active{background:var(--accent2);color:var(--accent)}
+    .fab{bottom:74px}
+    .danger-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:11px}
+    .recent-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .recent-summary-item{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:13px}
+    .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}.recent-summary-item strong{display:block;margin-top:4px;font-size:1.15rem}
+
+    @media(max-width:680px){.dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.danger-grid{grid-template-columns:1fr}.recent-summary-grid{grid-template-columns:1fr}.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
   </style>
 </head>
 <body>
 <main class="app">
-  <header class="topbar topbar-minimal">
-    <div></div>
-    <button class="icon-btn" id="openSettings" type="button" aria-label="설정">⚙️</button>
-  </header>
-
-  <section class="view active" data-view="home">
+<section class="view active" data-view="capture">
     <div class="home-minimal">
       <div class="home-title">
         <div class="eyebrow">THOUGHT GARDEN</div>
@@ -163,6 +192,45 @@
         <span>오늘 남긴 생각</span>
         <strong id="todayCount">0</strong>
       </button>
+    </div>
+  </section>
+
+  <section class="view" data-view="home">
+    <div class="section-head home-dashboard-head">
+      <div>
+        <div class="eyebrow">HOME</div>
+        <h2 style="margin-top:7px">지금 내 생각의 상태</h2>
+        <p>기록은 앞에서 가볍게, 정리와 흐름은 여기서 봅니다.</p>
+      </div>
+    </div>
+
+    <div class="dashboard-metrics">
+      <button class="dashboard-stat" data-go="garden" type="button">
+        <span>생각 조각</span><strong id="homeFragmentCount">0</strong><small>Garden에서 보기</small>
+      </button>
+      <button class="dashboard-stat" data-go="garden" type="button">
+        <span>Thread</span><strong id="homeThreadCount">0</strong><small>자라는 생각</small>
+      </button>
+      <button class="dashboard-stat" data-go="studio" type="button">
+        <span>Studio</span><strong id="homeProjectCount">0</strong><small>만드는 중</small>
+      </button>
+      <button class="dashboard-stat" data-go="library" type="button">
+        <span>Library</span><strong id="homeSourceCount">0</strong><small>작품과 자료</small>
+      </button>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div><h2>최근 7일</h2><p>최근에 어떤 생각을 많이 남겼는지 가볍게 봅니다.</p></div>
+      </div>
+      <div id="homeRecentSummary"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div><h2>최근 Studio</h2><p>다시 이어서 만들 수 있는 작업.</p></div>
+      </div>
+      <div id="homeProjects"></div>
     </div>
   </section>
 
@@ -195,14 +263,24 @@
   </section>
 </main>
 
-<button class="fab" id="fab" type="button" aria-label="빠른 생각 기록">＋</button>
+<button class="fab hidden" id="fab" type="button" aria-label="빠른 생각 기록">＋</button>
 
-<nav class="bottom-nav">
-  <button class="nav-btn active" data-view-target="home" type="button"><span>🏠</span><span>Home</span></button>
-  <button class="nav-btn" data-view-target="library" type="button"><span>📚</span><span>Library</span></button>
-  <button class="nav-btn" data-view-target="garden" type="button"><span>🌱</span><span>Garden</span></button>
-  <button class="nav-btn" data-view-target="studio" type="button"><span>🏭</span><span>Studio</span></button>
-</nav>
+<button class="menu-trigger" id="menuTrigger" type="button" aria-expanded="false" aria-controls="navSheet">
+  <span class="menu-trigger-icon">⌃</span>
+  <span>메뉴</span>
+</button>
+
+<div class="nav-sheet" id="navSheet" aria-hidden="true">
+  <div class="nav-sheet-handle"></div>
+  <div class="nav-sheet-grid">
+    <button class="sheet-nav active" data-view-target="capture" type="button"><span>✍️</span><b>생각</b></button>
+    <button class="sheet-nav" data-view-target="home" type="button"><span>🏠</span><b>Home</b></button>
+    <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
+    <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
+    <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
+    <button class="sheet-nav" id="sheetSettings" type="button"><span>⚙️</span><b>설정</b></button>
+  </div>
+</div>
 
 <dialog id="captureDialog">
   <div class="modal capture-modal">
@@ -344,6 +422,19 @@
     </div>
     <div class="settings-card"><strong>🧪 샘플 흐름</strong><div class="helper">Source → Fragment → Thread → Studio를 한 번에 확인하는 예시 데이터를 넣습니다.</div><button class="btn soft" id="seedDemo" type="button" style="margin-top:9px">샘플 데이터 넣기</button></div>
     <div class="settings-card"><strong>♻️ V0.1 로컬 데이터</strong><div class="helper">이 브라우저에 이전 버전 기록이 남아 있으면 V0.2 구조로 가져옵니다.</div><button class="btn" id="migrateV01" type="button" style="margin-top:9px">V0.1 기록 가져오기</button></div>
+    <div class="settings-card">
+      <strong>🧹 데이터 정리</strong>
+      <div class="helper">개별 삭제는 각 화면에서 할 수 있습니다. 아래는 범주별 전체 삭제입니다.</div>
+      <div class="danger-grid">
+        <button class="btn danger" id="deleteAllFragments" type="button">생각 전체 삭제</button>
+        <button class="btn danger" id="deleteAllSources" type="button">Library 전체 삭제</button>
+        <button class="btn danger" id="deleteAllThreads" type="button">Thread 전체 삭제</button>
+        <button class="btn danger" id="deleteAllProjects" type="button">Studio 전체 삭제</button>
+      </div>
+      <div class="divider"></div>
+      <button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button>
+      <div class="helper">완전 초기화는 확인창에 <b>전체삭제</b>를 직접 입력해야 실행됩니다.</div>
+    </div>
     <div class="settings-card"><strong>💾 백업</strong><div class="actions"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div></div>
   </div>
 </dialog>
@@ -352,7 +443,7 @@
 
 <script>
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig";
-const state={sources:[],fragments:[],threads:[],projects:[],view:"home",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
+const state={sources:[],fragments:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,uid:null,connected:false,api:null}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
@@ -400,25 +491,59 @@ async function firebaseLoad(){
   renderAll();
 }
 async function persist(collectionName,obj){
-  if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.setDoc(api.doc(db,"users",uid,collectionName,obj.id),{...obj,updatedAtServer:api.serverTimestamp()},{merge:true})}else localSave();
+  if(state.firebase.connected){
+    const {api,db,uid}=state.firebase;
+    await api.setDoc(api.doc(db,"users",uid,collectionName,obj.id),{...obj,updatedAtServer:api.serverTimestamp()});
+  }
+  localSave();
 }
 async function remove(collectionName,id){
   state[collectionName]=state[collectionName].filter(x=>x.id!==id);
-  if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.deleteDoc(api.doc(db,"users",uid,collectionName,id))}else localSave();
+  if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.deleteDoc(api.doc(db,"users",uid,collectionName,id))}
+  localSave();
+}
+function closeMenu(){
+  $("navSheet").classList.remove("open");$("navSheet").setAttribute("aria-hidden","true");
+  $("menuTrigger").classList.remove("open");$("menuTrigger").setAttribute("aria-expanded","false");
+}
+function toggleMenu(){
+  const open=!$("navSheet").classList.contains("open");
+  $("navSheet").classList.toggle("open",open);$("navSheet").setAttribute("aria-hidden",String(!open));
+  $("menuTrigger").classList.toggle("open",open);$("menuTrigger").setAttribute("aria-expanded",String(open));
 }
 function setView(v){
   state.view=v;state.openSourceId=null;state.openThreadId=null;state.openProjectId=null;
-  $$(".view").forEach(x=>x.classList.toggle("active",x.dataset.view===v));$$(".nav-btn").forEach(x=>x.classList.toggle("active",x.dataset.viewTarget===v));
-  $("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
-  renderAll();window.scrollTo({top:0,behavior:"smooth"});
+  $$(".view").forEach(x=>x.classList.toggle("active",x.dataset.view===v));
+  $$(".sheet-nav[data-view-target]").forEach(x=>x.classList.toggle("active",x.dataset.viewTarget===v));
+  $("fab").classList.toggle("hidden",v==="capture");
+  $("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");
+  $("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");
+  $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
+  closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
 }
-function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects()}
+function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects()}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
-function renderHome(){
+function renderCapture(){
   $("dateLabel").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"}).format(new Date());
   $("todayCount").textContent=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today()).length;
+}
+function renderHome(){
+  $("homeFragmentCount").textContent=state.fragments.length;
+  $("homeThreadCount").textContent=state.threads.length;
+  $("homeProjectCount").textContent=state.projects.length;
+  $("homeSourceCount").textContent=state.sources.length;
+  const recent=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)<=6);
+  const sourceRecent=recent.filter(f=>f.sourceId).length;
+  const freeRecent=recent.filter(f=>!f.sourceId).length;
+  const linkedRecent=recent.filter(f=>(f.threadIds||[]).length).length;
+  $("homeRecentSummary").innerHTML=`<div class="recent-summary-grid">
+    <div class="recent-summary-item"><small>최근 7일 생각</small><strong>${recent.length}</strong></div>
+    <div class="recent-summary-item"><small>Library에서 온 조각</small><strong>${sourceRecent}</strong></div>
+    <div class="recent-summary-item"><small>Thread에 연결됨</small><strong>${linkedRecent}</strong></div>
+  </div>`;
+  $("homeProjects").innerHTML=state.projects.length?state.projects.slice(0,3).map(projectCard).join(""):empty("🏭","진행 중인 Studio가 없어요.","Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
 }
 function renderResurface(){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
@@ -445,7 +570,7 @@ function openSource(id){
   state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
   $("libraryIndex").classList.add("hidden");$("sourceDetail").classList.remove("hidden");
   const fs=sourceFragments(id);
-  $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button></div>
+  $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button><button class="text-btn danger-text" data-delete-source="${s.id}" type="button">작품 삭제</button></div></div>
     <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type)}</div><div><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"BOOK":"MEDIA"}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
     <div class="quick-capture">
       <div class="eyebrow">한 줄 + 나의 한 줄</div>
@@ -481,7 +606,7 @@ function threadCard(t,compact=false){
 function openThread(id){
   state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
   $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
-  $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button></div>
+  $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button><button class="text-btn danger-text" data-delete-thread="${t.id}" type="button">Thread 삭제</button></div></div>
     <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
     <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div><div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div><div style="text-align:right"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div></div>
     <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>정답보다, 내가 어떻게 달라졌는지를 봅니다.</p></div></div>
@@ -641,6 +766,70 @@ async function saveAllSlots(pid){
 }
 async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return;await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.")}
 async function deleteProject(pid){if(!confirm("이 Studio 프로젝트를 삭제할까요?"))return;await remove("projects",pid);setView("studio");toast("프로젝트를 삭제했습니다.")}
+async function deleteSource(sid){
+  const s=state.sources.find(x=>x.id===sid);if(!s)return;
+  const count=sourceFragments(sid).length;
+  if(!confirm(`‘${s.title}’ 작품 정보를 삭제할까요?\n\n연결되어 있던 생각 ${count}개는 삭제하지 않고 Garden의 독립된 생각으로 남깁니다.`))return;
+  for(const f of state.fragments.filter(f=>f.sourceId===sid)){
+    delete f.sourceId;
+    if(f.type==="source")f.type="thought";
+    f.updatedAt=new Date().toISOString();
+    await persist("fragments",f);
+  }
+  await remove("sources",sid);setView("library");toast("작품 정보만 삭제했습니다. 생각은 남아 있어요.");
+}
+async function deleteThread(tid){
+  const t=state.threads.find(x=>x.id===tid);if(!t)return;
+  const count=threadFragments(tid).length;
+  if(!confirm(`‘${t.title}’ Thread를 삭제할까요?\n\n묶여 있던 생각 ${count}개는 삭제하지 않고 Garden에 남깁니다.`))return;
+  for(const f of state.fragments.filter(f=>(f.threadIds||[]).includes(tid))){
+    f.threadIds=(f.threadIds||[]).filter(id=>id!==tid);f.updatedAt=new Date().toISOString();await persist("fragments",f);
+  }
+  for(const p of state.projects.filter(p=>p.threadId===tid)){
+    p.threadId="";p.updatedAt=new Date().toISOString();await persist("projects",p);
+  }
+  await remove("threads",tid);setView("garden");toast("Thread만 삭제했습니다. 생각은 남아 있어요.");
+}
+async function deleteCollectionDocs(name){
+  const items=[...state[name]];
+  if(state.firebase.connected){
+    const {api,db,uid}=state.firebase;
+    for(const item of items)await api.deleteDoc(api.doc(db,"users",uid,name,item.id));
+  }
+  state[name]=[];
+  localSave();
+}
+async function deleteAllFragments(){
+  if(!state.fragments.length)return toast("삭제할 생각이 없습니다.");
+  if(!confirm(`생각 ${state.fragments.length}개를 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`))return;
+  await deleteCollectionDocs("fragments");
+  for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:[]}));await persist("projects",p)}
+  renderAll();toast("모든 생각을 삭제했습니다.");
+}
+async function deleteAllSources(){
+  if(!state.sources.length)return toast("삭제할 Library 작품이 없습니다.");
+  if(!confirm(`Library 작품 ${state.sources.length}개를 모두 삭제할까요?\n연결된 생각은 Garden에 남습니다.`))return;
+  for(const f of state.fragments.filter(f=>f.sourceId)){delete f.sourceId;if(f.type==="source")f.type="thought";await persist("fragments",f)}
+  await deleteCollectionDocs("sources");renderAll();toast("Library 작품을 모두 삭제했습니다.");
+}
+async function deleteAllThreads(){
+  if(!state.threads.length)return toast("삭제할 Thread가 없습니다.");
+  if(!confirm(`Thread ${state.threads.length}개를 모두 삭제할까요?\n생각은 삭제되지 않습니다.`))return;
+  for(const f of state.fragments){if((f.threadIds||[]).length){f.threadIds=[];await persist("fragments",f)}}
+  for(const p of state.projects){if(p.threadId){p.threadId="";await persist("projects",p)}}
+  await deleteCollectionDocs("threads");renderAll();toast("모든 Thread를 삭제했습니다.");
+}
+async function deleteAllProjects(){
+  if(!state.projects.length)return toast("삭제할 Studio 프로젝트가 없습니다.");
+  if(!confirm(`Studio 프로젝트 ${state.projects.length}개를 모두 삭제할까요?`))return;
+  await deleteCollectionDocs("projects");renderAll();toast("Studio 프로젝트를 모두 삭제했습니다.");
+}
+async function resetEverything(){
+  const answer=prompt("모든 생각, Library, Thread, Studio 데이터를 완전히 삭제합니다.\n계속하려면 ‘전체삭제’를 입력하세요.");
+  if(answer!=="전체삭제")return toast("초기화를 취소했습니다.");
+  for(const name of ["projects","threads","fragments","sources"])await deleteCollectionDocs(name);
+  renderAll();setView("capture");$("settingsDialog").close();toast("모든 데이터를 초기화했습니다.");
+}
 
 function seedDemoObjects(){
   const s1={id:uid(),type:"book",status:"active",title:"미드나잇 라이브러리",creator:"Matt Haig",platform:"독서",image:"",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
@@ -672,10 +861,12 @@ document.addEventListener("click",async e=>{
   const os=e.target.closest("[data-open-source]");if(os)return openSource(os.dataset.openSource);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
+  const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot)return openThread(ot.dataset.openThread);
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
   const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
+  const dt=e.target.closest("[data-delete-thread]");if(dt)return deleteThread(dt.dataset.deleteThread);
   const st=e.target.closest("[data-save-thread-thought]");if(st)return addThreadThought(st.dataset.saveThreadThought);
   const li=e.target.closest("[data-link]");if(li)return openLinkDialog(li.dataset.link);
   const lt=e.target.closest("[data-link-to-thread]");if(lt)return linkFragment($("linkFragmentId").value,lt.dataset.linkToThread);
@@ -691,6 +882,8 @@ document.addEventListener("click",async e=>{
   const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
 });
 $("fab").addEventListener("click",()=>openCapture());$("homeCapture").addEventListener("click",()=>openCapture());
+$("menuTrigger").addEventListener("click",toggleMenu);
+$("sheetSettings").addEventListener("click",()=>{closeMenu();$("settingsDialog").showModal()});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
@@ -704,9 +897,14 @@ $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dat
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",renderGarden);
 $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;renderGarden()});
-$("openSettings").addEventListener("click",()=>$("settingsDialog").showModal());
+
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
 $("seedDemo").addEventListener("click",seedDemo);$("migrateV01").addEventListener("click",migrateV01);$("exportData").addEventListener("click",exportData);
+$("deleteAllFragments").addEventListener("click",deleteAllFragments);
+$("deleteAllSources").addEventListener("click",deleteAllSources);
+$("deleteAllThreads").addEventListener("click",deleteAllThreads);
+$("deleteAllProjects").addEventListener("click",deleteAllProjects);
+$("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("saveFirebaseConfig").addEventListener("click",async()=>{try{const raw=$("firebaseConfigInput").value.trim(),cfg=normalizeFirebaseConfig(raw);if(!cfg.apiKey||!cfg.projectId)throw new Error();localStorage.setItem(FIREBASE_KEY,raw);$("settingsDialog").close();await connectFirebase()}catch{toast("Firebase config 형식을 확인해주세요.")}});
 $("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
