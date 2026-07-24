@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
-  <title>생각의 텃밭 · V0.4</title>
+  <title>생각의 텃밭 · V0.6</title>
   <style>
     :root{
       --bg:#f5f2e9; --panel:#fffdf8; --panel2:#efede5; --text:#24251f; --muted:#77786f;
@@ -166,7 +166,30 @@
     .recent-summary-item{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:13px}
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}.recent-summary-item strong{display:block;margin-top:4px;font-size:1.15rem}
 
-    @media(max-width:680px){.dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.danger-grid{grid-template-columns:1fr}.recent-summary-grid{grid-template-columns:1fr}.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
+
+    .attachment-tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+    .file-pick{position:relative;overflow:hidden}
+    .file-pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .selected-files{display:grid;gap:6px;margin-top:8px}
+    .selected-file{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--panel2);border-radius:12px;padding:8px 10px;font-size:.74rem}
+    .attachments{display:grid;gap:8px;margin-top:11px}
+    .attachment-image{width:100%;max-height:360px;object-fit:contain;border-radius:14px;background:var(--panel2)}
+    .attachment-video{width:100%;max-height:420px;border-radius:14px;background:#111}
+    .attachment-audio{width:100%}
+    .api-search-box{border:1px solid var(--line);background:var(--accent3);border-radius:18px;padding:13px;margin-bottom:14px}
+    .api-search-row{display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:7px}
+    .search-results{display:grid;gap:7px;margin-top:10px;max-height:360px;overflow:auto}
+    .search-result{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:10px;display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;text-align:left;cursor:pointer;width:100%}
+    .search-thumb{width:48px;height:68px;border-radius:8px;background:var(--panel2);display:grid;place-items:center;overflow:hidden}
+    .search-thumb.video{height:48px}
+    .search-thumb img{width:100%;height:100%;object-fit:cover}
+    .search-result-title{font-weight:800;font-size:.82rem;line-height:1.35}
+    .search-result-sub{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.35}
+    .api-status{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+    .api-badge{background:var(--panel2);color:var(--muted);border-radius:999px;padding:5px 8px;font-size:.7rem}
+    .api-badge.ok{background:var(--accent2);color:var(--accent)}
+
+    @media(max-width:680px){.api-search-row{grid-template-columns:1fr}.dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.danger-grid{grid-template-columns:1fr}.recent-summary-grid{grid-template-columns:1fr}.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
   </style>
 </head>
 <body>
@@ -306,6 +329,14 @@
       </div>
     </div>
 
+    <div class="field">
+      <label>사진 · 음성 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
+      <div class="attachment-tools">
+        <label class="btn file-pick">📎 파일 추가<input id="captureFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
+      </div>
+      <div class="selected-files" id="captureFileList"></div>
+      <div class="helper">Firebase Storage가 연결된 경우에만 파일이 실제로 저장됩니다.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn" data-close="captureDialog" type="button">취소</button>
       <button class="btn primary" id="saveCapture" type="button">남겨두기</button>
@@ -356,6 +387,20 @@
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">SOURCE</div><h2 id="sourceDialogTitle">Library에 작품 추가</h2></div><button class="close-btn" data-close="sourceDialog" type="button">✕</button></div>
     <input id="sourceId" type="hidden" />
+    <div class="api-search-box" id="apiSourceSearchBox">
+      <div class="eyebrow">SEARCH FIRST</div>
+      <div class="api-search-row" style="margin-top:8px">
+        <select class="select" id="apiSearchType">
+          <option value="book">📚 책 · 알라딘 우선</option>
+          <option value="tmdb">🎬 영화·드라마</option>
+          <option value="youtube">▶️ YouTube</option>
+        </select>
+        <input class="input" id="apiSearchQuery" placeholder="제목을 검색하세요" />
+        <button class="btn primary" id="runApiSearch" type="button">검색</button>
+      </div>
+      <div class="search-results" id="apiSearchResults"></div>
+      <div class="helper">책은 알라딘 국내도서를 먼저 검색하고, 결과가 없거나 호출이 실패하면 Google Books를 보조 검색합니다. 검색 결과를 누르면 작품 정보가 자동 입력됩니다.</div>
+    </div>
     <div class="form-grid">
       <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
       <div class="field"><label for="sourceStatus">상태</label><select class="select" id="sourceStatus"><option value="active">읽는/보는 중</option><option value="paused">잠시 멈춤</option><option value="done">완료</option></select></div>
@@ -364,6 +409,10 @@
     <div class="form-grid">
       <div class="field"><label for="sourceCreator">저자 / 제작자</label><input class="input" id="sourceCreator" placeholder="선택" /></div>
       <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="선택" /></div>
+    </div>
+    <div class="form-grid">
+      <div class="field"><label for="sourceIsbn">ISBN13 <span style="color:var(--muted);font-weight:500">(자동)</span></label><input class="input" id="sourceIsbn" placeholder="검색 결과에서 자동 입력" /></div>
+      <div class="field"><label for="sourceProvider">정보 출처 <span style="color:var(--muted);font-weight:500">(자동)</span></label><input class="input" id="sourceProvider" placeholder="Aladin / Google Books / TMDB / YouTube" readonly /></div>
     </div>
     <div class="field"><label for="sourceImage">표지 이미지 URL <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="sourceImage" placeholder="https://..." /></div>
     <div class="modal-actions"><button class="btn" data-close="sourceDialog" type="button">취소</button><button class="btn primary" id="saveSource" type="button">저장</button></div>
@@ -415,8 +464,17 @@
     <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>저장과 데이터</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
     <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>로컬 저장 모드</strong><div class="helper" id="storageText">이 브라우저에 저장됩니다.</div></div>
     <div class="settings-card">
+      <strong>🔎 콘텐츠 검색 API</strong>
+      <div class="helper">국내 책은 알라딘을 우선 사용합니다. 알라딘 TTB Key, TMDB, YouTube 키는 이 브라우저에만 저장합니다. Google Books는 보조 검색으로 사용합니다.</div>
+      <div class="field"><label for="aladinKeyInput">알라딘 TTB Key</label><input class="input" id="aladinKeyInput" placeholder="알라딘 OpenAPI 인증키"></div>
+      <div class="field"><label for="tmdbKeyInput">TMDB API Read Token 또는 v3 API Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
+      <div class="field"><label for="youtubeKeyInput">YouTube Data API Key</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
+      <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
+      <div class="api-status" id="apiStatus"></div>
+    </div>
+    <div class="settings-card">
       <strong>🔥 Firebase 연결</strong>
-      <div class="helper">Firebase Console에서 복사한 <code class="inline">const firebaseConfig = { ... };</code> 전체 또는 JSON만 그대로 붙여넣어도 됩니다.</div>
+      <div class="helper">Firebase Console에서 복사한 <code class="inline">const firebaseConfig = { ... };</code> 전체 또는 JSON만 그대로 붙여넣어도 됩니다. 사진·음성·영상은 Firebase Storage가 활성화되어 있을 때 저장됩니다.</div>
       <div class="field"><textarea class="textarea" id="firebaseConfigInput" placeholder='const firebaseConfig = { apiKey: "...", projectId: "..." };'></textarea></div>
       <div class="actions"><button class="btn primary" id="saveFirebaseConfig" type="button">연결 저장</button><button class="btn danger" id="clearFirebaseConfig" type="button">연결 해제</button></div>
     </div>
@@ -442,10 +500,11 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig";
+const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys";
 const state={sources:[],fragments:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
-  firebase:{app:null,auth:null,db:null,uid:null,connected:false,api:null}};
+  firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null},
+  pendingFiles:{capture:[],source:[],thread:[]},apiResults:[]};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -456,6 +515,59 @@ const sourceIcon=t=>t==="book"?"📚":"🎬";
 const fragIcon=t=>({thought:"💭",moment:"🌿",decision:"⚖️",source:"✦"}[t]||"💭");
 
 function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2100)}
+function getApiKeys(){try{return JSON.parse(localStorage.getItem(API_KEY_STORE)||"{}")}catch{return {}}}
+function renderApiSettings(){
+  const k=getApiKeys();
+  $("aladinKeyInput").value=k.aladin||"";
+  $("tmdbKeyInput").value=k.tmdb||"";
+  $("youtubeKeyInput").value=k.youtube||"";
+  $("apiStatus").innerHTML=`<span class="api-badge ${k.aladin?"ok":""}">알라딘 ${k.aladin?"설정됨":"TTB Key 필요"}</span><span class="api-badge ok">Google Books 보조</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
+}
+function humanSize(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB"}
+function validateMediaFile(file){
+  if(!/^(image|audio|video)\//.test(file.type))return "이미지·음성·영상 파일만 첨부할 수 있습니다.";
+  const max=file.type.startsWith("image/")?10*1024*1024:file.type.startsWith("audio/")?25*1024*1024:100*1024*1024;
+  if(file.size>max)return `${file.name} 파일이 너무 큽니다.`;
+  return "";
+}
+function setPendingFiles(kind,fileList){
+  const files=[...(fileList||[])],accepted=[];
+  for(const f of files){const err=validateMediaFile(f);if(err){toast(err);continue}accepted.push(f)}
+  state.pendingFiles[kind]=accepted;renderPendingFiles(kind);
+}
+function renderPendingFiles(kind){
+  const el=$(kind==="capture"?"captureFileList":kind==="source"?"sourceFileList":"threadFileList");if(!el)return;
+  el.innerHTML=(state.pendingFiles[kind]||[]).map(f=>`<div class="selected-file"><span>${f.type.startsWith("image/")?"🖼️":f.type.startsWith("audio/")?"🎙️":"🎥"} ${esc(f.name)}</span><span>${humanSize(f.size)}</span></div>`).join("");
+}
+async function uploadFiles(files,fragmentId){
+  if(!files?.length)return [];
+  if(!state.firebase.connected||!state.firebase.storage)throw new Error("Firebase Storage가 연결되지 않았습니다.");
+  const {api,storage,uid}=state.firebase;const out=[];
+  for(const file of files){
+    const safe=file.name.replace(/[^\w.\-가-힣]/g,"_");
+    const path=`users/${uid}/fragments/${fragmentId}/${Date.now()}-${uid.slice(0,6)}-${safe}`;
+    const ref=api.ref(storage,path);
+    await api.uploadBytes(ref,file,{contentType:file.type});
+    const url=await api.getDownloadURL(ref);
+    out.push({name:file.name,type:file.type,size:file.size,url,path});
+  }
+  return out;
+}
+async function deleteAttachments(attachments=[]){
+  if(!state.firebase.connected||!state.firebase.storage)return;
+  const {api,storage}=state.firebase;
+  for(const a of attachments){if(!a.path)continue;try{await api.deleteObject(api.ref(storage,a.path))}catch(e){console.warn("attachment delete",e)}}
+}
+function attachmentsHTML(list=[]){
+  if(!list.length)return "";
+  return `<div class="attachments">${list.map(a=>{
+    if(a.type?.startsWith("image/"))return `<img class="attachment-image" src="${esc(a.url)}" alt="${esc(a.name||"첨부 이미지")}">`;
+    if(a.type?.startsWith("audio/"))return `<audio class="attachment-audio" controls preload="metadata" src="${esc(a.url)}"></audio>`;
+    if(a.type?.startsWith("video/"))return `<video class="attachment-video" controls preload="metadata" src="${esc(a.url)}"></video>`;
+    return `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.name||"첨부 파일")}</a>`;
+  }).join("")}</div>`;
+}
+
 function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=d.sources||[];state.fragments=d.fragments||[];state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
 function localSave(){localStorage.setItem(STORAGE_KEY,JSON.stringify({sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects}))}
 function normalizeFirebaseConfig(raw){
@@ -468,13 +580,14 @@ async function connectFirebase(){
   const raw=localStorage.getItem(FIREBASE_KEY); if(!raw){setFirebaseStatus(false);localLoad();return}
   try{
     const config=normalizeFirebaseConfig(raw); if(!config.apiKey||!config.projectId)throw new Error("config 형식 확인");
-    const [appApi,authApi,fireApi]=await Promise.all([
+    const [appApi,authApi,fireApi,storageApi]=await Promise.all([
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
-      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js")]);
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js")]);
     if(state.firebase.app&&state.firebase.api?.deleteApp)await state.firebase.api.deleteApp(state.firebase.app);
-    const app=appApi.initializeApp(config,"garden-"+Date.now()),auth=authApi.getAuth(app),db=fireApi.getFirestore(app);
-    state.firebase={app,auth,db,uid:null,connected:false,api:{...appApi,...authApi,...fireApi}};
+    const app=appApi.initializeApp(config,"garden-"+Date.now()),auth=authApi.getAuth(app),db=fireApi.getFirestore(app),storage=storageApi.getStorage(app);
+    state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi}};
     await authApi.signInAnonymously(auth);
     await new Promise((resolve,reject)=>{const tm=setTimeout(()=>reject(new Error("인증 시간 초과")),8000);const off=authApi.onAuthStateChanged(auth,u=>{if(u){clearTimeout(tm);off();state.firebase.uid=u.uid;state.firebase.connected=true;resolve()}},reject)});
     setFirebaseStatus(true);await firebaseLoad();toast("Firebase에 연결되었습니다.");
@@ -564,10 +677,10 @@ function sourceCard(s,compact=false){
   return `<article class="card click-card source-card" data-open-source="${s.id}">
     <div class="cover">${cover}</div><div><div class="card-head"><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</span><span class="date">${last?fmt(last.slice(0,10)):""}</span></div>
     <div class="source-title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · ")||"")}</div>
-    <div class="meta"><span class="status">생각 ${count}개</span><span class="status">${s.status==="done"?"완료":s.status==="paused"?"잠시 멈춤":"이어가는 중"}</span></div></div></article>`;
+    <div class="meta">${s.provider?`<span class="status">${esc(s.provider)}</span>`:""}${s.isbn13?`<span class="status">ISBN ${esc(s.isbn13)}</span>`:""}<span class="status">생각 ${count}개</span><span class="status">${s.status==="done"?"완료":s.status==="paused"?"잠시 멈춤":"이어가는 중"}</span></div></div></article>`;
 }
 function openSource(id){
-  state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
+  state.pendingFiles.source=[];state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
   $("libraryIndex").classList.add("hidden");$("sourceDetail").classList.remove("hidden");
   const fs=sourceFragments(id);
   $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button><button class="text-btn danger-text" data-delete-source="${s.id}" type="button">작품 삭제</button></div></div>
@@ -576,10 +689,15 @@ function openSource(id){
       <div class="eyebrow">한 줄 + 나의 한 줄</div>
       <div class="field"><label>${s.type==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${s.type==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea></div>
       <div class="inline-two"><input class="input" id="sourceLocator" placeholder="${s.type==="book"?"p.132":"6화 / 12:31"}"><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
+      <div class="attachment-tools">
+        <label class="btn file-pick">📎 사진·음성·영상<input id="sourceFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
+      </div>
+      <div class="selected-files" id="sourceFileList"></div>
       <div style="display:flex;justify-content:flex-end;margin-top:9px"><button class="btn primary" data-save-source-fragment="${s.id}" type="button">생각 남기기</button></div>
     </div>
     <div class="section"><div class="section-head"><div><h2>쌓인 생각</h2><p>같은 작품을 다시 볼 때마다 여기로 돌아옵니다.</p></div></div>
     <div>${fs.length?fs.map(fragmentCard).join(""):empty("✦","아직 생각이 없어요.","문장을 수집하는 데서 끝내지 말고, 그 아래 내 생각 한 줄을 붙여보세요.")}</div></div>`;
+  setTimeout(()=>{$("sourceFiles")?.addEventListener("change",e=>setPendingFiles("source",e.target.files));renderPendingFiles("source")},0);
 }
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>f.createdAt||f.date||"").sort().reverse()[0]||state.sources.find(s=>s.id===id)?.updatedAt||""}
@@ -604,21 +722,27 @@ function threadCard(t,compact=false){
     <div class="meta"><span class="status">생각 ${fs.length}개</span><span class="status">Studio ${state.projects.filter(p=>p.threadId===t.id).length}개</span></div></article>`;
 }
 function openThread(id){
-  state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
+  state.pendingFiles.thread=[];state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
   $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
   $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button><button class="text-btn danger-text" data-delete-thread="${t.id}" type="button">Thread 삭제</button></div></div>
     <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
-    <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div><div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div><div style="text-align:right"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div></div>
+    <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div>
+      <div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div>
+      <div class="attachment-tools"><label class="btn file-pick">📎 사진·음성·영상<input id="threadFiles" type="file" accept="image/*,audio/*,video/*" multiple></label></div>
+      <div class="selected-files" id="threadFileList"></div>
+      <div style="text-align:right;margin-top:8px"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div>
+    </div>
     <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>정답보다, 내가 어떻게 달라졌는지를 봅니다.</p></div></div>
     <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","Garden의 다른 조각을 이 Thread에 연결해보세요.")}</div></div>`;
+  setTimeout(()=>{$("threadFiles")?.addEventListener("change",e=>setPendingFiles("thread",e.target.files));renderPendingFiles("thread")},0);
 }
 function fragmentCard(f,compact=false){
   const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
   return `<article class="card"><div class="card-head"><span class="chip">${src?sourceIcon(src.type):fragIcon(f.type)} ${src?esc(src.title):f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
     ${f.context?`<div class="source-sub">${esc(f.context)}</div>`:""}${f.externalText?`<div class="source-line">${esc(f.externalText)}${f.locator?`<div class="date" style="margin-top:4px">${esc(f.locator)}</div>`:""}</div>`:""}
-    <div class="thought">${esc(f.thought||f.text||"")}</div>${f.choice?`<div class="meta"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
+    ${f.thought||f.text?`<div class="thought">${esc(f.thought||f.text||"")}</div>`:""}${attachmentsHTML(f.attachments||[])}${f.choice?`<div class="meta"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     <div class="meta">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>
-    ${compact?"":`<div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div>`}</article>`;
+    <div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div></article>`;
 }
 function renderStudio(){
   $("projectList").innerHTML=state.projects.length?state.projects.map(projectCard).join(""):empty("🏭","아직 Studio 작업이 없어요.","Thread 하나를 골라 콘텐츠 작업대로 보내보세요.");
@@ -678,6 +802,7 @@ function openCapture(prefill=""){
   $("captureText").value=prefill;
   $("captureExternal").value="";
   $("captureLocator").value="";
+  state.pendingFiles.capture=[];renderPendingFiles("capture");$("captureFiles").value="";
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
   $("captureDialog").showModal();
@@ -685,13 +810,16 @@ function openCapture(prefill=""){
 }
 async function saveCapture(){
   const thought=$("captureText").value.trim(),externalText=$("captureExternal").value.trim();
-  if(!thought&&!externalText)return toast("한 줄만 남겨주세요.");
+  if(!thought&&!externalText&&!state.pendingFiles.capture.length)return toast("한 줄이나 미디어 하나는 남겨주세요.");
   const f={
     id:uid(),type:"thought",thought,externalText,locator:$("captureLocator").value.trim(),
-    threadIds:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+    threadIds:[],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
-  state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();
-  $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
+  try{
+    if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id);
+    state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();
+    $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
+  }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function renderTodayDialog(){
   const list=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today());
@@ -711,11 +839,193 @@ async function linkFragmentToSource(fid,sid){
   f.sourceId=sid;f.type="source";f.updatedAt=new Date().toISOString();await persist("fragments",f);
   state.pendingSourceLinkFragmentId=null;$("sourceLinkDialog").close();renderAll();toast("Library에 연결했습니다.");
 }
-function openSourceDialog(s=null){$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=s?.status||"active";$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceDialog").showModal()}
+
+function aladinJsonpSearch(query){
+  return new Promise((resolve,reject)=>{
+    const key=getApiKeys().aladin;
+    if(!key)return reject(new Error("알라딘 TTB Key가 설정되지 않았습니다."));
+    const cb=`__aladin_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const script=document.createElement("script");
+    const cleanup=()=>{try{delete window[cb]}catch{};script.remove();clearTimeout(timer)};
+    const timer=setTimeout(()=>{cleanup();reject(new Error("알라딘 검색 응답 시간이 초과되었습니다."))},9000);
+    window[cb]=(data)=>{cleanup();resolve(data)};
+    script.onerror=()=>{cleanup();reject(new Error("알라딘 검색을 불러오지 못했습니다."))};
+    const params=new URLSearchParams({
+      ttbkey:key,
+      Query:query,
+      QueryType:"Keyword",
+      MaxResults:"12",
+      start:"1",
+      SearchTarget:"Book",
+      Cover:"Big",
+      Output:"JS",
+      Version:"20131101",
+      callback:cb
+    });
+    script.src=`https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?${params.toString()}`;
+    document.head.appendChild(script);
+  });
+}
+function cleanAladinTitle(v=""){
+  const d=document.createElement("div");d.innerHTML=v;return d.textContent||d.innerText||v;
+}
+function normalizeIsbn(v=""){return String(v||"").replace(/[^0-9X]/gi,"")}
+function existingSourceByIsbn(isbn){
+  const x=normalizeIsbn(isbn);if(!x)return null;
+  return state.sources.find(s=>normalizeIsbn(s.isbn13||s.isbn)===x)||null;
+}
+function renderBookSearchResults(results,providerLabel){
+  state.apiResults=results;
+  const box=$("apiSearchResults");
+  if(!results.length){
+    box.innerHTML=empty("📚","검색 결과가 없어요.","다른 검색어를 입력하거나 직접 작품 정보를 적어주세요.");
+    return;
+  }
+  box.innerHTML=results.map((r,i)=>{
+    const dup=existingSourceByIsbn(r.isbn13);
+    return `<button class="search-result" data-api-result-index="${i}" type="button">
+      <span class="search-thumb">${r.image?`<img src="${esc(r.image)}" alt="">`:"📚"}</span>
+      <span>
+        <span class="search-result-title">${esc(r.title||"제목 없음")}</span>
+        <span class="search-result-sub">${esc([r.creator,r.publisher,r.pubDate].filter(Boolean).join(" · "))}</span>
+        <span class="api-status" style="margin-top:5px"><span class="api-badge ${providerLabel==="알라딘"?"ok":""}">${providerLabel}</span>${r.isbn13?`<span class="api-badge">ISBN ${esc(r.isbn13)}</span>`:""}${dup?`<span class="api-badge ok">✓ 이미 Library에 있음</span>`:""}</span>
+      </span>
+    </button>`;
+  }).join("");
+}
+async function googleBooksFallback(query,reason=""){
+  const box=$("apiSearchResults");
+  box.innerHTML=`<div class="helper">${reason?esc(reason)+" ":""}Google Books에서 보조 검색 중…</div>`;
+  const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&langRestrict=ko`);
+  if(!r.ok)throw new Error("Google Books 보조 검색 실패");
+  const d=await r.json();
+  const results=(d.items||[]).map(x=>{
+    const v=x.volumeInfo||{};
+    const isbn13=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_13")?.identifier||"";
+    const isbn10=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_10")?.identifier||"";
+    return {
+      kind:"book",provider:"Google Books",externalId:x.id||"",title:v.title||"",
+      creator:(v.authors||[]).join(", "),publisher:v.publisher||"",pubDate:v.publishedDate||"",
+      image:(v.imageLinks?.thumbnail||v.imageLinks?.smallThumbnail||"").replace("http://","https://"),
+      isbn13:isbn13||isbn10,link:v.infoLink||""
+    };
+  });
+  renderBookSearchResults(results,"Google Books");
+}
+async function searchBookPreferAladin(query){
+  const box=$("apiSearchResults"),key=getApiKeys().aladin;
+  if(!key){
+    await googleBooksFallback(query,"알라딘 TTB Key가 없어");
+    return;
+  }
+  box.innerHTML='<div class="helper">알라딘 국내도서 검색 중…</div>';
+  try{
+    const data=await aladinJsonpSearch(query);
+    const raw=Array.isArray(data?.item)?data.item:[];
+    const results=raw.map(x=>({
+      kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
+      creator:x.author||"",publisher:x.publisher||"",pubDate:x.pubDate||"",
+      image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
+    }));
+    if(results.length)renderBookSearchResults(results,"알라딘");
+    else await googleBooksFallback(query,"알라딘에서 결과를 찾지 못해");
+  }catch(e){
+    console.warn("Aladin fallback:",e);
+    await googleBooksFallback(query,"알라딘 검색에 실패해");
+  }
+}
+async function searchSourceApi(){
+  const type=$("apiSearchType").value,q=$("apiSearchQuery").value.trim();
+  if(!q)return toast("검색어를 입력해주세요.");
+  const box=$("apiSearchResults");box.innerHTML='<div class="helper">검색 중…</div>';
+  try{
+    if(type==="book"){
+      await searchBookPreferAladin(q);
+    }else if(type==="tmdb"){
+      const k=getApiKeys().tmdb;if(!k)throw new Error("설정에서 TMDB API 키를 먼저 입력해주세요.");
+      const headers=k.startsWith("ey")?{Authorization:`Bearer ${k}`,accept:"application/json"}:{accept:"application/json"};
+      const keyPart=k.startsWith("ey")?"":`&api_key=${encodeURIComponent(k)}`;
+      const r=await fetch(`https://api.themoviedb.org/3/search/multi?query=${encodeURIComponent(q)}&include_adult=false&language=ko-KR&page=1${keyPart}`,{headers});
+      if(!r.ok)throw new Error("TMDB 검색 실패");
+      const d=await r.json();
+      state.apiResults=(d.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).slice(0,12).map(x=>({
+        kind:"media",provider:"TMDB",externalId:String(x.id||""),title:x.title||x.name||"",
+        creator:"",publisher:"TMDB",pubDate:x.release_date||x.first_air_date||"",
+        image:x.poster_path?`https://image.tmdb.org/t/p/w342${x.poster_path}`:"",isbn13:"",link:""
+      }));
+      box.innerHTML=state.apiResults.length?state.apiResults.map((x,i)=>`<button class="search-result" data-api-result-index="${i}" type="button"><span class="search-thumb">${x.image?`<img src="${esc(x.image)}" alt="">`:"🎬"}</span><span><span class="search-result-title">${esc(x.title)}</span><span class="search-result-sub">${esc(x.pubDate?.slice(0,4)||"")}</span><span class="api-status" style="margin-top:5px"><span class="api-badge ok">TMDB</span></span></span></button>`).join(""):empty("🎬","검색 결과가 없어요.","직접 입력해도 됩니다.");
+    }else{
+      const k=getApiKeys().youtube;if(!k)throw new Error("설정에서 YouTube API 키를 먼저 입력해주세요.");
+      const r=await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(q)}&key=${encodeURIComponent(k)}`);
+      if(!r.ok)throw new Error("YouTube 검색 실패");
+      const d=await r.json();
+      state.apiResults=(d.items||[]).map(x=>({
+        kind:"media",provider:"YouTube",externalId:x.id?.videoId||"",title:x.snippet?.title||"",
+        creator:x.snippet?.channelTitle||"",publisher:"YouTube",pubDate:x.snippet?.publishedAt||"",
+        image:x.snippet?.thumbnails?.medium?.url||x.snippet?.thumbnails?.default?.url||"",isbn13:"",
+        link:x.id?.videoId?`https://www.youtube.com/watch?v=${x.id.videoId}`:""
+      }));
+      box.innerHTML=state.apiResults.length?state.apiResults.map((x,i)=>`<button class="search-result" data-api-result-index="${i}" type="button"><span class="search-thumb video">${x.image?`<img src="${esc(x.image)}" alt="">`:"▶️"}</span><span><span class="search-result-title">${esc(x.title)}</span><span class="search-result-sub">${esc(x.creator)}</span><span class="api-status" style="margin-top:5px"><span class="api-badge ok">YouTube</span></span></span></button>`).join(""):empty("▶️","검색 결과가 없어요.","직접 입력해도 됩니다.");
+    }
+  }catch(e){
+    console.error(e);
+    box.innerHTML=`<div class="empty"><span class="emoji">⚠️</span><strong>${esc(e.message||"검색 실패")}</strong></div>`;
+  }
+}
+async function applyApiResultByIndex(index){
+  const r=state.apiResults[Number(index)];if(!r)return;
+  if(r.kind==="book"&&r.isbn13){
+    const existing=existingSourceByIsbn(r.isbn13);
+    if(existing){
+      if(state.pendingSourceLinkFragmentId){
+        const fid=state.pendingSourceLinkFragmentId;
+        $("sourceDialog").close();
+        await linkFragmentToSource(fid,existing.id);
+        setView("library");openSource(existing.id);
+        toast("이미 등록된 책에 생각을 연결했습니다.");
+      }else{
+        $("sourceDialog").close();setView("library");openSource(existing.id);toast("이미 Library에 있는 책입니다.");
+      }
+      return;
+    }
+  }
+  $("sourceType").value=r.kind==="book"?"book":"media";
+  $("sourceTitleInput").value=r.title||"";
+  $("sourceCreator").value=r.creator||"";
+  $("sourcePlatform").value=r.publisher||"";
+  $("sourceImage").value=r.image||"";
+  $("sourceIsbn").value=r.isbn13||"";
+  $("sourceProvider").value=r.provider||"";
+  $("sourceDialog").dataset.externalId=r.externalId||"";
+  $("sourceDialog").dataset.externalLink=r.link||"";
+  $("apiSearchResults").innerHTML='<div class="helper">검색 결과를 작품 정보에 반영했습니다. 아래 내용을 확인하고 저장하세요.</div>';
+}
+function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=s?.status||"active";$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";$("sourceDialog").showModal()}
 async function saveSource(){
-  const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");const old=state.sources.find(s=>s.id===$("sourceId").value);
-  const s={id:old?.id||uid(),type:$("sourceType").value,status:$("sourceStatus").value,title,creator:$("sourceCreator").value.trim(),platform:$("sourcePlatform").value.trim(),image:$("sourceImage").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];await persist("sources",s);$("sourceDialog").close();
+  const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");
+  const old=state.sources.find(s=>s.id===$("sourceId").value);
+  const isbn13=normalizeIsbn($("sourceIsbn").value);
+  if(!old&&isbn13){
+    const duplicate=existingSourceByIsbn(isbn13);
+    if(duplicate){
+      $("sourceDialog").close();
+      if(state.pendingSourceLinkFragmentId){
+        const fid=state.pendingSourceLinkFragmentId;
+        await linkFragmentToSource(fid,duplicate.id);
+      }
+      setView("library");openSource(duplicate.id);toast("같은 ISBN의 책이 이미 등록되어 있어 기존 책을 열었습니다.");return;
+    }
+  }
+  const s={
+    id:old?.id||uid(),type:$("sourceType").value,status:$("sourceStatus").value,title,
+    creator:$("sourceCreator").value.trim(),platform:$("sourcePlatform").value.trim(),
+    image:$("sourceImage").value.trim(),isbn13,provider:$("sourceProvider").value.trim(),
+    externalId:$("sourceDialog").dataset.externalId||old?.externalId||"",
+    externalLink:$("sourceDialog").dataset.externalLink||old?.externalLink||"",
+    createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
+  };
+  state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];
+  await persist("sources",s);$("sourceDialog").close();
   if(!old && state.pendingSourceLinkFragmentId){
     const fid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;await linkFragmentToSource(fid,s.id);
   }else{
@@ -723,9 +1033,13 @@ async function saveSource(){
   }
 }
 async function saveSourceFragment(sourceId){
-  const thought=$("sourceThought").value.trim(),externalText=$("sourceExternalText").value.trim();if(!thought&&!externalText)return toast("문장이나 내 생각 중 하나는 남겨주세요.");
-  const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.fragments.unshift(f);await persist("fragments",f);openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
+  const thought=$("sourceThought").value.trim(),externalText=$("sourceExternalText").value.trim();
+  if(!thought&&!externalText&&!state.pendingFiles.source.length)return toast("문장·생각·미디어 중 하나는 남겨주세요.");
+  const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  try{
+    if(state.pendingFiles.source.length)f.attachments=await uploadFiles(state.pendingFiles.source,f.id);
+    state.fragments.unshift(f);await persist("fragments",f);state.pendingFiles.source=[];openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
+  }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function openThreadDialog(t=null){$("threadId").value=t?.id||"";$("threadTitleInput").value=t?.title||"";$("threadQuestion").value=t?.question||"";$("threadDialog").showModal()}
 async function saveThread(){
@@ -744,7 +1058,13 @@ async function linkFragment(fid,tid){
   const f=state.fragments.find(x=>x.id===fid);if(!f)return;f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
 }
 async function addThreadThought(tid){
-  const el=$("threadThoughtInput"),text=el?.value.trim();if(!text)return toast("한 줄을 적어주세요.");const f={id:uid(),type:"thought",thought:text,threadIds:[tid],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};state.fragments.unshift(f);await persist("fragments",f);openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
+  const el=$("threadThoughtInput"),text=el?.value.trim();
+  if(!text&&!state.pendingFiles.thread.length)return toast("한 줄이나 미디어 하나를 남겨주세요.");
+  const f={id:uid(),type:"thought",thought:text,threadIds:[tid],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  try{
+    if(state.pendingFiles.thread.length)f.attachments=await uploadFiles(state.pendingFiles.thread,f.id);
+    state.fragments.unshift(f);await persist("fragments",f);state.pendingFiles.thread=[];openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
+  }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function openProjectDialog(threadId=""){
   $("projectId").value="";$("projectTitleInput").value="";$("projectFormat").value="blog";refreshSelects();$("projectThread").value=threadId;$("projectDialog").showModal();
@@ -764,7 +1084,7 @@ async function attachFragment(pid,slotId,fid){
 async function saveAllSlots(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p);$$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value.trim()});p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);renderStudio();openProject(pid);toast("작업대를 저장했습니다.");
 }
-async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return;await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.")}
+async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return;const target=state.fragments.find(f=>f.id===fid);if(target)await deleteAttachments(target.attachments||[]);await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.")}
 async function deleteProject(pid){if(!confirm("이 Studio 프로젝트를 삭제할까요?"))return;await remove("projects",pid);setView("studio");toast("프로젝트를 삭제했습니다.")}
 async function deleteSource(sid){
   const s=state.sources.find(x=>x.id===sid);if(!s)return;
@@ -801,7 +1121,8 @@ async function deleteCollectionDocs(name){
 }
 async function deleteAllFragments(){
   if(!state.fragments.length)return toast("삭제할 생각이 없습니다.");
-  if(!confirm(`생각 ${state.fragments.length}개를 모두 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`))return;
+  if(!confirm(`생각 ${state.fragments.length}개를 모두 삭제할까요?\n첨부 미디어도 함께 삭제되며 되돌릴 수 없습니다.`))return;
+  for(const f of state.fragments)await deleteAttachments(f.attachments||[]);
   await deleteCollectionDocs("fragments");
   for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:[]}));await persist("projects",p)}
   renderAll();toast("모든 생각을 삭제했습니다.");
@@ -827,6 +1148,7 @@ async function deleteAllProjects(){
 async function resetEverything(){
   const answer=prompt("모든 생각, Library, Thread, Studio 데이터를 완전히 삭제합니다.\n계속하려면 ‘전체삭제’를 입력하세요.");
   if(answer!=="전체삭제")return toast("초기화를 취소했습니다.");
+  for(const f of state.fragments)await deleteAttachments(f.attachments||[]);
   for(const name of ["projects","threads","fragments","sources"])await deleteCollectionDocs(name);
   renderAll();setView("capture");$("settingsDialog").close();toast("모든 데이터를 초기화했습니다.");
 }
@@ -854,6 +1176,7 @@ function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v
 async function importData(file){try{const d=JSON.parse(await file.text());for(const k of ["sources","fragments","threads","projects"]){if(Array.isArray(d[k])){const m=new Map(state[k].map(x=>[x.id,x]));d[k].forEach(x=>m.set(x.id||uid(),x));state[k]=[...m.values()]}}if(state.firebase.connected){for(const k of ["sources","fragments","threads","projects"])for(const x of state[k])await persist(k,x)}else localSave();renderAll();toast("백업을 가져왔습니다.")}catch(e){console.error(e);toast("백업 파일을 읽지 못했습니다.")}}
 
 document.addEventListener("click",async e=>{
+  const apiResult=e.target.closest("[data-api-result-index]");if(apiResult)return applyApiResultByIndex(apiResult.dataset.apiResultIndex);
   const n=e.target.closest("[data-view-target]");if(n)return setView(n.dataset.viewTarget);
   const g=e.target.closest("[data-go]");if(g)return setView(g.dataset.go);
   const c=e.target.closest("[data-close]");if(c)return $(c.dataset.close).close();
@@ -883,9 +1206,13 @@ document.addEventListener("click",async e=>{
 });
 $("fab").addEventListener("click",()=>openCapture());$("homeCapture").addEventListener("click",()=>openCapture());
 $("menuTrigger").addEventListener("click",toggleMenu);
-$("sheetSettings").addEventListener("click",()=>{closeMenu();$("settingsDialog").showModal()});
+$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();$("settingsDialog").showModal()});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
+$("runApiSearch").addEventListener("click",searchSourceApi);
+$("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
+
 $("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
 $("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast("그대로 잘 남겨뒀어요.")});
 $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
@@ -906,8 +1233,9 @@ $("deleteAllThreads").addEventListener("click",deleteAllThreads);
 $("deleteAllProjects").addEventListener("click",deleteAllProjects);
 $("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
+$("saveApiKeys").addEventListener("click",()=>{localStorage.setItem(API_KEY_STORE,JSON.stringify({aladin:$("aladinKeyInput").value.trim(),tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()}));renderApiSettings();toast("검색 API 설정을 저장했습니다.")});
 $("saveFirebaseConfig").addEventListener("click",async()=>{try{const raw=$("firebaseConfigInput").value.trim(),cfg=normalizeFirebaseConfig(raw);if(!cfg.apiKey||!cfg.projectId)throw new Error();localStorage.setItem(FIREBASE_KEY,raw);$("settingsDialog").close();await connectFirebase()}catch{toast("Firebase config 형식을 확인해주세요.")}});
-$("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
+$("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
 ["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
 </script>
