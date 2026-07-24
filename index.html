@@ -3,1526 +3,583 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f4f2ea" />
-  <title>생각의 텃밭 · V0.1</title>
+  <meta name="theme-color" content="#f5f2e9" />
+  <title>생각의 텃밭 · V0.2</title>
   <style>
-    :root {
-      --bg: #f4f2ea;
-      --panel: #fffdf7;
-      --panel-2: #f0eee5;
-      --text: #25251f;
-      --muted: #77766d;
-      --line: #dedbd0;
-      --accent: #355c46;
-      --accent-soft: #dfe9e1;
-      --danger: #a14b45;
-      --warning: #8a6a2f;
-      --shadow: 0 12px 34px rgba(49, 51, 42, .08);
-      --radius: 22px;
-      --nav-height: 76px;
+    :root{
+      --bg:#f5f2e9; --panel:#fffdf8; --panel2:#efede5; --text:#24251f; --muted:#77786f;
+      --line:#ddd9ce; --accent:#365f48; --accent2:#dfe9e1; --accent3:#eef4ef;
+      --danger:#a44f48; --warn:#9b762f; --shadow:0 10px 30px rgba(44,46,38,.08);
+      --radius:22px; --nav:76px;
     }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top right, rgba(53,92,70,.06), transparent 28rem),
-        var(--bg);
-      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      min-height: 100vh;
-    }
-    button, input, textarea, select { font: inherit; }
-    button { color: inherit; }
-    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
-      outline: 3px solid rgba(53,92,70,.2);
-      outline-offset: 2px;
-    }
-    .app {
-      width: min(100%, 880px);
-      margin: 0 auto;
-      padding: 18px 18px calc(var(--nav-height) + 38px);
-    }
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 22px;
-    }
-    .brand h1 {
-      margin: 0;
-      font-size: 1.22rem;
-      letter-spacing: -.03em;
-    }
-    .brand p {
-      margin: 5px 0 0;
-      color: var(--muted);
-      font-size: .85rem;
-    }
-    .icon-btn {
-      border: 1px solid var(--line);
-      background: rgba(255,253,247,.75);
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      cursor: pointer;
-      display: grid;
-      place-items: center;
-    }
-    .view { display: none; }
-    .view.active { display: block; animation: rise .18s ease-out; }
-    @keyframes rise { from { opacity: .2; transform: translateY(5px); } to { opacity:1; transform:none; } }
-
-    .hero {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 30px;
-      padding: 24px;
-      box-shadow: var(--shadow);
-      overflow: hidden;
-      position: relative;
-    }
-    .hero::after {
-      content: "🌱";
-      position: absolute;
-      right: 18px;
-      top: 13px;
-      font-size: 4rem;
-      opacity: .11;
-      transform: rotate(12deg);
-    }
-    .eyebrow {
-      color: var(--accent);
-      font-size: .78rem;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .hero h2 {
-      margin: 8px 0 10px;
-      font-size: clamp(1.45rem, 5vw, 2rem);
-      line-height: 1.22;
-      letter-spacing: -.045em;
-      max-width: 620px;
-    }
-    .hero p { color: var(--muted); margin: 0; line-height: 1.65; }
-    .metrics {
-      margin-top: 18px;
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .metric {
-      border-radius: 18px;
-      padding: 15px;
-      background: var(--panel-2);
-      border: 1px solid transparent;
-    }
-    .metric small { color: var(--muted); display:block; font-size: .75rem; }
-    .metric strong { display:block; margin-top:4px; font-size:1.3rem; letter-spacing:-.03em; }
-
-    .section { margin-top: 26px; }
-    .section-head {
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    .section-head h2 { margin:0; font-size:1.05rem; letter-spacing:-.025em; }
-    .section-head p { margin:4px 0 0; color:var(--muted); font-size:.8rem; }
-    .text-btn {
-      border:0;
-      background:transparent;
-      color:var(--accent);
-      font-weight:700;
-      cursor:pointer;
-      padding:6px;
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      padding: 18px;
-      box-shadow: 0 6px 20px rgba(49,51,42,.04);
-    }
-    .card + .card { margin-top: 10px; }
-    .fragment-card { position:relative; }
-    .fragment-head {
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-    .type-chip, .tag {
-      display:inline-flex;
-      align-items:center;
-      gap:5px;
-      border-radius:999px;
-      padding:5px 9px;
-      font-size:.72rem;
-      background:var(--panel-2);
-      color:var(--muted);
-    }
-    .tag { background:var(--accent-soft); color:var(--accent); }
-    .date { color:var(--muted); font-size:.74rem; }
-    .fragment-title {
-      font-size:1.02rem;
-      font-weight:800;
-      letter-spacing:-.025em;
-      margin-bottom:7px;
-      line-height:1.4;
-    }
-    .fragment-body {
-      color:#45453e;
-      white-space:pre-wrap;
-      line-height:1.65;
-      font-size:.93rem;
-      overflow-wrap:anywhere;
-    }
-    .quote {
-      border-left:3px solid var(--accent);
-      padding-left:12px;
-      color:#55544d;
-      margin:10px 0;
-      font-style:italic;
-      white-space:pre-wrap;
-    }
-    .thought-box {
-      margin-top:10px;
-      padding:12px 14px;
-      border-radius:16px;
-      background:var(--accent-soft);
-      color:#2f4d3c;
-      white-space:pre-wrap;
-      line-height:1.55;
-    }
-    .meta {
-      display:flex;
-      flex-wrap:wrap;
-      gap:6px;
-      margin-top:12px;
-    }
-    .actions {
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-      margin-top:14px;
-      padding-top:13px;
-      border-top:1px solid var(--line);
-    }
-    .btn {
-      border:1px solid var(--line);
-      background:var(--panel);
-      border-radius:13px;
-      padding:9px 12px;
-      cursor:pointer;
-      font-weight:700;
-      font-size:.82rem;
-    }
-    .btn.primary { background:var(--accent); color:white; border-color:var(--accent); }
-    .btn.soft { background:var(--accent-soft); color:var(--accent); border-color:transparent; }
-    .btn.danger { color:var(--danger); }
-    .btn.block { width:100%; }
-    .btn:disabled { opacity:.45; cursor:not-allowed; }
-
-    .search-row {
-      display:grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap:8px;
-      margin-bottom:12px;
-    }
-    .input, .select, .textarea {
-      width:100%;
-      border:1px solid var(--line);
-      background:var(--panel);
-      color:var(--text);
-      border-radius:15px;
-      padding:12px 13px;
-    }
-    .textarea { min-height:112px; resize:vertical; line-height:1.55; }
-    .chips { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0 16px; }
-    .filter-chip {
-      border:1px solid var(--line);
-      background:var(--panel);
-      color:var(--muted);
-      border-radius:999px;
-      padding:8px 11px;
-      cursor:pointer;
-      font-size:.8rem;
-      font-weight:700;
-    }
-    .filter-chip.active { background:var(--accent); color:white; border-color:var(--accent); }
-
-    .empty {
-      text-align:center;
-      padding:32px 18px;
-      color:var(--muted);
-      border:1px dashed var(--line);
-      border-radius:22px;
-      background:rgba(255,253,247,.45);
-    }
-    .empty .emoji { font-size:2rem; margin-bottom:8px; display:block; }
-
-    .resurface {
-      background:linear-gradient(145deg, var(--panel), #edf2ec);
-      border:1px solid #d4ddd5;
-    }
-    .resurface strong { display:block; margin-bottom:8px; }
-    .project-status {
-      display:flex; gap:6px; flex-wrap:wrap; margin-top:12px;
-    }
-    .status-step {
-      font-size:.7rem; padding:5px 8px; border-radius:999px;
-      background:var(--panel-2); color:var(--muted);
-    }
-    .status-step.current { background:var(--accent); color:white; }
-    .material-list { margin-top:12px; display:grid; gap:7px; }
-    .material {
-      background:var(--panel-2); border-radius:13px; padding:10px 11px;
-      font-size:.82rem; line-height:1.4;
-    }
-
-    .bottom-nav {
-      position: fixed;
-      left: 50%;
-      bottom: max(10px, env(safe-area-inset-bottom));
-      transform: translateX(-50%);
-      width: min(calc(100% - 22px), 850px);
-      height: var(--nav-height);
-      display:grid;
-      grid-template-columns: repeat(5, 1fr);
-      padding:8px;
-      border-radius:25px;
-      background:rgba(255,253,247,.94);
-      backdrop-filter:blur(18px);
-      border:1px solid rgba(222,219,208,.95);
-      box-shadow:0 18px 50px rgba(49,51,42,.15);
-      z-index:30;
-    }
-    .nav-btn {
-      border:0;
-      background:transparent;
-      border-radius:18px;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:4px;
-      color:var(--muted);
-      cursor:pointer;
-      font-size:.68rem;
-      font-weight:700;
-    }
-    .nav-btn span:first-child { font-size:1.15rem; }
-    .nav-btn.active { color:var(--accent); background:var(--accent-soft); }
-    .fab {
-      position:fixed;
-      right:max(20px, calc((100vw - 850px)/2 + 22px));
-      bottom:calc(var(--nav-height) + 25px + env(safe-area-inset-bottom));
-      width:58px; height:58px;
-      border-radius:50%;
-      border:0;
-      background:var(--accent);
-      color:white;
-      font-size:1.8rem;
-      cursor:pointer;
-      box-shadow:0 12px 30px rgba(53,92,70,.3);
-      z-index:29;
-    }
-
-    dialog {
-      width:min(94vw, 620px);
-      max-height:88vh;
-      border:0;
-      border-radius:28px;
-      padding:0;
-      background:var(--panel);
-      color:var(--text);
-      box-shadow:0 32px 100px rgba(20,20,15,.25);
-    }
-    dialog::backdrop { background:rgba(24,25,21,.42); backdrop-filter:blur(4px); }
-    .modal { padding:22px; overflow:auto; max-height:88vh; }
-    .modal-head { display:flex; justify-content:space-between; gap:12px; align-items:center; margin-bottom:16px; }
-    .modal-head h2 { margin:0; font-size:1.1rem; }
-    .close-btn { border:0; background:var(--panel-2); border-radius:50%; width:38px; height:38px; cursor:pointer; }
-    .capture-types {
-      display:grid;
-      grid-template-columns:repeat(5, 1fr);
-      gap:7px;
-      margin-bottom:18px;
-    }
-    .capture-type {
-      border:1px solid var(--line);
-      background:var(--panel);
-      border-radius:14px;
-      padding:10px 4px;
-      cursor:pointer;
-      font-size:.7rem;
-      color:var(--muted);
-    }
-    .capture-type b { display:block; font-size:1.2rem; margin-bottom:4px; }
-    .capture-type.active { background:var(--accent-soft); border-color:#b9cdbd; color:var(--accent); }
-    .field { margin-top:13px; }
-    .field label { display:block; font-size:.78rem; font-weight:800; margin-bottom:6px; }
-    .helper { color:var(--muted); font-size:.75rem; line-height:1.45; margin-top:5px; }
-    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .hidden { display:none !important; }
-    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
-
-    .settings-grid { display:grid; gap:12px; }
-    .settings-card {
-      border:1px solid var(--line); border-radius:18px; padding:16px;
-    }
-    .status-dot {
-      display:inline-block; width:9px; height:9px; border-radius:50%; margin-right:6px; background:#999;
-    }
-    .status-dot.ok { background:#4e8060; }
-    .status-dot.warn { background:#b28338; }
-    code.inline { background:var(--panel-2); padding:2px 6px; border-radius:7px; font-size:.82rem; }
-
-    .toast {
-      position:fixed;
-      left:50%;
-      bottom:calc(var(--nav-height) + 95px);
-      transform:translate(-50%, 18px);
-      background:#24271f;
-      color:white;
-      padding:11px 15px;
-      border-radius:999px;
-      opacity:0;
-      pointer-events:none;
-      transition:.2s;
-      z-index:100;
-      font-size:.82rem;
-      max-width:88vw;
-      text-align:center;
-    }
-    .toast.show { opacity:1; transform:translate(-50%, 0); }
-
-    @media (max-width: 560px) {
-      .app { padding-left:13px; padding-right:13px; }
-      .hero { padding:20px; border-radius:25px; }
-      .metrics { grid-template-columns:repeat(3, 1fr); }
-      .metric { padding:12px 9px; }
-      .metric strong { font-size:1.12rem; }
-      .capture-types { grid-template-columns:repeat(5,1fr); gap:5px; }
-      .capture-type { padding:9px 2px; font-size:.62rem; }
-      .form-grid { grid-template-columns:1fr; }
-      .fab { right:18px; }
-    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at top right,rgba(54,95,72,.07),transparent 30rem),var(--bg);
+      color:var(--text);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    button,input,textarea,select{font:inherit} button{color:inherit}
+    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(54,95,72,.2);outline-offset:2px}
+    .app{width:min(100%,920px);margin:0 auto;padding:18px 16px calc(var(--nav) + 44px)}
+    .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+    .brand h1{margin:0;font-size:1.16rem;letter-spacing:-.035em}.brand p{margin:5px 0 0;color:var(--muted);font-size:.8rem}
+    .icon-btn,.round-btn{border:1px solid var(--line);background:rgba(255,253,248,.82);border-radius:50%;display:grid;place-items:center;cursor:pointer}
+    .icon-btn{width:42px;height:42px}.round-btn{width:38px;height:38px}
+    .view{display:none}.view.active{display:block;animation:up .18s ease-out}
+    @keyframes up{from{opacity:.2;transform:translateY(5px)}to{opacity:1;transform:none}}
+    .hero{background:var(--panel);border:1px solid var(--line);border-radius:30px;padding:24px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+    .hero:after{content:"🌱";position:absolute;right:18px;top:9px;font-size:4.4rem;opacity:.1;transform:rotate(9deg)}
+    .eyebrow{color:var(--accent);font-size:.72rem;font-weight:850;letter-spacing:.09em;text-transform:uppercase}
+    .hero h2{font-size:clamp(1.45rem,5vw,2.05rem);line-height:1.22;letter-spacing:-.05em;margin:8px 0 9px;max-width:670px}
+    .hero p{margin:0;color:var(--muted);line-height:1.65}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:18px}
+    .metric{background:var(--panel2);border-radius:17px;padding:13px}.metric small{display:block;color:var(--muted);font-size:.72rem}
+    .metric strong{display:block;margin-top:4px;font-size:1.2rem}
+    .section{margin-top:25px}.section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:12px}
+    .section-head h2{margin:0;font-size:1.05rem;letter-spacing:-.03em}.section-head p{margin:4px 0 0;color:var(--muted);font-size:.78rem}
+    .text-btn{border:0;background:transparent;color:var(--accent);font-weight:800;cursor:pointer;padding:6px}
+    .btn{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:9px 12px;cursor:pointer;font-weight:750;font-size:.8rem}
+    .btn.primary{background:var(--accent);color:white;border-color:var(--accent)} .btn.soft{background:var(--accent2);color:var(--accent);border-color:transparent}
+    .btn.danger{color:var(--danger)} .btn.block{width:100%}.btn:disabled{opacity:.45;cursor:not-allowed}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px;box-shadow:0 5px 18px rgba(44,46,38,.04)}
+    .card+.card{margin-top:9px}.click-card{cursor:pointer;transition:.15s}.click-card:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+    .card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:9px}
+    .chip,.tag,.status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 9px;font-size:.7rem;background:var(--panel2);color:var(--muted)}
+    .tag{background:var(--accent2);color:var(--accent)} .status{background:var(--accent3);color:var(--accent)}
+    .date{font-size:.72rem;color:var(--muted)}
+    .title{font-size:1.02rem;font-weight:830;letter-spacing:-.03em;line-height:1.42}
+    .body{color:#45463f;font-size:.9rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+    .thought{margin-top:10px;background:var(--accent3);border-radius:15px;padding:12px 13px;color:#324f3e;line-height:1.55;white-space:pre-wrap}
+    .source-line{border-left:3px solid var(--accent);padding-left:11px;margin:9px 0;color:#55564e;line-height:1.55;white-space:pre-wrap}
+    .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid var(--line)}
+    .empty{text-align:center;padding:30px 16px;border:1px dashed var(--line);border-radius:22px;color:var(--muted);background:rgba(255,253,248,.45)}
+    .empty .emoji{display:block;font-size:2rem;margin-bottom:8px}
+    .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:12px}
+    .input,.textarea,.select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:15px;padding:12px 13px;color:var(--text)}
+    .textarea{min-height:108px;resize:vertical;line-height:1.55}.helper{margin-top:5px;color:var(--muted);font-size:.73rem;line-height:1.45}
+    .field{margin-top:13px}.field label{display:block;font-size:.77rem;font-weight:820;margin-bottom:6px}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .library-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .source-card{display:grid;grid-template-columns:68px 1fr;gap:12px;align-items:center}
+    .cover{width:68px;height:92px;border-radius:12px;background:var(--panel2);display:grid;place-items:center;font-size:2rem;border:1px solid var(--line);overflow:hidden}
+    .cover img{width:100%;height:100%;object-fit:cover}
+    .source-title{font-weight:850;letter-spacing:-.03em;line-height:1.4}.source-sub{font-size:.77rem;color:var(--muted);margin-top:4px}
+    .progress{height:8px;background:var(--panel2);border-radius:99px;margin-top:9px;overflow:hidden}.progress>span{display:block;height:100%;background:var(--accent);border-radius:99px}
+    .detail-head{display:flex;align-items:flex-start;gap:13px;margin-bottom:18px}.detail-head .cover{width:76px;height:104px;flex:0 0 auto}
+    .detail-topline{display:flex;align-items:center;gap:8px;margin-bottom:12px}.back-btn{border:0;background:transparent;font-weight:800;color:var(--accent);cursor:pointer;padding:4px 0}
+    .quick-capture{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 5px 18px rgba(44,46,38,.04)}
+    .quick-capture .textarea{min-height:82px;background:#fff}.inline-two{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;margin-top:8px}
+    .thread-card{border-left:5px solid var(--accent)}.thread-count{font-size:1.7rem;font-weight:850;letter-spacing:-.05em}
+    .timeline{position:relative;padding-left:18px}.timeline:before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--line)}
+    .timeline-item{position:relative;margin:0 0 14px}.timeline-item:before{content:"";position:absolute;left:-17px;top:8px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+    .studio-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:12px;align-items:start}
+    .material-pool{position:sticky;top:10px}.material{background:var(--panel2);border-radius:13px;padding:10px 11px;margin-top:7px;font-size:.8rem;line-height:1.45}
+    .slot{border:1px solid var(--line);border-radius:18px;background:var(--panel);padding:14px;margin-bottom:9px}
+    .slot-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.slot h3{margin:0;font-size:.92rem}.slot-prompt{color:var(--muted);font-size:.75rem;margin:5px 0 10px;line-height:1.45}
+    .slot.done{border-color:#b8ccbd;background:#fbfffc}.slot .textarea{min-height:78px}
+    .completion{display:flex;align-items:center;gap:10px}.completion strong{font-size:1.25rem}.mini-bar{flex:1;height:9px;background:var(--panel2);border-radius:99px;overflow:hidden}.mini-bar span{display:block;height:100%;background:var(--accent)}
+    .bottom-nav{position:fixed;left:50%;bottom:max(10px,env(safe-area-inset-bottom));transform:translateX(-50%);width:min(calc(100% - 22px),890px);height:var(--nav);
+      display:grid;grid-template-columns:repeat(4,1fr);padding:8px;background:rgba(255,253,248,.94);backdrop-filter:blur(18px);border:1px solid var(--line);border-radius:25px;box-shadow:0 18px 50px rgba(44,46,38,.15);z-index:30}
+    .nav-btn{border:0;background:transparent;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);cursor:pointer;font-size:.68rem;font-weight:750}
+    .nav-btn span:first-child{font-size:1.16rem}.nav-btn.active{color:var(--accent);background:var(--accent2)}
+    .fab{position:fixed;right:max(18px,calc((100vw - 890px)/2 + 20px));bottom:calc(var(--nav) + 25px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:0;background:var(--accent);color:white;font-size:1.8rem;cursor:pointer;box-shadow:0 12px 30px rgba(54,95,72,.3);z-index:29}
+    dialog{width:min(94vw,650px);max-height:88vh;border:0;border-radius:28px;padding:0;background:var(--panel);color:var(--text);box-shadow:0 30px 100px rgba(20,20,15,.26)}
+    dialog::backdrop{background:rgba(24,25,21,.42);backdrop-filter:blur(4px)}.modal{padding:22px;overflow:auto;max-height:88vh}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}.modal-head h2{margin:0;font-size:1.08rem}.close-btn{border:0;background:var(--panel2);border-radius:50%;width:38px;height:38px;cursor:pointer}
+    .capture-mode{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}.mode-btn{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 11px;color:var(--muted);cursor:pointer;font-size:.76rem;font-weight:750}
+    .mode-btn.active{background:var(--accent2);color:var(--accent);border-color:#b9ccbd}
+    .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.hidden{display:none!important}
+    .settings-card{border:1px solid var(--line);border-radius:18px;padding:15px;margin-top:10px}.status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}.status-dot.ok{background:#4e8060}.status-dot.warn{background:#b28338}
+    code.inline{background:var(--panel2);padding:2px 5px;border-radius:6px;font-size:.8rem}
+    .toast{position:fixed;left:50%;bottom:calc(var(--nav) + 95px);transform:translate(-50%,18px);background:#24271f;color:white;padding:11px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;z-index:100;font-size:.8rem;max-width:88vw;text-align:center}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .divider{height:1px;background:var(--line);margin:14px 0}
+    @media(max-width:680px){.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
   </style>
 </head>
 <body>
-  <main class="app">
-    <header class="topbar">
-      <div class="brand">
-        <h1>생각의 텃밭 <span style="color:var(--accent);font-size:.72rem">V0.1</span></h1>
-        <p id="todayLabel">삶의 조각을 콘텐츠의 씨앗으로.</p>
-      </div>
-      <button class="icon-btn" id="openSettings" type="button" aria-label="설정">⚙️</button>
-    </header>
+<main class="app">
+  <header class="topbar">
+    <div class="brand"><h1>생각의 텃밭 <span style="color:var(--accent);font-size:.7rem">V0.2</span></h1><p id="dateLabel">세상에서 한 조각 → 나의 한 줄 → 하나의 이야기</p></div>
+    <button class="icon-btn" id="openSettings" type="button" aria-label="설정">⚙️</button>
+  </header>
 
-    <section class="view active" data-view="today">
-      <div class="hero">
-        <span class="eyebrow">TODAY</span>
-        <h2 id="heroTitle">오늘 마음에 걸린 한 조각만 남겨도 충분해요.</h2>
-        <p>정리하려 애쓰기보다 먼저 붙잡아 두세요. 정리는 나중에 해도 됩니다.</p>
-        <div class="metrics">
-          <div class="metric"><small>오늘 조각</small><strong id="metricToday">0</strong></div>
-          <div class="metric"><small>전체 조각</small><strong id="metricAll">0</strong></div>
-          <div class="metric"><small>콘텐츠 씨앗</small><strong id="metricProjects">0</strong></div>
-        </div>
+  <section class="view active" data-view="home">
+    <div class="hero">
+      <span class="eyebrow">HOME</span>
+      <h2>기록을 더 많이 남기는 앱이 아니라,<br>남긴 생각을 다시 쓰게 만드는 앱.</h2>
+      <p>오늘은 한 줄만 붙잡아도 충분합니다. 쌓인 조각은 Garden에서 이어지고, Studio에서 콘텐츠가 됩니다.</p>
+      <div class="metrics">
+        <div class="metric"><small>생각 조각</small><strong id="metricFragments">0</strong></div>
+        <div class="metric"><small>자라는 Thread</small><strong id="metricThreads">0</strong></div>
+        <div class="metric"><small>Studio 작업</small><strong id="metricProjects">0</strong></div>
       </div>
+    </div>
 
-      <div class="section">
-        <div class="section-head">
-          <div><h2>🌱 과거의 나에게서</h2><p>예전에 남긴 생각을 다시 꺼냅니다.</p></div>
-          <button class="text-btn" id="reshuffleResurface" type="button">다른 기록</button>
-        </div>
-        <div id="resurfaceBox"></div>
-      </div>
+    <div class="section">
+      <div class="section-head"><div><h2>🕰 과거의 나에게서</h2><p>저장했던 생각을 다시 생각으로 바꿉니다.</p></div><button class="text-btn" id="reshuffle" type="button">다른 기록</button></div>
+      <div id="resurfaceBox"></div>
+    </div>
 
-      <div class="section">
-        <div class="section-head">
-          <div><h2>💡 키워볼 만한 생각</h2><p>최근 기록에서 자주 등장한 태그와 생각입니다.</p></div>
-        </div>
-        <div id="seedBox"></div>
-      </div>
+    <div class="section">
+      <div class="section-head"><div><h2>📚 이어서 볼 것</h2><p>최근에 생각을 남긴 책과 미디어.</p></div><button class="text-btn" data-go="library" type="button">Library</button></div>
+      <div id="continueSources"></div>
+    </div>
 
-      <div class="section">
-        <div class="section-head">
-          <div><h2>✍️ 최근 기록</h2><p>가장 최근에 붙잡아 둔 삶의 조각.</p></div>
-          <button class="text-btn" data-go="pocket" type="button">모두 보기</button>
-        </div>
-        <div id="recentList"></div>
-      </div>
-    </section>
+    <div class="section">
+      <div class="section-head"><div><h2>🌱 지금 자라는 생각</h2><p>조각이 모이기 시작한 Thread.</p></div><button class="text-btn" data-go="garden" type="button">Garden</button></div>
+      <div id="growingThreads"></div>
+    </div>
+  </section>
 
-    <section class="view" data-view="library">
-      <div class="section-head">
-        <div><h2>📚 Library</h2><p>읽고 본 것에서 내 생각을 남기는 공간.</p></div>
-      </div>
-      <div class="search-row">
-        <input class="input" id="librarySearch" placeholder="책, 영화, 유튜브, 메모 검색" />
-        <button class="btn soft" id="addLibrary" type="button">+ 기록</button>
-      </div>
-      <div class="chips" id="libraryFilters">
-        <button class="filter-chip active" data-filter="all" type="button">전체</button>
-        <button class="filter-chip" data-filter="book" type="button">📚 독서</button>
-        <button class="filter-chip" data-filter="media" type="button">🎬 미디어</button>
-      </div>
-      <div id="libraryList"></div>
-    </section>
+  <section class="view" data-view="library">
+    <div id="libraryIndex">
+      <div class="section-head"><div><h2>📚 Library</h2><p>책과 미디어는 한 번 등록하고, 그 안에 생각을 계속 쌓습니다.</p></div><button class="btn soft" id="newSource" type="button">+ 작품</button></div>
+      <div class="search-row"><input class="input" id="sourceSearch" placeholder="책, 영화, 드라마, 유튜브 검색" /><select class="select" id="sourceFilter" style="width:120px"><option value="all">전체</option><option value="book">책</option><option value="media">미디어</option></select></div>
+      <div class="library-grid" id="sourceList"></div>
+    </div>
+    <div id="sourceDetail" class="hidden"></div>
+  </section>
 
-    <section class="view" data-view="pocket">
-      <div class="section-head">
-        <div><h2>💭 Pocket</h2><p>생각은 정리보다 포획이 먼저.</p></div>
-      </div>
-      <div class="search-row">
-        <input class="input" id="pocketSearch" placeholder="생각, 태그, 문장 검색" />
-        <button class="btn soft" id="addPocket" type="button">+ 생각</button>
-      </div>
-      <div id="pocketList"></div>
-    </section>
+  <section class="view" data-view="garden">
+    <div id="gardenIndex">
+      <div class="section-head"><div><h2>🌱 Garden</h2><p>분류보다 연결. 비슷한 생각을 한 줄기로 키웁니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="search-row"><input class="input" id="gardenSearch" placeholder="Thread, 생각, 사람, 문장 검색" /><button class="btn" id="showUnlinked" type="button">미연결 조각</button></div>
+      <div id="threadList"></div>
+      <div class="section"><div class="section-head"><div><h2>💭 최근 생각 조각</h2><p>어디에 연결할지 아직 정하지 않아도 됩니다.</p></div></div><div id="recentFragments"></div></div>
+    </div>
+    <div id="threadDetail" class="hidden"></div>
+  </section>
 
-    <section class="view" data-view="moments">
-      <div class="section-head">
-        <div><h2>🌿 Moments</h2><p>사람, 사건, 감정, 결정이 생각을 남긴 순간.</p></div>
-      </div>
-      <div class="search-row">
-        <input class="input" id="momentSearch" placeholder="사람, 사건, 감정, 결정 검색" />
-        <button class="btn soft" id="addMoment" type="button">+ 순간</button>
-      </div>
-      <div class="chips" id="momentFilters">
-        <button class="filter-chip active" data-filter="all" type="button">전체</button>
-        <button class="filter-chip" data-filter="moment" type="button">🌿 순간</button>
-        <button class="filter-chip" data-filter="decision" type="button">⚖️ 결정</button>
-      </div>
-      <div id="momentList"></div>
-    </section>
-
-    <section class="view" data-view="studio">
-      <div class="section-head">
-        <div><h2>🏭 Studio</h2><p>흩어진 기록을 결과물로 키우는 곳.</p></div>
-        <button class="btn soft" id="newProject" type="button">+ 프로젝트</button>
-      </div>
+  <section class="view" data-view="studio">
+    <div id="studioIndex">
+      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각을 대신 써주는 곳이 아니라, 내 재료를 이야기 구조에 배치하는 작업대.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
       <div id="projectList"></div>
-    </section>
-  </main>
-
-  <button class="fab" id="fab" type="button" aria-label="빠른 기록">＋</button>
-
-  <nav class="bottom-nav" aria-label="주요 메뉴">
-    <button class="nav-btn active" data-view-target="today" type="button"><span>🏠</span><span>오늘</span></button>
-    <button class="nav-btn" data-view-target="library" type="button"><span>📚</span><span>Library</span></button>
-    <button class="nav-btn" data-view-target="pocket" type="button"><span>💭</span><span>Pocket</span></button>
-    <button class="nav-btn" data-view-target="moments" type="button"><span>🌿</span><span>Moments</span></button>
-    <button class="nav-btn" data-view-target="studio" type="button"><span>🏭</span><span>Studio</span></button>
-  </nav>
-
-  <dialog id="captureDialog">
-    <div class="modal">
-      <div class="modal-head">
-        <div>
-          <div class="eyebrow">CAPTURE</div>
-          <h2 id="captureTitle">무엇을 남길까요?</h2>
-        </div>
-        <button class="close-btn" data-close-dialog="captureDialog" type="button">✕</button>
-      </div>
-
-      <div class="capture-types">
-        <button class="capture-type active" data-capture-type="thought" type="button"><b>💭</b>생각</button>
-        <button class="capture-type" data-capture-type="moment" type="button"><b>🌿</b>순간</button>
-        <button class="capture-type" data-capture-type="book" type="button"><b>📚</b>독서</button>
-        <button class="capture-type" data-capture-type="media" type="button"><b>🎬</b>미디어</button>
-        <button class="capture-type" data-capture-type="decision" type="button"><b>⚖️</b>결정</button>
-      </div>
-
-      <input id="editingId" type="hidden" />
-      <input id="captureType" type="hidden" value="thought" />
-
-      <div class="field" data-common="title">
-        <label for="entryTitle">제목 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
-        <input class="input" id="entryTitle" placeholder="나중에 알아볼 수 있을 정도면 충분해요" />
-      </div>
-
-      <div class="field type-field" data-types="book media">
-        <label for="sourceTitle">콘텐츠 제목</label>
-        <input class="input" id="sourceTitle" placeholder="책 / 영화 / 영상 제목" />
-      </div>
-
-      <div class="form-grid type-field" data-types="book">
-        <div class="field">
-          <label for="author">저자</label>
-          <input class="input" id="author" placeholder="저자" />
-        </div>
-        <div class="field">
-          <label for="page">페이지</label>
-          <input class="input" id="page" inputmode="numeric" placeholder="예: 132" />
-        </div>
-      </div>
-
-      <div class="field type-field" data-types="book">
-        <label for="quote">놓치고 싶지 않은 문장</label>
-        <textarea class="textarea" id="quote" placeholder="책의 한 줄"></textarea>
-      </div>
-
-      <div class="form-grid type-field" data-types="media">
-        <div class="field">
-          <label for="platform">플랫폼</label>
-          <select class="select" id="platform">
-            <option value="">선택</option>
-            <option>YouTube</option><option>Netflix</option><option>TVING</option>
-            <option>Disney+</option><option>영화관</option><option>기타</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="mediaType">종류</label>
-          <select class="select" id="mediaType">
-            <option value="">선택</option><option>영화</option><option>드라마</option>
-            <option>다큐</option><option>유튜브</option><option>예능</option><option>기타</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field type-field" data-types="moment">
-        <label for="people">사람 / 장소</label>
-        <input class="input" id="people" placeholder="예: 박OO, 회사 식당" />
-      </div>
-
-      <div class="field type-field" data-types="decision">
-        <label for="decisionOptions">고민했던 선택지</label>
-        <input class="input" id="decisionOptions" placeholder="예: 계속한다 / 접는다 / 방식 변경" />
-      </div>
-
-      <div class="field">
-        <label for="content" id="contentLabel">무슨 생각이 들었나요?</label>
-        <textarea class="textarea" id="content" placeholder="정리되지 않아도 괜찮아요. 지금 떠오르는 그대로."></textarea>
-      </div>
-
-      <div class="field type-field" data-types="book media moment decision">
-        <label for="myThought">내 생각 / 느낀 점</label>
-        <textarea class="textarea" id="myThought" placeholder="한 줄만 적어도 충분합니다."></textarea>
-      </div>
-
-      <div class="field">
-        <label for="tags">태그</label>
-        <input class="input" id="tags" placeholder="쉼표로 구분: 꾸준함, 창작, 회사" />
-        <div class="helper">분류 때문에 멈추지 않도록, 태그는 비워두어도 됩니다.</div>
-      </div>
-
-      <div class="field">
-        <label for="entryDate">날짜</label>
-        <input class="input" id="entryDate" type="date" />
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn" data-close-dialog="captureDialog" type="button">취소</button>
-        <button class="btn primary" id="saveEntry" type="button">저장</button>
-      </div>
     </div>
-  </dialog>
+    <div id="projectDetail" class="hidden"></div>
+  </section>
+</main>
 
-  <dialog id="projectDialog">
-    <div class="modal">
-      <div class="modal-head">
-        <div><div class="eyebrow">STUDIO</div><h2 id="projectDialogTitle">콘텐츠 프로젝트</h2></div>
-        <button class="close-btn" data-close-dialog="projectDialog" type="button">✕</button>
-      </div>
-      <input type="hidden" id="projectId" />
-      <div class="field">
-        <label for="projectTitle">제목</label>
-        <input class="input" id="projectTitle" placeholder="예: 나는 왜 항상 시작했다가 그만둘까" />
-      </div>
-      <div class="form-grid">
-        <div class="field">
-          <label for="projectFormat">형태</label>
-          <select class="select" id="projectFormat">
-            <option>블로그</option><option>YouTube</option><option>Shorts</option>
-            <option>Podcast</option><option>뉴스레터</option><option>기타</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="projectStatus">상태</label>
-          <select class="select" id="projectStatus">
-            <option value="seed">씨앗</option><option value="research">조사</option>
-            <option value="outline">구성</option><option value="making">제작</option>
-            <option value="done">완료</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="projectOutline">구성 / 메모</label>
-        <textarea class="textarea" id="projectOutline" placeholder="시작 → 문제 → 생각의 변화 → 결론"></textarea>
-      </div>
-      <div class="modal-actions">
-        <button class="btn" data-close-dialog="projectDialog" type="button">취소</button>
-        <button class="btn primary" id="saveProject" type="button">저장</button>
-      </div>
+<button class="fab" id="fab" type="button" aria-label="빠른 생각 기록">＋</button>
+
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-view-target="home" type="button"><span>🏠</span><span>Home</span></button>
+  <button class="nav-btn" data-view-target="library" type="button"><span>📚</span><span>Library</span></button>
+  <button class="nav-btn" data-view-target="garden" type="button"><span>🌱</span><span>Garden</span></button>
+  <button class="nav-btn" data-view-target="studio" type="button"><span>🏭</span><span>Studio</span></button>
+</nav>
+
+<dialog id="captureDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">CAPTURE</div><h2>지금 남은 한 조각</h2></div><button class="close-btn" data-close="captureDialog" type="button">✕</button></div>
+    <div class="capture-mode">
+      <button class="mode-btn active" data-mode="thought" type="button">💭 생각</button>
+      <button class="mode-btn" data-mode="moment" type="button">🌿 순간</button>
+      <button class="mode-btn" data-mode="decision" type="button">⚖️ 결정</button>
     </div>
-  </dialog>
+    <input id="captureId" type="hidden" /><input id="captureMode" type="hidden" value="thought" />
+    <div class="field"><label for="captureText" id="captureLabel">무슨 생각이 났나요?</label><textarea class="textarea" id="captureText" placeholder="정리하지 말고, 떠오른 그대로 한 줄부터."></textarea></div>
+    <div class="field hidden" id="captureContextWrap"><label for="captureContext">맥락 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="captureContext" placeholder="예: 박OO와 점심 / 회의 후 / 러닝 중" /></div>
+    <div class="field hidden" id="captureChoiceWrap"><label for="captureChoice">결정 / 선택지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="captureChoice" placeholder="예: Shorts로 다시 시작한다" /></div>
+    <div class="field"><label for="captureThread">연결할 Thread <span style="color:var(--muted);font-weight:500">(나중에 해도 됨)</span></label><select class="select" id="captureThread"><option value="">연결하지 않음</option></select></div>
+    <div class="modal-actions"><button class="btn" data-close="captureDialog" type="button">취소</button><button class="btn primary" id="saveCapture" type="button">저장</button></div>
+  </div>
+</dialog>
 
-  <dialog id="materialDialog">
-    <div class="modal">
-      <div class="modal-head">
-        <div><div class="eyebrow">GROW</div><h2>이 조각을 어디에서 키울까요?</h2></div>
-        <button class="close-btn" data-close-dialog="materialDialog" type="button">✕</button>
-      </div>
-      <input type="hidden" id="materialFragmentId" />
-      <div id="materialProjectList"></div>
-      <button class="btn soft block" id="materialNewProject" type="button" style="margin-top:12px">+ 새 콘텐츠 프로젝트 만들기</button>
+<dialog id="sourceDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">SOURCE</div><h2 id="sourceDialogTitle">Library에 작품 추가</h2></div><button class="close-btn" data-close="sourceDialog" type="button">✕</button></div>
+    <input id="sourceId" type="hidden" />
+    <div class="form-grid">
+      <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
+      <div class="field"><label for="sourceStatus">상태</label><select class="select" id="sourceStatus"><option value="active">읽는/보는 중</option><option value="paused">잠시 멈춤</option><option value="done">완료</option></select></div>
     </div>
-  </dialog>
-
-  <dialog id="settingsDialog">
-    <div class="modal">
-      <div class="modal-head">
-        <div><div class="eyebrow">SETTINGS</div><h2>저장소 설정</h2></div>
-        <button class="close-btn" data-close-dialog="settingsDialog" type="button">✕</button>
-      </div>
-      <div class="settings-grid">
-        <div class="settings-card">
-          <strong id="storageStatus"><span class="status-dot warn"></span>로컬 저장 모드</strong>
-          <p class="helper" id="storageStatusText">이 브라우저에만 저장됩니다. Firebase를 연결하면 기기 간 동기화가 가능합니다.</p>
-        </div>
-        <div class="settings-card">
-          <strong>🔥 Firebase 연결</strong>
-          <p class="helper">Firebase Console → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성에서 <code class="inline">firebaseConfig</code> 객체의 중괄호 안 JSON을 붙여넣으세요. Anonymous Authentication과 Firestore를 먼저 활성화해야 합니다.</p>
-          <div class="field">
-            <label for="firebaseConfigInput">Firebase config JSON</label>
-            <textarea class="textarea" id="firebaseConfigInput" placeholder='{"apiKey":"...","authDomain":"...","projectId":"..."}'></textarea>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-            <button class="btn primary" id="saveFirebaseConfig" type="button">Firebase 연결 저장</button>
-            <button class="btn danger" id="clearFirebaseConfig" type="button">연결 해제</button>
-          </div>
-        </div>
-        <div class="settings-card">
-          <strong>🧪 샘플 데이터</strong>
-          <p class="helper">화면 흐름을 빠르게 확인할 수 있는 예시 기록을 추가합니다.</p>
-          <button class="btn soft" id="seedDemo" type="button">샘플 기록 넣기</button>
-        </div>
-        <div class="settings-card">
-          <strong>💾 백업</strong>
-          <p class="helper">현재 데이터를 JSON 파일로 내보내거나 가져옵니다. Firebase 모드에서도 개인 백업용으로 쓸 수 있습니다.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-            <button class="btn" id="exportData" type="button">내보내기</button>
-            <label class="btn" for="importData" style="cursor:pointer">가져오기</label>
-            <input id="importData" type="file" accept="application/json" class="hidden" />
-          </div>
-        </div>
-      </div>
+    <div class="field"><label for="sourceTitleInput">제목</label><input class="input" id="sourceTitleInput" placeholder="책 / 영화 / 영상 제목" /></div>
+    <div class="form-grid">
+      <div class="field"><label for="sourceCreator">저자 / 제작자</label><input class="input" id="sourceCreator" placeholder="선택" /></div>
+      <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="선택" /></div>
     </div>
-  </dialog>
-
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-
-  <script>
-
-    const STORAGE_KEY = "thoughtGarden_v01";
-    const FIREBASE_CONFIG_KEY = "thoughtGarden_firebaseConfig";
-    const state = {
-      fragments: [],
-      projects: [],
-      activeView: "today",
-      libraryFilter: "all",
-      momentFilter: "all",
-      resurfaceId: null,
-      firebase: { app: null, db: null, auth: null, uid: null, connected: false, api: null }
-    };
-
-    const typeInfo = {
-      thought: { label: "생각", icon: "💭" },
-      moment: { label: "순간", icon: "🌿" },
-      book: { label: "독서", icon: "📚" },
-      media: { label: "미디어", icon: "🎬" },
-      decision: { label: "결정", icon: "⚖️" }
-    };
-    const statusLabels = { seed:"씨앗", research:"조사", outline:"구성", making:"제작", done:"완료" };
-    const statusOrder = ["seed","research","outline","making","done"];
-
-    const $ = (id) => document.getElementById(id);
-    const $$ = (selector) => [...document.querySelectorAll(selector)];
-    const esc = (v="") => String(v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-    const todayISO = () => new Date().toLocaleDateString("en-CA");
-    const id = () => crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-    function toast(message) {
-      const el = $("toast");
-      el.textContent = message;
-      el.classList.add("show");
-      clearTimeout(toast.timer);
-      toast.timer = setTimeout(() => el.classList.remove("show"), 2100);
-    }
-
-    function parseTags(value="") {
-      return [...new Set(value.split(",").map(x => x.trim().replace(/^#/, "")).filter(Boolean))].slice(0, 12);
-    }
-
-    function formatDate(value) {
-      if (!value) return "";
-      const d = new Date(`${value}T00:00:00`);
-      if (Number.isNaN(d.getTime())) return value;
-      return new Intl.DateTimeFormat("ko-KR", { year:"numeric", month:"short", day:"numeric" }).format(d);
-    }
-
-    function daysAgo(value) {
-      if (!value) return null;
-      const d = new Date(`${value}T00:00:00`);
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      return Math.max(0, Math.round((today - d) / 86400000));
-    }
-
-    function getLocalData() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : { fragments: [], projects: [] };
-      } catch {
-        return { fragments: [], projects: [] };
-      }
-    }
-
-    function setLocalData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        fragments: state.fragments,
-        projects: state.projects
-      }));
-    }
-
-    async function connectFirebaseFromSavedConfig() {
-      const raw = localStorage.getItem(FIREBASE_CONFIG_KEY);
-      if (!raw) {
-        setFirebaseStatus(false);
-        loadLocal();
-        return;
-      }
-      try {
-        const config = JSON.parse(raw);
-        if (!config.apiKey || !config.projectId) throw new Error("config 형식이 올바르지 않습니다.");
-
-        // Firebase 설정이 있을 때만 SDK를 불러옵니다.
-        // 덕분에 Firebase를 연결하지 않은 상태에서는 index.html만 열어도
-        // 로컬 저장 모드가 네트워크 의존 없이 바로 동작합니다.
-        const [appApi, authApi, fireApi] = await Promise.all([
-          import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
-          import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
-          import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js")
-        ]);
-
-        if (state.firebase.app && state.firebase.api?.deleteApp) {
-          await state.firebase.api.deleteApp(state.firebase.app);
-        }
-
-        const app = appApi.initializeApp(config, "thought-garden-" + Date.now());
-        const auth = authApi.getAuth(app);
-        const db = fireApi.getFirestore(app);
-        state.firebase = {
-          app, auth, db, uid:null, connected:false,
-          api: { ...appApi, ...authApi, ...fireApi }
-        };
-
-        await authApi.signInAnonymously(auth);
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => reject(new Error("인증 시간이 초과되었습니다.")), 8000);
-          const off = authApi.onAuthStateChanged(auth, user => {
-            if (user) {
-              clearTimeout(timeout);
-              off();
-              state.firebase.uid = user.uid;
-              state.firebase.connected = true;
-              resolve();
-            }
-          }, reject);
-        });
-        setFirebaseStatus(true);
-        await loadFirebase();
-        toast("Firebase에 연결되었습니다.");
-      } catch (err) {
-        console.error(err);
-        state.firebase.connected = false;
-        setFirebaseStatus(false, err.message);
-        loadLocal();
-        toast("Firebase 연결에 실패해 로컬 모드로 열었습니다.");
-      }
-    }
-
-    function setFirebaseStatus(ok, error="") {
-      const title = $("storageStatus");
-      const text = $("storageStatusText");
-      if (ok) {
-        title.innerHTML = '<span class="status-dot ok"></span>Firebase 동기화 모드';
-        text.textContent = "현재 기록은 Firestore의 개인 사용자 공간에 저장됩니다.";
-      } else {
-        title.innerHTML = '<span class="status-dot warn"></span>로컬 저장 모드';
-        text.textContent = error ? `연결 오류: ${error}` : "이 브라우저에만 저장됩니다. Firebase를 연결하면 기기 간 동기화가 가능합니다.";
-      }
-      $("firebaseConfigInput").value = localStorage.getItem(FIREBASE_CONFIG_KEY) || "";
-    }
-
-    function loadLocal() {
-      const data = getLocalData();
-      state.fragments = Array.isArray(data.fragments) ? data.fragments : [];
-      state.projects = Array.isArray(data.projects) ? data.projects : [];
-      renderAll();
-    }
-
-    async function loadFirebase() {
-      const { db, uid, api } = state.firebase;
-      const fragSnap = await api.getDocs(api.collection(db, "users", uid, "fragments"));
-      const projectSnap = await api.getDocs(api.collection(db, "users", uid, "projects"));
-      state.fragments = fragSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-      state.projects = projectSnap.docs.map(d => ({ id:d.id, ...d.data() }));
-      renderAll();
-    }
-
-    async function persistFragment(fragment) {
-      if (state.firebase.connected) {
-        const { api, db, uid } = state.firebase;
-        const ref = api.doc(db, "users", uid, "fragments", fragment.id);
-        await api.setDoc(ref, { ...fragment, updatedAtServer: api.serverTimestamp() }, { merge:true });
-      } else {
-        setLocalData();
-      }
-    }
-
-    async function persistProject(project) {
-      if (state.firebase.connected) {
-        const { api, db, uid } = state.firebase;
-        const ref = api.doc(db, "users", uid, "projects", project.id);
-        await api.setDoc(ref, { ...project, updatedAtServer: api.serverTimestamp() }, { merge:true });
-      } else {
-        setLocalData();
-      }
-    }
-
-    async function removeFragment(idValue) {
-      if (!confirm("이 기록을 삭제할까요?")) return;
-      state.fragments = state.fragments.filter(f => f.id !== idValue);
-      state.projects = state.projects.map(p => ({
-        ...p,
-        fragmentIds: (p.fragmentIds || []).filter(fid => fid !== idValue)
-      }));
-      if (state.firebase.connected) {
-        await state.firebase.api.deleteDoc(
-          state.firebase.api.doc(state.firebase.db, "users", state.firebase.uid, "fragments", idValue)
-        );
-        await Promise.all(state.projects.map(p => persistProject(p)));
-      } else setLocalData();
-      renderAll();
-      toast("기록을 삭제했습니다.");
-    }
-
-    async function removeProject(idValue) {
-      if (!confirm("이 콘텐츠 프로젝트를 삭제할까요? 기록 원본은 남아 있습니다.")) return;
-      state.projects = state.projects.filter(p => p.id !== idValue);
-      if (state.firebase.connected) {
-        await state.firebase.api.deleteDoc(
-          state.firebase.api.doc(state.firebase.db, "users", state.firebase.uid, "projects", idValue)
-        );
-      } else setLocalData();
-      renderAll();
-      toast("프로젝트를 삭제했습니다.");
-    }
-
-    function setView(view) {
-      state.activeView = view;
-      $$(".view").forEach(v => v.classList.toggle("active", v.dataset.view === view));
-      $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.viewTarget === view));
-      window.scrollTo({ top:0, behavior:"smooth" });
-      renderAll();
-    }
-
-    function renderAll() {
-      state.fragments.sort((a,b) => String(b.date || b.createdAt || "").localeCompare(String(a.date || a.createdAt || "")));
-      state.projects.sort((a,b) => String(b.updatedAt || b.createdAt || "").localeCompare(String(a.updatedAt || a.createdAt || "")));
-      renderToday();
-      renderLibrary();
-      renderPocket();
-      renderMoments();
-      renderProjects();
-    }
-
-    function renderToday() {
-      const today = todayISO();
-      const todayCount = state.fragments.filter(f => f.date === today).length;
-      $("metricToday").textContent = todayCount;
-      $("metricAll").textContent = state.fragments.length;
-      $("metricProjects").textContent = state.projects.filter(p => p.status !== "done").length;
-      $("todayLabel").textContent = new Intl.DateTimeFormat("ko-KR", { month:"long", day:"numeric", weekday:"short" }).format(new Date());
-
-      const recent = state.fragments.slice(0,3);
-      $("recentList").innerHTML = recent.length ? recent.map(f => fragmentCard(f, { compact:true })).join("") :
-        emptyHTML("🌱", "아직 기록이 없어요.", "오른쪽 아래 + 버튼으로 첫 생각을 붙잡아보세요.");
-
-      renderResurface();
-      renderSeed();
-    }
-
-    function renderResurface() {
-      const candidates = state.fragments.filter(f => daysAgo(f.date) >= 7);
-      if (!candidates.length) {
-        $("resurfaceBox").innerHTML = emptyHTML("🕰️", "조금 더 시간이 필요해요.", "7일 이상 지난 기록이 생기면 과거의 생각을 다시 보여드릴게요.");
-        return;
-      }
-      let item = candidates.find(f => f.id === state.resurfaceId);
-      if (!item) {
-        item = candidates[Math.floor(Math.random() * candidates.length)];
-        state.resurfaceId = item.id;
-      }
-      const ago = daysAgo(item.date);
-      $("resurfaceBox").innerHTML = `
-        <div class="card resurface">
-          <div class="fragment-head">
-            <span class="type-chip">${typeInfo[item.type]?.icon || "📝"} ${ago}일 전의 기록</span>
-            <span class="date">${formatDate(item.date)}</span>
-          </div>
-          <div class="fragment-title">${esc(item.title || item.sourceTitle || "그때의 생각")}</div>
-          <div class="fragment-body">${esc(item.myThought || item.content || item.quote || "").slice(0,500)}</div>
-          <div class="actions">
-            <button class="btn soft" data-action="continue" data-id="${item.id}" type="button">생각 이어쓰기</button>
-            <button class="btn" data-action="grow" data-id="${item.id}" type="button">🌱 콘텐츠로 키우기</button>
-          </div>
-        </div>`;
-    }
-
-    function renderSeed() {
-      const counts = {};
-      state.fragments.forEach(f => (f.tags || []).forEach(t => counts[t] = (counts[t] || 0) + 1));
-      const top = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,4);
-      if (!top.length) {
-        $("seedBox").innerHTML = emptyHTML("💡", "태그가 아직 없어요.", "기록에 태그가 조금 쌓이면 반복해서 등장하는 생각을 보여드릴게요.");
-        return;
-      }
-      const [tag, count] = top[0];
-      const related = state.fragments.filter(f => (f.tags || []).includes(tag)).slice(0,3);
-      $("seedBox").innerHTML = `
-        <div class="card">
-          <span class="eyebrow">REPEATED IDEA</span>
-          <div class="fragment-title" style="margin-top:8px">#${esc(tag)}에 관한 기록이 ${count}개 쌓였어요.</div>
-          <div class="material-list">
-            ${related.map(f => `<div class="material">${typeInfo[f.type]?.icon || "📝"} ${esc(f.title || f.sourceTitle || f.myThought || f.content || "").slice(0,80)}</div>`).join("")}
-          </div>
-          <div class="actions">
-            <button class="btn soft" data-search-tag="${esc(tag)}" type="button">관련 기록 모아보기</button>
-          </div>
-        </div>`;
-    }
-
-    function renderLibrary() {
-      const query = $("librarySearch").value.trim().toLowerCase();
-      const items = state.fragments.filter(f => ["book","media"].includes(f.type))
-        .filter(f => state.libraryFilter === "all" || f.type === state.libraryFilter)
-        .filter(f => matches(f, query));
-      $("libraryList").innerHTML = items.length ? items.map(f => fragmentCard(f)).join("") :
-        emptyHTML("📚", "아직 Library가 비어 있어요.", "책의 한 줄이나 오늘 본 영상에서 남은 생각을 적어보세요.");
-    }
-
-    function renderPocket() {
-      const query = $("pocketSearch").value.trim().toLowerCase();
-      const items = state.fragments.filter(f => f.type === "thought").filter(f => matches(f, query));
-      $("pocketList").innerHTML = items.length ? items.map(f => fragmentCard(f)).join("") :
-        emptyHTML("💭", "아직 붙잡아 둔 생각이 없어요.", "정리하지 말고 떠오른 그대로 적어보세요.");
-    }
-
-    function renderMoments() {
-      const query = $("momentSearch").value.trim().toLowerCase();
-      const items = state.fragments.filter(f => ["moment","decision"].includes(f.type))
-        .filter(f => state.momentFilter === "all" || f.type === state.momentFilter)
-        .filter(f => matches(f, query));
-      $("momentList").innerHTML = items.length ? items.map(f => fragmentCard(f)).join("") :
-        emptyHTML("🌿", "아직 삶의 조각이 없어요.", "사람과의 대화, 마음에 남은 사건이나 결정을 남겨보세요.");
-    }
-
-    function renderProjects() {
-      if (!state.projects.length) {
-        $("projectList").innerHTML = emptyHTML("🏭", "아직 콘텐츠 씨앗이 없어요.", "기록 카드의 ‘콘텐츠로 키우기’를 눌러 첫 프로젝트를 시작해보세요.");
-        return;
-      }
-      $("projectList").innerHTML = state.projects.map(projectCard).join("");
-    }
-
-    function matches(f, q) {
-      if (!q) return true;
-      return [
-        f.title, f.sourceTitle, f.author, f.platform, f.mediaType, f.quote,
-        f.content, f.myThought, f.people, f.decisionOptions, ...(f.tags || [])
-      ].filter(Boolean).join(" ").toLowerCase().includes(q);
-    }
-
-    function fragmentCard(f, opts={}) {
-      const info = typeInfo[f.type] || {icon:"📝",label:"기록"};
-      const title = f.title || f.sourceTitle || defaultTitle(f);
-      const quote = f.quote ? `<div class="quote">“${esc(f.quote)}”${f.page ? `<div class="date" style="margin-top:5px">p.${esc(f.page)}</div>` : ""}</div>` : "";
-      const body = f.content ? `<div class="fragment-body">${esc(f.content)}</div>` : "";
-      const thought = f.myThought ? `<div class="thought-box"><b>내 생각</b><br>${esc(f.myThought)}</div>` : "";
-      const extras = [
-        f.author && `✍️ ${f.author}`,
-        f.platform && `📺 ${f.platform}`,
-        f.mediaType && f.mediaType,
-        f.people && `👤 ${f.people}`,
-        f.decisionOptions && `선택지 · ${f.decisionOptions}`
-      ].filter(Boolean);
-
-      return `
-        <article class="card fragment-card">
-          <div class="fragment-head">
-            <span class="type-chip">${info.icon} ${info.label}</span>
-            <span class="date">${formatDate(f.date)}</span>
-          </div>
-          <div class="fragment-title">${esc(title)}</div>
-          ${quote}${body}${thought}
-          <div class="meta">
-            ${extras.map(x => `<span class="type-chip">${esc(x)}</span>`).join("")}
-            ${(f.tags || []).map(t => `<span class="tag">#${esc(t)}</span>`).join("")}
-          </div>
-          ${opts.compact ? "" : `
-          <div class="actions">
-            <button class="btn soft" data-action="grow" data-id="${f.id}" type="button">🌱 콘텐츠로 키우기</button>
-            <button class="btn" data-action="edit" data-id="${f.id}" type="button">수정</button>
-            <button class="btn danger" data-action="delete" data-id="${f.id}" type="button">삭제</button>
-          </div>`}
-        </article>`;
-    }
-
-    function projectCard(p) {
-      const materials = (p.fragmentIds || []).map(fid => state.fragments.find(f => f.id === fid)).filter(Boolean);
-      return `
-        <article class="card">
-          <div class="fragment-head">
-            <span class="type-chip">🏭 ${esc(p.format || "콘텐츠")}</span>
-            <span class="date">${formatDate((p.updatedAt || p.createdAt || "").slice(0,10))}</span>
-          </div>
-          <div class="fragment-title">${esc(p.title)}</div>
-          ${p.outline ? `<div class="fragment-body">${esc(p.outline)}</div>` : ""}
-          <div class="project-status">
-            ${statusOrder.map(s => `<span class="status-step ${s === p.status ? "current" : ""}">${statusLabels[s]}</span>`).join("")}
-          </div>
-          ${materials.length ? `
-            <div class="material-list">
-              ${materials.slice(0,5).map(f => `<div class="material">${typeInfo[f.type]?.icon || "📝"} ${esc(f.title || f.sourceTitle || f.myThought || f.content || "").slice(0,92)}</div>`).join("")}
-              ${materials.length > 5 ? `<div class="date">+ ${materials.length - 5}개 재료 더 있음</div>` : ""}
-            </div>` : `<p class="helper">아직 연결된 생각 조각이 없습니다.</p>`}
-          <div class="actions">
-            <button class="btn soft" data-project-action="status" data-id="${p.id}" type="button">다음 단계</button>
-            <button class="btn" data-project-action="edit" data-id="${p.id}" type="button">수정</button>
-            <button class="btn danger" data-project-action="delete" data-id="${p.id}" type="button">삭제</button>
-          </div>
-        </article>`;
-    }
-
-    function defaultTitle(f) {
-      if (f.type === "thought") return (f.content || "생각 조각").slice(0,36);
-      if (f.type === "moment") return f.people ? `${f.people}에서 남은 순간` : "오늘 마음에 남은 순간";
-      if (f.type === "decision") return "내가 내린 결정";
-      if (f.type === "book") return f.sourceTitle || "독서 기록";
-      if (f.type === "media") return f.sourceTitle || "미디어 기록";
-      return "기록";
-    }
-
-    function emptyHTML(icon, title, desc) {
-      return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`;
-    }
-
-    function resetCapture(type="thought") {
-      $("editingId").value = "";
-      $("captureTitle").textContent = "무엇을 남길까요?";
-      ["entryTitle","sourceTitle","author","page","quote","people","decisionOptions","content","myThought","tags"].forEach(id => $(id).value = "");
-      $("platform").value = "";
-      $("mediaType").value = "";
-      $("entryDate").value = todayISO();
-      setCaptureType(type);
-    }
-
-    function setCaptureType(type) {
-      $("captureType").value = type;
-      $$(".capture-type").forEach(b => b.classList.toggle("active", b.dataset.captureType === type));
-      $$(".type-field").forEach(el => {
-        const types = (el.dataset.types || "").split(" ");
-        el.classList.toggle("hidden", !types.includes(type));
-      });
-      const labels = {
-        thought:"무슨 생각이 들었나요?",
-        moment:"무슨 일이 있었나요?",
-        book:"읽은 범위 / 기억할 맥락",
-        media:"무엇이 기억에 남았나요?",
-        decision:"어떤 결정을 내렸나요?"
-      };
-      $("contentLabel").textContent = labels[type] || "기록";
-      $("content").placeholder = type === "thought"
-        ? "정리되지 않아도 괜찮아요. 지금 떠오르는 그대로."
-        : "사실이나 맥락을 짧게 적어두세요.";
-    }
-
-    function openCapture(type="thought", fragment=null) {
-      resetCapture(type);
-      if (fragment) {
-        $("captureTitle").textContent = "기록 수정";
-        $("editingId").value = fragment.id;
-        setCaptureType(fragment.type);
-        $("entryTitle").value = fragment.title || "";
-        $("sourceTitle").value = fragment.sourceTitle || "";
-        $("author").value = fragment.author || "";
-        $("page").value = fragment.page || "";
-        $("quote").value = fragment.quote || "";
-        $("platform").value = fragment.platform || "";
-        $("mediaType").value = fragment.mediaType || "";
-        $("people").value = fragment.people || "";
-        $("decisionOptions").value = fragment.decisionOptions || "";
-        $("content").value = fragment.content || "";
-        $("myThought").value = fragment.myThought || "";
-        $("tags").value = (fragment.tags || []).join(", ");
-        $("entryDate").value = fragment.date || todayISO();
-      }
-      $("captureDialog").showModal();
-      setTimeout(() => {
-        const target = type === "thought" ? $("content") : $("entryTitle");
-        target.focus();
-      }, 80);
-    }
-
-    async function saveEntry() {
-      const type = $("captureType").value;
-      const editingId = $("editingId").value;
-      const existing = state.fragments.find(f => f.id === editingId);
-      const fragment = {
-        id: editingId || id(),
-        type,
-        title: $("entryTitle").value.trim(),
-        sourceTitle: $("sourceTitle").value.trim(),
-        author: $("author").value.trim(),
-        page: $("page").value.trim(),
-        quote: $("quote").value.trim(),
-        platform: $("platform").value,
-        mediaType: $("mediaType").value,
-        people: $("people").value.trim(),
-        decisionOptions: $("decisionOptions").value.trim(),
-        content: $("content").value.trim(),
-        myThought: $("myThought").value.trim(),
-        tags: parseTags($("tags").value),
-        date: $("entryDate").value || todayISO(),
-        createdAt: existing?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      if (!fragment.content && !fragment.myThought && !fragment.quote && !fragment.title && !fragment.sourceTitle) {
-        toast("한 줄이라도 남겨주세요.");
-        return;
-      }
-
-      if (editingId) {
-        state.fragments = state.fragments.map(f => f.id === editingId ? fragment : f);
-      } else state.fragments.unshift(fragment);
-
-      try {
-        await persistFragment(fragment);
-        $("captureDialog").close();
-        renderAll();
-        toast(editingId ? "기록을 수정했습니다." : "생각 조각을 저장했습니다. 🌱");
-      } catch (err) {
-        console.error(err);
-        toast("저장 중 오류가 발생했습니다.");
-      }
-    }
-
-    function openContinue(idValue) {
-      const base = state.fragments.find(f => f.id === idValue);
-      if (!base) return;
-      resetCapture("thought");
-      $("entryTitle").value = `${base.title || base.sourceTitle || "과거 기록"}에서 이어진 생각`;
-      $("content").value = `예전 기록:\n${base.myThought || base.content || base.quote || ""}\n\n지금은 어떻게 생각하나요?\n`;
-      $("tags").value = (base.tags || []).join(", ");
-      $("captureDialog").showModal();
-      setTimeout(() => $("content").focus(), 80);
-    }
-
-    function openGrow(idValue) {
-      $("materialFragmentId").value = idValue;
-      if (!state.projects.length) {
-        $("materialProjectList").innerHTML = emptyHTML("🌱", "아직 콘텐츠 프로젝트가 없어요.", "새 프로젝트를 만들고 이 생각을 첫 재료로 넣어보세요.");
-      } else {
-        $("materialProjectList").innerHTML = state.projects.map(p => `
-          <button class="card" data-add-material="${p.id}" type="button"
-            style="display:block;width:100%;text-align:left;cursor:pointer;margin-bottom:8px">
-            <div class="fragment-title">${esc(p.title)}</div>
-            <div class="date">${esc(p.format)} · ${statusLabels[p.status] || p.status} · 재료 ${(p.fragmentIds || []).length}개</div>
-          </button>`).join("");
-      }
-      $("materialDialog").showModal();
-    }
-
-    async function addMaterial(projectId, fragmentId) {
-      const p = state.projects.find(p => p.id === projectId);
-      if (!p) return;
-      p.fragmentIds = [...new Set([...(p.fragmentIds || []), fragmentId])];
-      p.updatedAt = new Date().toISOString();
-      await persistProject(p);
-      $("materialDialog").close();
-      renderAll();
-      toast("콘텐츠 재료로 연결했습니다. 🌱");
-    }
-
-    function openProject(project=null, initialFragmentId=null) {
-      $("projectDialogTitle").textContent = project ? "콘텐츠 프로젝트 수정" : "새 콘텐츠 프로젝트";
-      $("projectId").value = project?.id || "";
-      $("projectTitle").value = project?.title || "";
-      $("projectFormat").value = project?.format || "블로그";
-      $("projectStatus").value = project?.status || "seed";
-      $("projectOutline").value = project?.outline || "";
-      $("projectDialog").dataset.initialFragmentId = initialFragmentId || "";
-      $("projectDialog").showModal();
-      setTimeout(() => $("projectTitle").focus(), 80);
-    }
-
-    async function saveProject() {
-      const projectId = $("projectId").value;
-      const existing = state.projects.find(p => p.id === projectId);
-      const initialFragmentId = $("projectDialog").dataset.initialFragmentId;
-      const title = $("projectTitle").value.trim();
-      if (!title) {
-        toast("프로젝트 제목을 적어주세요.");
-        return;
-      }
-      const project = {
-        id: projectId || id(),
-        title,
-        format: $("projectFormat").value,
-        status: $("projectStatus").value,
-        outline: $("projectOutline").value.trim(),
-        fragmentIds: existing?.fragmentIds || (initialFragmentId ? [initialFragmentId] : []),
-        createdAt: existing?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      if (projectId) state.projects = state.projects.map(p => p.id === projectId ? project : p);
-      else state.projects.unshift(project);
-      await persistProject(project);
-      $("projectDialog").close();
-      $("materialDialog").close();
-      renderAll();
-      toast("콘텐츠 씨앗을 만들었습니다. 🌱");
-    }
-
-    async function advanceProject(idValue) {
-      const p = state.projects.find(p => p.id === idValue);
-      if (!p) return;
-      const idx = statusOrder.indexOf(p.status);
-      p.status = statusOrder[Math.min(idx + 1, statusOrder.length - 1)];
-      p.updatedAt = new Date().toISOString();
-      await persistProject(p);
-      renderAll();
-      toast(`프로젝트를 ‘${statusLabels[p.status]}’ 단계로 옮겼습니다.`);
-    }
-
-    async function seedDemo() {
-      const dateOffset = (days) => {
-        const d = new Date(); d.setDate(d.getDate() - days);
-        return d.toLocaleDateString("en-CA");
-      };
-      const samples = [
-        {
-          id:id(), type:"book", title:"후회에 대한 한 줄", sourceTitle:"미드나잇 라이브러리",
-          author:"Matt Haig", page:"132", quote:"선택하지 않은 삶을 우리는 쉽게 이상화한다.",
-          content:"오늘 읽은 부분에서 가장 오래 멈춘 문장.", myThought:"후회는 선택 자체보다 다른 삶을 완벽하게 상상해서 커지는 걸지도 모르겠다.",
-          tags:["후회","선택","삶"], date:dateOffset(93), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        },
-        {
-          id:id(), type:"thought", title:"꾸준함을 다시 정의한다면",
-          content:"꾸준한 사람은 한 번도 멈추지 않는 사람이 아니라 계속 돌아오는 사람 아닐까?",
-          myThought:"중단했던 프로젝트를 실패라고만 생각하지 말자.", tags:["꾸준함","창작","실패"],
-          date:dateOffset(18), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        },
-        {
-          id:id(), type:"moment", title:"점심 대화에서 남은 말", people:"박OO · 회사 식당",
-          content:"회사에 너무 많은 걸 기대하면 힘들더라는 말을 들었다.",
-          myThought:"회사와 나의 관계를 '나의 전부'가 아니라 계약으로 생각하면 조금 덜 힘들까?",
-          tags:["회사","자유","관계"], date:dateOffset(8), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        },
-        {
-          id:id(), type:"media", title:"다시 시작하는 힘", sourceTitle:"꾸준함에 관한 YouTube 영상",
-          platform:"YouTube", mediaType:"유튜브", content:"완벽한 루틴보다 다시 돌아오는 장치가 중요하다는 내용.",
-          myThought:"내가 필요한 건 의지력이 아니라 복귀 버튼일지도 모른다.", tags:["꾸준함","습관","창작"],
-          date:dateOffset(2), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        },
-        {
-          id:id(), type:"decision", title:"콘텐츠를 다시 시작하는 방식", decisionOptions:"긴 영상 / Shorts / 잠시 보류",
-          content:"당분간 Shorts 중심으로 다시 시도하기로 결정.",
-          myThought:"완벽한 복귀보다 작게 돌아오는 게 더 중요하다.", tags:["창작","꾸준함","결정"],
-          date:dateOffset(1), createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()
-        }
-      ];
-      for (const f of samples) {
-        state.fragments.unshift(f);
-        await persistFragment(f);
-      }
-      renderAll();
-      toast("샘플 기록 5개를 넣었습니다.");
-    }
-
-    function exportData() {
-      const payload = JSON.stringify({
-        app:"thought-garden-v01",
-        exportedAt:new Date().toISOString(),
-        fragments:state.fragments,
-        projects:state.projects
-      }, null, 2);
-      const blob = new Blob([payload], { type:"application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `thought-garden-backup-${todayISO()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    async function importData(file) {
-      try {
-        const raw = await file.text();
-        const data = JSON.parse(raw);
-        if (!Array.isArray(data.fragments) || !Array.isArray(data.projects)) throw new Error("지원하지 않는 백업 파일입니다.");
-        if (!confirm(`기록 ${data.fragments.length}개와 프로젝트 ${data.projects.length}개를 현재 데이터에 합칠까요?`)) return;
-
-        const fragMap = new Map(state.fragments.map(f => [f.id, f]));
-        data.fragments.forEach(f => fragMap.set(f.id || id(), f));
-        state.fragments = [...fragMap.values()];
-        const projMap = new Map(state.projects.map(p => [p.id, p]));
-        data.projects.forEach(p => projMap.set(p.id || id(), p));
-        state.projects = [...projMap.values()];
-
-        if (state.firebase.connected) {
-          await Promise.all(state.fragments.map(persistFragment));
-          await Promise.all(state.projects.map(persistProject));
-        } else setLocalData();
-        renderAll();
-        toast("백업 데이터를 가져왔습니다.");
-      } catch (err) {
-        console.error(err);
-        toast("백업 파일을 읽지 못했습니다.");
-      }
-    }
-
-    document.addEventListener("click", async (e) => {
-      const nav = e.target.closest("[data-view-target]");
-      if (nav) return setView(nav.dataset.viewTarget);
-
-      const go = e.target.closest("[data-go]");
-      if (go) return setView(go.dataset.go);
-
-      const close = e.target.closest("[data-close-dialog]");
-      if (close) return $(close.dataset.closeDialog).close();
-
-      const cap = e.target.closest("[data-capture-type]");
-      if (cap) return setCaptureType(cap.dataset.captureType);
-
-      const action = e.target.closest("[data-action]");
-      if (action) {
-        const fid = action.dataset.id;
-        if (action.dataset.action === "edit") return openCapture(null, state.fragments.find(f => f.id === fid));
-        if (action.dataset.action === "delete") return removeFragment(fid);
-        if (action.dataset.action === "grow") return openGrow(fid);
-        if (action.dataset.action === "continue") return openContinue(fid);
-      }
-
-      const paction = e.target.closest("[data-project-action]");
-      if (paction) {
-        const pid = paction.dataset.id;
-        if (paction.dataset.projectAction === "edit") return openProject(state.projects.find(p => p.id === pid));
-        if (paction.dataset.projectAction === "delete") return removeProject(pid);
-        if (paction.dataset.projectAction === "status") return advanceProject(pid);
-      }
-
-      const material = e.target.closest("[data-add-material]");
-      if (material) return addMaterial(material.dataset.addMaterial, $("materialFragmentId").value);
-
-      const tag = e.target.closest("[data-search-tag]");
-      if (tag) {
-        $("pocketSearch").value = tag.dataset.searchTag;
-        setView("pocket");
-      }
-    });
-
-    $$(".nav-btn").forEach(b => b.addEventListener("click", () => setView(b.dataset.viewTarget)));
-    $("fab").addEventListener("click", () => openCapture("thought"));
-    $("addLibrary").addEventListener("click", () => openCapture("book"));
-    $("addPocket").addEventListener("click", () => openCapture("thought"));
-    $("addMoment").addEventListener("click", () => openCapture("moment"));
-    $("newProject").addEventListener("click", () => openProject());
-    $("saveEntry").addEventListener("click", saveEntry);
-    $("saveProject").addEventListener("click", saveProject);
-
-    $("materialNewProject").addEventListener("click", () => {
-      const fragmentId = $("materialFragmentId").value;
-      $("materialDialog").close();
-      openProject(null, fragmentId);
-    });
-
-    $("openSettings").addEventListener("click", () => $("settingsDialog").showModal());
-    $("reshuffleResurface").addEventListener("click", () => {
-      state.resurfaceId = null;
-      renderResurface();
-    });
-
-    ["librarySearch","pocketSearch","momentSearch"].forEach(id => $(id).addEventListener("input", renderAll));
-
-    $("libraryFilters").addEventListener("click", e => {
-      const btn = e.target.closest("[data-filter]");
-      if (!btn) return;
-      state.libraryFilter = btn.dataset.filter;
-      [...$("libraryFilters").children].forEach(x => x.classList.toggle("active", x === btn));
-      renderLibrary();
-    });
-    $("momentFilters").addEventListener("click", e => {
-      const btn = e.target.closest("[data-filter]");
-      if (!btn) return;
-      state.momentFilter = btn.dataset.filter;
-      [...$("momentFilters").children].forEach(x => x.classList.toggle("active", x === btn));
-      renderMoments();
-    });
-
-    $("saveFirebaseConfig").addEventListener("click", async () => {
-      try {
-        const raw = $("firebaseConfigInput").value.trim();
-        const parsed = JSON.parse(raw);
-        if (!parsed.apiKey || !parsed.projectId) throw new Error();
-        localStorage.setItem(FIREBASE_CONFIG_KEY, JSON.stringify(parsed));
-        $("settingsDialog").close();
-        await connectFirebaseFromSavedConfig();
-      } catch {
-        toast("Firebase config JSON을 확인해주세요.");
-      }
-    });
-
-    $("clearFirebaseConfig").addEventListener("click", async () => {
-      localStorage.removeItem(FIREBASE_CONFIG_KEY);
-      if (state.firebase.app && state.firebase.api?.deleteApp) {
-        try { await state.firebase.api.deleteApp(state.firebase.app); } catch {}
-      }
-      state.firebase = { app:null, db:null, auth:null, uid:null, connected:false, api:null };
-      setFirebaseStatus(false);
-      loadLocal();
-      toast("Firebase 연결을 해제했습니다.");
-    });
-
-    $("seedDemo").addEventListener("click", seedDemo);
-    $("exportData").addEventListener("click", exportData);
-    $("importData").addEventListener("change", e => {
-      const file = e.target.files?.[0];
-      if (file) importData(file);
-      e.target.value = "";
-    });
-
-    ["captureDialog","projectDialog","materialDialog","settingsDialog"].forEach(id => {
-      $(id).addEventListener("click", e => {
-        if (e.target === $(id)) $(id).close();
-      });
-    });
-
-    $("entryDate").value = todayISO();
-    setCaptureType("thought");
-    connectFirebaseFromSavedConfig();
-  </script>
+    <div class="field"><label for="sourceImage">표지 이미지 URL <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="sourceImage" placeholder="https://..." /></div>
+    <div class="modal-actions"><button class="btn" data-close="sourceDialog" type="button">취소</button><button class="btn primary" id="saveSource" type="button">저장</button></div>
+  </div>
+</dialog>
+
+<dialog id="threadDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">THREAD</div><h2>생각의 줄기 만들기</h2></div><button class="close-btn" data-close="threadDialog" type="button">✕</button></div>
+    <input id="threadId" type="hidden" />
+    <div class="field"><label for="threadTitleInput">이 생각을 뭐라고 부를까요?</label><input class="input" id="threadTitleInput" placeholder="예: 꾸준함에 대하여 / 회사와 나 / 좋은 교육이란?" /></div>
+    <div class="field"><label for="threadQuestion">지금 품고 있는 질문 <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="threadQuestion" placeholder="예: 멈추지 않는 것만이 정말 꾸준함일까?"></textarea></div>
+    <div class="modal-actions"><button class="btn" data-close="threadDialog" type="button">취소</button><button class="btn primary" id="saveThread" type="button">저장</button></div>
+  </div>
+</dialog>
+
+<dialog id="linkDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">CONNECT</div><h2>이 조각을 어디에 연결할까요?</h2></div><button class="close-btn" data-close="linkDialog" type="button">✕</button></div>
+    <input id="linkFragmentId" type="hidden" />
+    <div id="linkThreadList"></div>
+    <button class="btn soft block" id="linkNewThread" type="button" style="margin-top:10px">+ 새 Thread 만들기</button>
+  </div>
+</dialog>
+
+<dialog id="projectDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">STUDIO</div><h2>새 콘텐츠 프로젝트</h2></div><button class="close-btn" data-close="projectDialog" type="button">✕</button></div>
+    <input id="projectId" type="hidden" />
+    <div class="field"><label for="projectTitleInput">제목</label><input class="input" id="projectTitleInput" placeholder="예: 나는 왜 늘 시작하고 그만둘까" /></div>
+    <div class="form-grid">
+      <div class="field"><label for="projectFormat">형태</label><select class="select" id="projectFormat"><option value="blog">블로그</option><option value="shorts">Shorts</option><option value="podcast">떠드는 도서관 / Podcast</option></select></div>
+      <div class="field"><label for="projectThread">시작 Thread <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="select" id="projectThread"><option value="">없음</option></select></div>
+    </div>
+    <div class="modal-actions"><button class="btn" data-close="projectDialog" type="button">취소</button><button class="btn primary" id="saveProject" type="button">작업대 만들기</button></div>
+  </div>
+</dialog>
+
+<dialog id="attachDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">MATERIAL</div><h2>이 칸에 넣을 생각 조각</h2></div><button class="close-btn" data-close="attachDialog" type="button">✕</button></div>
+    <input id="attachProjectId" type="hidden" /><input id="attachSlotId" type="hidden" />
+    <div id="attachFragmentList"></div>
+  </div>
+</dialog>
+
+<dialog id="settingsDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>저장과 데이터</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
+    <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>로컬 저장 모드</strong><div class="helper" id="storageText">이 브라우저에 저장됩니다.</div></div>
+    <div class="settings-card">
+      <strong>🔥 Firebase 연결</strong>
+      <div class="helper">Firebase Console에서 복사한 <code class="inline">const firebaseConfig = { ... };</code> 전체 또는 JSON만 그대로 붙여넣어도 됩니다.</div>
+      <div class="field"><textarea class="textarea" id="firebaseConfigInput" placeholder='const firebaseConfig = { apiKey: "...", projectId: "..." };'></textarea></div>
+      <div class="actions"><button class="btn primary" id="saveFirebaseConfig" type="button">연결 저장</button><button class="btn danger" id="clearFirebaseConfig" type="button">연결 해제</button></div>
+    </div>
+    <div class="settings-card"><strong>🧪 샘플 흐름</strong><div class="helper">Source → Fragment → Thread → Studio를 한 번에 확인하는 예시 데이터를 넣습니다.</div><button class="btn soft" id="seedDemo" type="button" style="margin-top:9px">샘플 데이터 넣기</button></div>
+    <div class="settings-card"><strong>♻️ V0.1 로컬 데이터</strong><div class="helper">이 브라우저에 이전 버전 기록이 남아 있으면 V0.2 구조로 가져옵니다.</div><button class="btn" id="migrateV01" type="button" style="margin-top:9px">V0.1 기록 가져오기</button></div>
+    <div class="settings-card"><strong>💾 백업</strong><div class="actions"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script>
+const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig";
+const state={sources:[],fragments:[],threads:[],projects:[],view:"home",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
+  gardenUnlinked:false,pendingLinkFragmentId:null,
+  firebase:{app:null,auth:null,db:null,uid:null,connected:false,api:null}};
+const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
+const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const today=()=>new Date().toLocaleDateString("en-CA");
+const fmt=d=>d?new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"short",day:"numeric"}).format(new Date(`${d.slice(0,10)}T00:00:00`)):"";
+const daysAgo=d=>{if(!d)return null;const x=new Date(`${d.slice(0,10)}T00:00:00`),n=new Date();n.setHours(0,0,0,0);return Math.max(0,Math.round((n-x)/86400000))};
+const sourceIcon=t=>t==="book"?"📚":"🎬";
+const fragIcon=t=>({thought:"💭",moment:"🌿",decision:"⚖️",source:"✦"}[t]||"💭");
+
+function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2100)}
+function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=d.sources||[];state.fragments=d.fragments||[];state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
+function localSave(){localStorage.setItem(STORAGE_KEY,JSON.stringify({sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects}))}
+function normalizeFirebaseConfig(raw){
+  let s=raw.trim().replace(/^const\s+firebaseConfig\s*=\s*/,"").replace(/;\s*$/,"");
+  try{return JSON.parse(s)}catch{}
+  s=s.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g,'$1"$2"$3').replace(/'/g,'"');
+  return JSON.parse(s);
+}
+async function connectFirebase(){
+  const raw=localStorage.getItem(FIREBASE_KEY); if(!raw){setFirebaseStatus(false);localLoad();return}
+  try{
+    const config=normalizeFirebaseConfig(raw); if(!config.apiKey||!config.projectId)throw new Error("config 형식 확인");
+    const [appApi,authApi,fireApi]=await Promise.all([
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js")]);
+    if(state.firebase.app&&state.firebase.api?.deleteApp)await state.firebase.api.deleteApp(state.firebase.app);
+    const app=appApi.initializeApp(config,"garden-"+Date.now()),auth=authApi.getAuth(app),db=fireApi.getFirestore(app);
+    state.firebase={app,auth,db,uid:null,connected:false,api:{...appApi,...authApi,...fireApi}};
+    await authApi.signInAnonymously(auth);
+    await new Promise((resolve,reject)=>{const tm=setTimeout(()=>reject(new Error("인증 시간 초과")),8000);const off=authApi.onAuthStateChanged(auth,u=>{if(u){clearTimeout(tm);off();state.firebase.uid=u.uid;state.firebase.connected=true;resolve()}},reject)});
+    setFirebaseStatus(true);await firebaseLoad();toast("Firebase에 연결되었습니다.");
+  }catch(e){console.error(e);state.firebase.connected=false;setFirebaseStatus(false,e.message);localLoad();toast("Firebase 연결 실패 · 로컬 모드로 열었습니다.");}
+}
+function setFirebaseStatus(ok,error=""){
+  $("storageStatus").innerHTML=ok?'<span class="status-dot ok"></span>Firebase 동기화 모드':'<span class="status-dot warn"></span>로컬 저장 모드';
+  $("storageText").textContent=ok?"Firestore의 개인 사용자 공간에 저장됩니다.":error?`연결 오류: ${error}`:"이 브라우저에 저장됩니다.";
+  $("firebaseConfigInput").value=localStorage.getItem(FIREBASE_KEY)||"";
+}
+async function firebaseLoad(){
+  const {api,db,uid}=state.firebase;
+  for(const key of ["sources","fragments","threads","projects"]){const snap=await api.getDocs(api.collection(db,"users",uid,key));state[key]=snap.docs.map(d=>({id:d.id,...d.data()}))}
+  renderAll();
+}
+async function persist(collectionName,obj){
+  if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.setDoc(api.doc(db,"users",uid,collectionName,obj.id),{...obj,updatedAtServer:api.serverTimestamp()},{merge:true})}else localSave();
+}
+async function remove(collectionName,id){
+  state[collectionName]=state[collectionName].filter(x=>x.id!==id);
+  if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.deleteDoc(api.doc(db,"users",uid,collectionName,id))}else localSave();
+}
+function setView(v){
+  state.view=v;state.openSourceId=null;state.openThreadId=null;state.openProjectId=null;
+  $$(".view").forEach(x=>x.classList.toggle("active",x.dataset.view===v));$$(".nav-btn").forEach(x=>x.classList.toggle("active",x.dataset.viewTarget===v));
+  $("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
+  renderAll();window.scrollTo({top:0,behavior:"smooth"});
+}
+function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects()}
+function refreshSelects(){
+  const threadOpts='<option value="">연결하지 않음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  $("captureThread").innerHTML=threadOpts;$("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+}
+function renderHome(){
+  $("dateLabel").textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());
+  $("metricFragments").textContent=state.fragments.length;$("metricThreads").textContent=state.threads.length;$("metricProjects").textContent=state.projects.length;
+  renderResurface();
+  const srcs=[...state.sources].sort((a,b)=>lastSourceActivity(b.id).localeCompare(lastSourceActivity(a.id))).slice(0,3);
+  $("continueSources").innerHTML=srcs.length?srcs.map(s=>sourceCard(s,true)).join(""):empty("📚","아직 Library가 비어 있어요.","한 작품을 등록하고 그 안에 생각을 계속 쌓아보세요.");
+  const ts=[...state.threads].sort((a,b)=>threadFragments(b.id).length-threadFragments(a.id).length).slice(0,3);
+  $("growingThreads").innerHTML=ts.length?ts.map(t=>threadCard(t,true)).join(""):empty("🌱","아직 자라는 생각이 없어요.","비슷한 조각이 보이면 Thread로 연결해보세요.");
+}
+function renderResurface(){
+  const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
+  let f=c.find(x=>x.id===state.resurfaceId);if(!f){f=c[Math.floor(Math.random()*c.length)];state.resurfaceId=f.id}
+  const src=state.sources.find(s=>s.id===f.sourceId);
+  $("resurfaceBox").innerHTML=`<div class="card"><div class="card-head"><span class="chip">${fragIcon(f.type)} ${daysAgo(f.date||f.createdAt)}일 전</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
+    ${src?`<div class="source-sub">${sourceIcon(src.type)} ${esc(src.title)}</div>`:""}
+    ${f.externalText?`<div class="source-line">${esc(f.externalText)}</div>`:""}<div class="thought">${esc(f.thought||f.text||"")}</div>
+    <div class="actions"><button class="btn soft" data-continue="${f.id}" type="button">지금 생각 덧붙이기</button><button class="btn" data-link="${f.id}" type="button">🌱 Thread 연결</button></div></div>`;
+}
+function renderLibrary(){
+  const q=$("sourceSearch").value.trim().toLowerCase(),filter=$("sourceFilter").value;
+  const arr=state.sources.filter(s=>(filter==="all"||s.type===filter)&&[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q));
+  $("sourceList").innerHTML=arr.length?arr.map(s=>sourceCard(s)).join(""):empty("📚","등록된 작품이 없어요.","책이나 미디어는 딱 한 번만 등록합니다.");
+}
+function sourceCard(s,compact=false){
+  const count=sourceFragments(s.id).length,last=lastSourceActivity(s.id),cover=s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type);
+  return `<article class="card click-card source-card" data-open-source="${s.id}">
+    <div class="cover">${cover}</div><div><div class="card-head"><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</span><span class="date">${last?fmt(last.slice(0,10)):""}</span></div>
+    <div class="source-title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · ")||"")}</div>
+    <div class="meta"><span class="status">생각 ${count}개</span><span class="status">${s.status==="done"?"완료":s.status==="paused"?"잠시 멈춤":"이어가는 중"}</span></div></div></article>`;
+}
+function openSource(id){
+  state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
+  $("libraryIndex").classList.add("hidden");$("sourceDetail").classList.remove("hidden");
+  const fs=sourceFragments(id);
+  $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button></div>
+    <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type)}</div><div><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"BOOK":"MEDIA"}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
+    <div class="quick-capture">
+      <div class="eyebrow">한 줄 + 나의 한 줄</div>
+      <div class="field"><label>${s.type==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${s.type==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea></div>
+      <div class="inline-two"><input class="input" id="sourceLocator" placeholder="${s.type==="book"?"p.132":"6화 / 12:31"}"><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:9px"><button class="btn primary" data-save-source-fragment="${s.id}" type="button">생각 남기기</button></div>
+    </div>
+    <div class="section"><div class="section-head"><div><h2>쌓인 생각</h2><p>같은 작품을 다시 볼 때마다 여기로 돌아옵니다.</p></div></div>
+    <div>${fs.length?fs.map(fragmentCard).join(""):empty("✦","아직 생각이 없어요.","문장을 수집하는 데서 끝내지 말고, 그 아래 내 생각 한 줄을 붙여보세요.")}</div></div>`;
+}
+function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
+function lastSourceActivity(id){return sourceFragments(id).map(f=>f.createdAt||f.date||"").sort().reverse()[0]||state.sources.find(s=>s.id===id)?.updatedAt||""}
+function renderGarden(){
+  const q=$("gardenSearch").value.trim().toLowerCase();
+  const ts=state.threads.filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q));
+  $("threadList").innerHTML=ts.length?ts.map(t=>threadCard(t)).join(""):empty("🌱","아직 Thread가 없어요.","같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
+  const frags=state.fragments
+    .filter(f=>!state.gardenUnlinked || !(f.threadIds||[]).length)
+    .filter(f=>[f.thought,f.externalText,f.context,f.choice].filter(Boolean).join(" ").toLowerCase().includes(q))
+    .slice(0,8);
+  $("showUnlinked").textContent=state.gardenUnlinked?"전체 조각":"미연결 조각";
+  $("showUnlinked").classList.toggle("soft",state.gardenUnlinked);
+  $("recentFragments").innerHTML=frags.length?frags.map(fragmentCard).join(""):empty("💭",state.gardenUnlinked?"미연결 조각이 없어요.":"생각 조각이 없습니다.",state.gardenUnlinked?"모든 조각이 적어도 하나의 Thread에 연결되어 있습니다.":"+ 버튼으로 한 줄만 먼저 붙잡아보세요.");
+}
+function threadFragments(id){return state.fragments.filter(f=>(f.threadIds||[]).includes(id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
+function threadCard(t,compact=false){
+  const fs=threadFragments(t.id),last=fs.at(-1);
+  return `<article class="card click-card thread-card" data-open-thread="${t.id}"><div class="card-head"><span class="chip">🌱 THREAD</span><span class="thread-count">${fs.length}</span></div><div class="title">${esc(t.title)}</div>
+    ${t.question?`<div class="source-sub" style="margin-top:5px">지금의 질문 · ${esc(t.question)}</div>`:""}${last?`<div class="thought" style="margin-top:11px">${esc(last.thought||last.text||"")}</div>`:""}
+    <div class="meta"><span class="status">생각 ${fs.length}개</span><span class="status">Studio ${state.projects.filter(p=>p.threadId===t.id).length}개</span></div></article>`;
+}
+function openThread(id){
+  state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
+  $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
+  $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button></div>
+    <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
+    <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div><div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div><div style="text-align:right"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div></div>
+    <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>정답보다, 내가 어떻게 달라졌는지를 봅니다.</p></div></div>
+    <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","Garden의 다른 조각을 이 Thread에 연결해보세요.")}</div></div>`;
+}
+function fragmentCard(f,compact=false){
+  const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
+  return `<article class="card"><div class="card-head"><span class="chip">${src?sourceIcon(src.type):fragIcon(f.type)} ${src?esc(src.title):f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
+    ${f.context?`<div class="source-sub">${esc(f.context)}</div>`:""}${f.externalText?`<div class="source-line">${esc(f.externalText)}${f.locator?`<div class="date" style="margin-top:4px">${esc(f.locator)}</div>`:""}</div>`:""}
+    <div class="thought">${esc(f.thought||f.text||"")}</div>${f.choice?`<div class="meta"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
+    <div class="meta">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>
+    ${compact?"":`<div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div>`}</article>`;
+}
+function renderStudio(){
+  $("projectList").innerHTML=state.projects.length?state.projects.map(projectCard).join(""):empty("🏭","아직 Studio 작업이 없어요.","Thread 하나를 골라 콘텐츠 작업대로 보내보세요.");
+}
+const templates={
+  blog:[
+    {id:"hook",title:"1. 시작 / Hook",prompt:"첫 문단에서 독자가 멈춰 읽게 할 내 경험이나 질문은?"},
+    {id:"experience",title:"2. 나의 경험",prompt:"내가 실제로 겪은 장면·실패·사건은?"},
+    {id:"outside",title:"3. 외부의 시선",prompt:"책·미디어·누군가의 말 중 이 생각을 확장한 재료는?"},
+    {id:"meaning",title:"4. 나의 해석",prompt:"그래서 나는 이것을 어떻게 다르게 보게 되었나?"},
+    {id:"counter",title:"5. 반론",prompt:"반대로 생각하는 사람은 뭐라고 말할까? 내가 합리화하고 있는 건 없나?"},
+    {id:"conclusion",title:"6. 지금의 결론",prompt:"지금 시점에서 내가 말하고 싶은 한 문장은?"}
+  ],
+  shorts:[
+    {id:"hook",title:"1. 3초 Hook",prompt:"스크롤을 멈추게 할 한 문장은?"},
+    {id:"situation",title:"2. 상황",prompt:"아주 짧게 맥락을 보여준다."},
+    {id:"turn",title:"3. 전환",prompt:"예상과 다른 생각이나 깨달음은?"},
+    {id:"point",title:"4. 핵심 한 문장",prompt:"이 콘텐츠의 단 하나의 메시지는?"},
+    {id:"close",title:"5. 마무리",prompt:"시청자 머릿속에 남길 질문 또는 문장은?"}
+  ],
+  podcast:[
+    {id:"open",title:"1. 오프닝 질문",prompt:"오늘 청취자에게 던질 질문은?"},
+    {id:"line",title:"2. 책/미디어 한 줄",prompt:"오늘 이야기를 여는 외부의 한 줄은?"},
+    {id:"experience",title:"3. 내 경험",prompt:"그 한 줄과 맞닿는 내 실제 이야기는?"},
+    {id:"counter",title:"4. 반론 / 백번읽꾸",prompt:"이 생각에 가장 날카롭게 반박한다면?"},
+    {id:"meaning",title:"5. 내 생각",prompt:"반론을 지나고도 남는 내 생각은?"},
+    {id:"question",title:"6. 청취자 질문",prompt:"듣는 사람에게 어떤 질문을 남길까?"}
+  ]
+};
+function projectSlots(p){const base=templates[p.format]||templates.blog;return base.map(b=>({ ...b, ...(p.slots?.find(s=>s.id===b.id)||{text:"",fragmentIds:[]})}))}
+function projectCard(p){
+  const slots=projectSlots(p),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
+  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${p.format==="shorts"?"Shorts":p.format==="podcast"?"Podcast":"블로그"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div></article>`;
+}
+function openProject(id){
+  state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
+  $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
+  const pool=t?threadFragments(t.id):state.fragments.slice(0,12),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
+  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
+    <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div></div>
+    <div class="studio-layout section">
+      <aside class="material-pool"><div class="section-head"><div><h2>재료함</h2><p>내가 이미 남긴 생각.</p></div></div>${pool.length?pool.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,120))}</b></div>`).join(""):empty("🧺","재료가 없어요.","Garden에서 생각을 먼저 연결해보세요.")}</aside>
+      <section><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
+      ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block" data-save-all-slots="${p.id}" type="button">작업대 저장</button></section>
+    </div>`;
+}
+function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(s.type)} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
+function slotHTML(p,s){
+  const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
+  return `<div class="slot ${(s.text||attached.length)?"done":""}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div><div class="slot-prompt">${esc(s.prompt)}</div>
+    ${attached.map(f=>`<div class="material">${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
+    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea></div>`;
+}
+function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
+
+function setCaptureMode(mode){$("captureMode").value=mode;$$(".mode-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));$("captureContextWrap").classList.toggle("hidden",mode==="thought");$("captureChoiceWrap").classList.toggle("hidden",mode!=="decision");$("captureLabel").textContent=mode==="thought"?"무슨 생각이 났나요?":mode==="moment"?"무슨 일이 마음에 남았나요?":"이 결정에 대해 지금 무엇을 생각하나요?"}
+function openCapture(mode="thought",prefill=""){$("captureId").value="";$("captureText").value=prefill;$("captureContext").value="";$("captureChoice").value="";setCaptureMode(mode);refreshSelects();$("captureDialog").showModal();setTimeout(()=>$("captureText").focus(),60)}
+async function saveCapture(){
+  const text=$("captureText").value.trim();if(!text)return toast("한 줄만 남겨주세요.");
+  const threadId=$("captureThread").value,f={id:uid(),type:$("captureMode").value,thought:text,context:$("captureContext").value.trim(),choice:$("captureChoice").value.trim(),threadIds:threadId?[threadId]:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();toast("생각을 붙잡았습니다. 🌱");
+}
+function openSourceDialog(s=null){$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=s?.status||"active";$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceDialog").showModal()}
+async function saveSource(){
+  const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");const old=state.sources.find(s=>s.id===$("sourceId").value);
+  const s={id:old?.id||uid(),type:$("sourceType").value,status:$("sourceStatus").value,title,creator:$("sourceCreator").value.trim(),platform:$("sourcePlatform").value.trim(),image:$("sourceImage").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];await persist("sources",s);$("sourceDialog").close();renderAll();if(old)openSource(s.id);toast("Library에 저장했습니다.");
+}
+async function saveSourceFragment(sourceId){
+  const thought=$("sourceThought").value.trim(),externalText=$("sourceExternalText").value.trim();if(!thought&&!externalText)return toast("문장이나 내 생각 중 하나는 남겨주세요.");
+  const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.fragments.unshift(f);await persist("fragments",f);openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
+}
+function openThreadDialog(t=null){$("threadId").value=t?.id||"";$("threadTitleInput").value=t?.title||"";$("threadQuestion").value=t?.question||"";$("threadDialog").showModal()}
+async function saveThread(){
+  const title=$("threadTitleInput").value.trim();if(!title)return toast("Thread 이름을 적어주세요.");const old=state.threads.find(t=>t.id===$("threadId").value);
+  const t={id:old?.id||uid(),title,question:$("threadQuestion").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.threads=old?state.threads.map(x=>x.id===t.id?t:x):[t,...state.threads];await persist("threads",t);
+  if(!old && state.pendingLinkFragmentId){
+    const f=state.fragments.find(x=>x.id===state.pendingLinkFragmentId);
+    if(f){f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f);}
+    state.pendingLinkFragmentId=null;
+  }
+  $("threadDialog").close();renderAll();toast(old?"Thread를 수정했습니다.":"생각의 줄기를 만들었습니다. 🌱");
+}
+function openLinkDialog(fid){state.pendingLinkFragmentId=fid;$("linkFragmentId").value=fid;$("linkThreadList").innerHTML=state.threads.length?state.threads.map(t=>`<button class="card click-card" data-link-to-thread="${t.id}" type="button" style="width:100%;text-align:left;margin-bottom:7px"><div class="title">${esc(t.title)}</div><div class="source-sub">생각 ${threadFragments(t.id).length}개</div></button>`).join(""):empty("🌱","아직 Thread가 없어요.","새 Thread를 먼저 만들어보세요.");$("linkDialog").showModal()}
+async function linkFragment(fid,tid){
+  const f=state.fragments.find(x=>x.id===fid);if(!f)return;f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
+}
+async function addThreadThought(tid){
+  const el=$("threadThoughtInput"),text=el?.value.trim();if(!text)return toast("한 줄을 적어주세요.");const f={id:uid(),type:"thought",thought:text,threadIds:[tid],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};state.fragments.unshift(f);await persist("fragments",f);openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
+}
+function openProjectDialog(threadId=""){
+  $("projectId").value="";$("projectTitleInput").value="";$("projectFormat").value="blog";refreshSelects();$("projectThread").value=threadId;$("projectDialog").showModal();
+}
+async function saveProject(){
+  const title=$("projectTitleInput").value.trim();if(!title)return toast("프로젝트 제목을 적어주세요.");const format=$("projectFormat").value;
+  const p={id:uid(),title,format,threadId:$("projectThread").value,slots:templates[format].map(s=>({id:s.id,text:"",fragmentIds:[]})),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  state.projects.unshift(p);await persist("projects",p);$("projectDialog").close();renderStudio();openProject(p.id);toast("Studio 작업대를 만들었습니다.");
+}
+function openAttachDialog(pid,slotId){
+  $("attachProjectId").value=pid;$("attachSlotId").value=slotId;const p=state.projects.find(x=>x.id===pid),pool=p?.threadId?threadFragments(p.threadId):state.fragments;
+  $("attachFragmentList").innerHTML=pool.length?pool.map(f=>`<button class="card click-card" data-attach-fragment="${f.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${srcLabel(f)}</div><div class="body">${esc((f.thought||f.text||f.externalText||"").slice(0,180))}</div></button>`).join(""):empty("🧺","연결할 재료가 없어요.","Garden에서 생각을 먼저 쌓아보세요.");$("attachDialog").showModal();
+}
+async function attachFragment(pid,slotId,fid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p),slot=slots.find(s=>s.id===slotId);slot.fragmentIds=[...new Set([...(slot.fragmentIds||[]),fid])];p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);$("attachDialog").close();openProject(pid);toast("재료를 배치했습니다.");
+}
+async function saveAllSlots(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p);$$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value.trim()});p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);renderStudio();openProject(pid);toast("작업대를 저장했습니다.");
+}
+async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return;await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.")}
+async function deleteProject(pid){if(!confirm("이 Studio 프로젝트를 삭제할까요?"))return;await remove("projects",pid);setView("studio");toast("프로젝트를 삭제했습니다.")}
+
+function seedDemoObjects(){
+  const s1={id:uid(),type:"book",status:"active",title:"미드나잇 라이브러리",creator:"Matt Haig",platform:"독서",image:"",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const s2={id:uid(),type:"media",status:"active",title:"꾸준함에 관한 YouTube 영상",creator:"",platform:"YouTube",image:"",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const t={id:uid(),title:"꾸준함에 대하여",question:"멈추지 않는 것만이 정말 꾸준함일까?",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const mkDate=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toLocaleDateString("en-CA")};
+  const fs=[
+    {id:uid(),type:"source",sourceId:s1.id,externalText:"선택하지 않은 삶을 우리는 쉽게 이상화한다.",locator:"p.132",thought:"후회는 선택 자체보다 다른 삶을 완벽하게 상상해서 커지는 걸지도 모르겠다.",threadIds:[t.id],date:mkDate(90),createdAt:new Date(Date.now()-90*86400000).toISOString(),updatedAt:new Date().toISOString()},
+    {id:uid(),type:"moment",context:"예전에 중단했던 프로젝트들을 떠올리며",thought:"나는 무언가를 지속하지 못하는 사람 같다고 자주 생각한다.",threadIds:[t.id],date:mkDate(35),createdAt:new Date(Date.now()-35*86400000).toISOString(),updatedAt:new Date().toISOString()},
+    {id:uid(),type:"source",sourceId:s2.id,externalText:"완벽한 루틴보다 다시 돌아오는 장치가 중요하다.",locator:"12:31",thought:"내게 필요한 건 의지력이 아니라 복귀 버튼일지도 모른다.",threadIds:[t.id],date:mkDate(10),createdAt:new Date(Date.now()-10*86400000).toISOString(),updatedAt:new Date().toISOString()},
+    {id:uid(),type:"thought",thought:"꾸준한 사람은 한 번도 멈추지 않는 사람이 아니라 계속 돌아오는 사람 아닐까?",threadIds:[t.id],date:mkDate(2),createdAt:new Date(Date.now()-2*86400000).toISOString(),updatedAt:new Date().toISOString()}
+  ];
+  const p={id:uid(),title:"나는 왜 늘 시작하고 그만둘까",format:"blog",threadId:t.id,slots:templates.blog.map(s=>({id:s.id,text:"",fragmentIds:[]})),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  return {sources:[s1,s2],threads:[t],fragments:fs,projects:[p]};
+}
+async function seedDemo(){const d=seedDemoObjects();for(const k of ["sources","threads","fragments","projects"]){for(const x of d[k]){state[k].push(x);await persist(k,x)}}renderAll();toast("전체 흐름 샘플을 넣었습니다.")}
+async function migrateV01(){
+  let d;try{d=JSON.parse(localStorage.getItem("thoughtGarden_v01")||"null")}catch{}if(!d?.fragments?.length)return toast("이 브라우저에서 V0.1 기록을 찾지 못했습니다.");
+  let n=0;for(const old of d.fragments){const f={id:old.id||uid(),type:["moment","decision"].includes(old.type)?old.type:"thought",thought:old.myThought||old.content||old.quote||old.title||"",context:old.people||old.sourceTitle||"",choice:old.decisionOptions||"",externalText:old.quote||"",locator:old.page?`p.${old.page}`:"",threadIds:[],date:old.date||today(),createdAt:old.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};state.fragments.push(f);await persist("fragments",f);n++}renderAll();toast(`V0.1 기록 ${n}개를 가져왔습니다.`)
+}
+function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
+async function importData(file){try{const d=JSON.parse(await file.text());for(const k of ["sources","fragments","threads","projects"]){if(Array.isArray(d[k])){const m=new Map(state[k].map(x=>[x.id,x]));d[k].forEach(x=>m.set(x.id||uid(),x));state[k]=[...m.values()]}}if(state.firebase.connected){for(const k of ["sources","fragments","threads","projects"])for(const x of state[k])await persist(k,x)}else localSave();renderAll();toast("백업을 가져왔습니다.")}catch(e){console.error(e);toast("백업 파일을 읽지 못했습니다.")}}
+
+document.addEventListener("click",async e=>{
+  const n=e.target.closest("[data-view-target]");if(n)return setView(n.dataset.viewTarget);
+  const g=e.target.closest("[data-go]");if(g)return setView(g.dataset.go);
+  const c=e.target.closest("[data-close]");if(c)return $(c.dataset.close).close();
+  const m=e.target.closest("[data-mode]");if(m)return setCaptureMode(m.dataset.mode);
+  const os=e.target.closest("[data-open-source]");if(os)return openSource(os.dataset.openSource);
+  if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
+  const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
+  const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
+  const ot=e.target.closest("[data-open-thread]");if(ot)return openThread(ot.dataset.openThread);
+  if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
+  const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
+  const st=e.target.closest("[data-save-thread-thought]");if(st)return addThreadThought(st.dataset.saveThreadThought);
+  const li=e.target.closest("[data-link]");if(li)return openLinkDialog(li.dataset.link);
+  const lt=e.target.closest("[data-link-to-thread]");if(lt)return linkFragment($("linkFragmentId").value,lt.dataset.linkToThread);
+  const ct=e.target.closest("[data-continue]");if(ct){const f=state.fragments.find(x=>x.id===ct.dataset.continue);return openCapture("thought",`예전의 나는 이렇게 생각했다.\n“${f?.thought||f?.text||""}”\n\n지금은 `)}
+  const df=e.target.closest("[data-delete-fragment]");if(df)return deleteFragment(df.dataset.deleteFragment);
+  const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
+  const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
+  if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
+  const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
+  const saveSlots=e.target.closest("[data-save-all-slots]");if(saveSlots)return saveAllSlots(saveSlots.dataset.saveAllSlots);
+  const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
+});
+$("fab").addEventListener("click",()=>openCapture("thought"));$("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
+$("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",renderGarden);
+$("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;renderGarden()});
+$("reshuffle").addEventListener("click",()=>{state.resurfaceId=null;renderResurface()});$("openSettings").addEventListener("click",()=>$("settingsDialog").showModal());
+$("linkNewThread").addEventListener("click",()=>{$("linkDialog").close();openThreadDialog()});
+$("seedDemo").addEventListener("click",seedDemo);$("migrateV01").addEventListener("click",migrateV01);$("exportData").addEventListener("click",exportData);
+$("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
+$("saveFirebaseConfig").addEventListener("click",async()=>{try{const raw=$("firebaseConfigInput").value.trim(),cfg=normalizeFirebaseConfig(raw);if(!cfg.apiKey||!cfg.projectId)throw new Error();localStorage.setItem(FIREBASE_KEY,raw);$("settingsDialog").close();await connectFirebase()}catch{toast("Firebase config 형식을 확인해주세요.")}});
+$("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
+["captureDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+connectFirebase();
+</script>
 </body>
 </html>
