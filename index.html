@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
-  <title>생각의 텃밭 · V0.6</title>
+  <title>생각의 텃밭 · V0.7.1</title>
   <style>
     :root{
       --bg:#f5f2e9; --panel:#fffdf8; --panel2:#efede5; --text:#24251f; --muted:#77786f;
@@ -188,6 +188,9 @@
     .api-status{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
     .api-badge{background:var(--panel2);color:var(--muted);border-radius:999px;padding:5px 8px;font-size:.7rem}
     .api-badge.ok{background:var(--accent2);color:var(--accent)}
+
+
+    .account-name{display:inline-flex;align-items:center;gap:7px;margin-top:8px;background:var(--accent2);color:var(--accent);padding:6px 9px;border-radius:999px;font-size:.74rem;font-weight:800}
 
     @media(max-width:680px){.api-search-row{grid-template-columns:1fr}.dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.danger-grid{grid-template-columns:1fr}.recent-summary-grid{grid-template-columns:1fr}.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
   </style>
@@ -459,13 +462,39 @@
   </div>
 </dialog>
 
+<dialog id="accountDialog">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">SYNC</div><h2 id="accountDialogTitle">어느 기기에서든 같은 텃밭</h2></div>
+      <button class="close-btn" data-close="accountDialog" type="button">✕</button>
+    </div>
+    <div class="card" style="box-shadow:none">
+      <div style="font-size:2rem;margin-bottom:8px">☁️</div>
+      <div class="title" id="accountDialogLead">Google 계정으로 연결하세요.</div>
+      <div class="body" id="accountDialogBody" style="margin-top:7px">생각, Library, Thread, Studio와 API 설정을 같은 계정으로 불러옵니다.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" data-close="accountDialog" type="button">나중에</button>
+      <button class="btn primary" id="accountDialogGoogleBtn" type="button">Google로 연결</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="settingsDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>저장과 데이터</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
-    <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>로컬 저장 모드</strong><div class="helper" id="storageText">이 브라우저에 저장됩니다.</div></div>
+    <div class="settings-card">
+      <strong>👤 계정과 기기 동기화</strong>
+      <div class="helper" id="accountText">계정 상태를 확인 중입니다.</div>
+      <div class="actions">
+        <button class="btn primary" id="googleAccountBtn" type="button">Google 계정 연결</button>
+        <button class="btn" id="signOutBtn" type="button">로그아웃</button>
+      </div>
+    </div>
+    <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
     <div class="settings-card">
       <strong>🔎 콘텐츠 검색 API</strong>
-      <div class="helper">국내 책은 알라딘을 우선 사용합니다. 알라딘 TTB Key, TMDB, YouTube 키는 이 브라우저에만 저장합니다. Google Books는 보조 검색으로 사용합니다.</div>
+      <div class="helper">국내 책은 알라딘을 우선 사용합니다. Google 계정을 연결하면 알라딘/TMDB/YouTube 설정도 내 Firebase 계정에 동기화되어 다른 기기에서 다시 입력할 필요가 없습니다.</div>
       <div class="field"><label for="aladinKeyInput">알라딘 TTB Key</label><input class="input" id="aladinKeyInput" placeholder="알라딘 OpenAPI 인증키"></div>
       <div class="field"><label for="tmdbKeyInput">TMDB API Read Token 또는 v3 API Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
       <div class="field"><label for="youtubeKeyInput">YouTube Data API Key</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
@@ -473,10 +502,8 @@
       <div class="api-status" id="apiStatus"></div>
     </div>
     <div class="settings-card">
-      <strong>🔥 Firebase 연결</strong>
-      <div class="helper">Firebase Console에서 복사한 <code class="inline">const firebaseConfig = { ... };</code> 전체 또는 JSON만 그대로 붙여넣어도 됩니다. 사진·음성·영상은 Firebase Storage가 활성화되어 있을 때 저장됩니다.</div>
-      <div class="field"><textarea class="textarea" id="firebaseConfigInput" placeholder='const firebaseConfig = { apiKey: "...", projectId: "..." };'></textarea></div>
-      <div class="actions"><button class="btn primary" id="saveFirebaseConfig" type="button">연결 저장</button><button class="btn danger" id="clearFirebaseConfig" type="button">연결 해제</button></div>
+      <strong>🔥 Firebase 프로젝트</strong>
+      <div class="helper"><b>idea-pocket-56063</b> 프로젝트를 앱에 기본 연결했습니다. 이제 새 기기에서 Firebase config를 다시 붙여넣을 필요가 없습니다. 사진·음성·영상은 Firebase Storage를 사용합니다.</div>
     </div>
     <div class="settings-card"><strong>🧪 샘플 흐름</strong><div class="helper">Source → Fragment → Thread → Studio를 한 번에 확인하는 예시 데이터를 넣습니다.</div><button class="btn soft" id="seedDemo" type="button" style="margin-top:9px">샘플 데이터 넣기</button></div>
     <div class="settings-card"><strong>♻️ V0.1 로컬 데이터</strong><div class="helper">이 브라우저에 이전 버전 기록이 남아 있으면 V0.2 구조로 가져옵니다.</div><button class="btn" id="migrateV01" type="button" style="margin-top:9px">V0.1 기록 가져오기</button></div>
@@ -500,10 +527,18 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys";
+const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
+const DEFAULT_FIREBASE_CONFIG={
+  apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
+  authDomain:"idea-pocket-56063.firebaseapp.com",
+  projectId:"idea-pocket-56063",
+  storageBucket:"idea-pocket-56063.firebasestorage.app",
+  messagingSenderId:"894399979515",
+  appId:"1:894399979515:web:834a298e37ef05dbd0f55e"
+};
 const state={sources:[],fragments:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
-  firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null},
+  firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[]};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -516,6 +551,43 @@ const fragIcon=t=>({thought:"💭",moment:"🌿",decision:"⚖️",source:"✦"}
 
 function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2100)}
 function getApiKeys(){try{return JSON.parse(localStorage.getItem(API_KEY_STORE)||"{}")}catch{return {}}}
+function renderAccountStatus(){
+  const u=state.firebase.user;
+  const text=$("accountText"),btn=$("googleAccountBtn"),out=$("signOutBtn");
+  if(!text||!btn||!out)return;
+  if(!u){
+    text.innerHTML="아직 Google 계정에 연결되지 않았습니다. 이 기기에서만 임시로 사용할 수 있습니다.";
+    btn.textContent="Google로 로그인";btn.classList.remove("hidden");out.classList.add("hidden");
+  }else if(u.isAnonymous){
+    text.innerHTML="현재는 <b>익명 계정</b>입니다. 지금 Google 계정을 연결하면 기존 생각을 그대로 유지하면서 멀티기기 계정으로 바뀝니다.";
+    btn.textContent="기존 데이터에 Google 계정 연결";btn.classList.remove("hidden");out.classList.add("hidden");
+  }else{
+    const name=esc(u.displayName||u.email||"Google 사용자");
+    text.innerHTML=`동기화 계정 <span class="account-name">✓ ${name}</span><br>다른 기기에서도 같은 Google 계정으로 로그인하면 같은 데이터를 불러옵니다.`;
+    btn.textContent="Google 계정 연결됨";btn.classList.add("hidden");out.classList.remove("hidden");
+  }
+}
+async function saveCloudApiKeys(keys){
+  if(!state.firebase.connected||!state.firebase.uid)return;
+  const {api,db,uid}=state.firebase;
+  await api.setDoc(api.doc(db,"users",uid,"settings","private"),{apiKeys:keys,updatedAtServer:api.serverTimestamp()},{merge:true});
+}
+async function loadCloudApiKeys({pushLocal=false}={}){
+  if(!state.firebase.connected||!state.firebase.uid)return;
+  const {api,db,uid}=state.firebase;
+  const ref=api.doc(db,"users",uid,"settings","private");
+  const snap=await api.getDoc(ref);
+  const local=getApiKeys();
+  if(pushLocal && Object.values(local).some(Boolean)){
+    await saveCloudApiKeys(local);
+    return;
+  }
+  if(snap.exists()&&snap.data()?.apiKeys){
+    localStorage.setItem(API_KEY_STORE,JSON.stringify(snap.data().apiKeys));
+  }else if(Object.values(local).some(Boolean)){
+    await saveCloudApiKeys(local);
+  }
+}
 function renderApiSettings(){
   const k=getApiKeys();
   $("aladinKeyInput").value=k.aladin||"";
@@ -576,32 +648,123 @@ function normalizeFirebaseConfig(raw){
   s=s.replace(/([{,]\s*)([A-Za-z_$][\w$]*)(\s*:)/g,'$1"$2"$3').replace(/'/g,'"');
   return JSON.parse(s);
 }
-async function connectFirebase(){
-  const raw=localStorage.getItem(FIREBASE_KEY); if(!raw){setFirebaseStatus(false);localLoad();return}
+async function waitInitialAuth(auth,authApi){
+  return await new Promise((resolve,reject)=>{
+    const tm=setTimeout(()=>{off();reject(new Error("인증 상태 확인 시간 초과"))},8000);
+    const off=authApi.onAuthStateChanged(auth,u=>{clearTimeout(tm);off();resolve(u)},reject);
+  });
+}
+function showAccountDialog(mode){
+  if(!$("accountDialog")||$("accountDialog").open)return;
+  if(mode==="anonymous"){
+    $("accountDialogTitle").textContent="기존 텃밭을 Google 계정에 연결";
+    $("accountDialogLead").textContent="지금 연결하면 현재 데이터가 그대로 유지됩니다.";
+    $("accountDialogBody").textContent="익명 Firebase UID를 Google 계정에 연결해 같은 UID를 계속 사용합니다. 이후 다른 기기에서는 Google 로그인만 하면 됩니다.";
+    $("accountDialogGoogleBtn").textContent="기존 데이터에 Google 연결";
+  }else{
+    $("accountDialogTitle").textContent="어느 기기에서든 같은 텃밭";
+    $("accountDialogLead").textContent="Google 계정으로 로그인하세요.";
+    $("accountDialogBody").textContent="생각, Library, Thread, Studio와 API 설정을 같은 계정에서 불러옵니다.";
+    $("accountDialogGoogleBtn").textContent="Google로 로그인";
+  }
+  $("accountDialog").showModal();
+}
+async function activateFirebaseUser(user,{pushLocalKeys=false}={}){
+  state.firebase.user=user;state.firebase.uid=user.uid;state.firebase.connected=true;
+  setFirebaseStatus(true);
+  await firebaseLoad();
+  await loadCloudApiKeys({pushLocal:pushLocalKeys});
+  renderApiSettings();renderAccountStatus();
+  if($("accountDialog")?.open)$("accountDialog").close();
+}
+async function beginGoogleAuth(){
+  const {api,auth}=state.firebase;
+  if(!api||!auth)return toast("Firebase 연결이 아직 준비되지 않았습니다.");
+  const provider=new api.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:"select_account"});
+  const current=auth.currentUser;
+  const isMobile=window.matchMedia("(pointer:coarse)").matches || window.innerWidth<720;
+  const wasAnonymous=!!current?.isAnonymous;
   try{
-    const config=normalizeFirebaseConfig(raw); if(!config.apiKey||!config.projectId)throw new Error("config 형식 확인");
+    if(isMobile){
+      localStorage.setItem(GOOGLE_LINK_PENDING,wasAnonymous?"link":"signin");
+      if(wasAnonymous)await api.linkWithRedirect(current,provider);
+      else await api.signInWithRedirect(auth,provider);
+      return;
+    }
+    const result=wasAnonymous?await api.linkWithPopup(current,provider):await api.signInWithPopup(auth,provider);
+    await activateFirebaseUser(result.user,{pushLocalKeys:wasAnonymous});
+    if(wasAnonymous)toast("기존 텃밭을 Google 계정에 연결했습니다. ☁️");
+    else toast("Google 계정으로 동기화를 시작했습니다. ☁️");
+  }catch(e){
+    console.error(e);
+    if(e.code==="auth/credential-already-in-use"||e.code==="auth/account-exists-with-different-credential"){
+      toast("이 Google 계정은 이미 다른 Firebase 계정에 연결되어 있습니다.");
+    }else if(e.code!=="auth/popup-closed-by-user"){
+      toast("Google 계정 연결에 실패했습니다.");
+    }
+  }
+}
+async function signOutGarden(){
+  if(!state.firebase.auth)return;
+  if(!confirm("이 기기에서 Google 계정을 로그아웃할까요?\n클라우드 데이터는 삭제되지 않습니다."))return;
+  await state.firebase.api.signOut(state.firebase.auth);
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(API_KEY_STORE);
+  state.sources=[];state.fragments=[];state.threads=[];state.projects=[];
+  state.firebase.user=null;state.firebase.uid=null;state.firebase.connected=false;
+  setFirebaseStatus(false);renderAll();renderAccountStatus();$("settingsDialog").close();showAccountDialog("signin");
+}
+async function connectFirebase(){
+  try{
+    const raw=localStorage.getItem(FIREBASE_KEY);
+    const config=raw?normalizeFirebaseConfig(raw):DEFAULT_FIREBASE_CONFIG;
     const [appApi,authApi,fireApi,storageApi]=await Promise.all([
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js")]);
     if(state.firebase.app&&state.firebase.api?.deleteApp)await state.firebase.api.deleteApp(state.firebase.app);
-    const app=appApi.initializeApp(config,"garden-"+Date.now()),auth=authApi.getAuth(app),db=fireApi.getFirestore(app),storage=storageApi.getStorage(app);
-    state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi}};
-    await authApi.signInAnonymously(auth);
-    await new Promise((resolve,reject)=>{const tm=setTimeout(()=>reject(new Error("인증 시간 초과")),8000);const off=authApi.onAuthStateChanged(auth,u=>{if(u){clearTimeout(tm);off();state.firebase.uid=u.uid;state.firebase.connected=true;resolve()}},reject)});
-    setFirebaseStatus(true);await firebaseLoad();toast("Firebase에 연결되었습니다.");
-  }catch(e){console.error(e);state.firebase.connected=false;setFirebaseStatus(false,e.message);localLoad();toast("Firebase 연결 실패 · 로컬 모드로 열었습니다.");}
+    const app=appApi.initializeApp(config,"garden-"+Date.now()),
+          auth=authApi.getAuth(app),db=fireApi.getFirestore(app),storage=storageApi.getStorage(app);
+    state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi},user:null,ready:true};
+
+    let redirectResult=null;
+    try{redirectResult=await authApi.getRedirectResult(auth)}catch(e){console.warn("redirect result",e)}
+    let user=redirectResult?.user || auth.currentUser || await waitInitialAuth(auth,authApi);
+    const pending=localStorage.getItem(GOOGLE_LINK_PENDING);
+    localStorage.removeItem(GOOGLE_LINK_PENDING);
+
+    if(user){
+      await activateFirebaseUser(user,{pushLocalKeys:pending==="link"});
+      if(user.isAnonymous)showAccountDialog("anonymous");
+      else if(redirectResult)toast("Google 계정 동기화가 연결되었습니다. ☁️");
+    }else{
+      state.firebase.user=null;state.firebase.connected=false;setFirebaseStatus(false);
+      localLoad();renderAccountStatus();showAccountDialog("signin");
+    }
+  }catch(e){
+    console.error(e);state.firebase.connected=false;state.firebase.ready=false;setFirebaseStatus(false,e.message);localLoad();renderAccountStatus();toast("Firebase 연결 확인에 실패해 로컬 모드로 열었습니다.");
+  }
 }
 function setFirebaseStatus(ok,error=""){
-  $("storageStatus").innerHTML=ok?'<span class="status-dot ok"></span>Firebase 동기화 모드':'<span class="status-dot warn"></span>로컬 저장 모드';
-  $("storageText").textContent=ok?"Firestore의 개인 사용자 공간에 저장됩니다.":error?`연결 오류: ${error}`:"이 브라우저에 저장됩니다.";
-  $("firebaseConfigInput").value=localStorage.getItem(FIREBASE_KEY)||"";
+  if(!$("storageStatus"))return;
+  if(ok){
+    const u=state.firebase.user;
+    $("storageStatus").innerHTML='<span class="status-dot ok"></span>클라우드 동기화 모드';
+    $("storageText").textContent=u?.isAnonymous?"현재 기기의 익명 계정에 저장 중입니다. Google 계정을 연결하면 멀티기기 동기화가 됩니다.":"Google 계정 기준으로 Firestore/Storage에 동기화됩니다.";
+  }else{
+    $("storageStatus").innerHTML='<span class="status-dot warn"></span>로컬 / 로그인 대기';
+    $("storageText").textContent=error?`연결 오류: ${error}`:"Google 로그인 전에는 이 기기의 로컬 데이터만 사용할 수 있습니다.";
+  }
 }
 async function firebaseLoad(){
   const {api,db,uid}=state.firebase;
-  for(const key of ["sources","fragments","threads","projects"]){const snap=await api.getDocs(api.collection(db,"users",uid,key));state[key]=snap.docs.map(d=>({id:d.id,...d.data()}))}
-  renderAll();
+  for(const key of ["sources","fragments","threads","projects"]){
+    const snap=await api.getDocs(api.collection(db,"users",uid,key));
+    state[key]=snap.docs.map(d=>({id:d.id,...d.data()}));
+  }
+  localSave();renderAll();
 }
 async function persist(collectionName,obj){
   if(state.firebase.connected){
@@ -848,7 +1011,20 @@ function aladinJsonpSearch(query){
     const script=document.createElement("script");
     const cleanup=()=>{try{delete window[cb]}catch{};script.remove();clearTimeout(timer)};
     const timer=setTimeout(()=>{cleanup();reject(new Error("알라딘 검색 응답 시간이 초과되었습니다."))},9000);
-    window[cb]=(data)=>{cleanup();resolve(data)};
+    window[cb]=(...args)=>{
+      let success=true,data;
+      if(args.length>=2 && typeof args[0]==="boolean"){
+        success=args[0];data=args[1];
+      }else{
+        data=args[0];
+      }
+      cleanup();
+      if(!success){
+        reject(new Error(data?.errorMessage||data?.message||"알라딘 도서검색에 실패했습니다."));
+        return;
+      }
+      resolve(data);
+    };
     script.onerror=()=>{cleanup();reject(new Error("알라딘 검색을 불러오지 못했습니다."))};
     const params=new URLSearchParams({
       ttbkey:key,
@@ -1206,7 +1382,10 @@ document.addEventListener("click",async e=>{
 });
 $("fab").addEventListener("click",()=>openCapture());$("homeCapture").addEventListener("click",()=>openCapture());
 $("menuTrigger").addEventListener("click",toggleMenu);
-$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();$("settingsDialog").showModal()});
+$("googleAccountBtn").addEventListener("click",beginGoogleAuth);
+$("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
+$("signOutBtn").addEventListener("click",signOutGarden);
+$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();renderAccountStatus();$("settingsDialog").showModal()});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
@@ -1233,10 +1412,14 @@ $("deleteAllThreads").addEventListener("click",deleteAllThreads);
 $("deleteAllProjects").addEventListener("click",deleteAllProjects);
 $("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
-$("saveApiKeys").addEventListener("click",()=>{localStorage.setItem(API_KEY_STORE,JSON.stringify({aladin:$("aladinKeyInput").value.trim(),tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()}));renderApiSettings();toast("검색 API 설정을 저장했습니다.")});
-$("saveFirebaseConfig").addEventListener("click",async()=>{try{const raw=$("firebaseConfigInput").value.trim(),cfg=normalizeFirebaseConfig(raw);if(!cfg.apiKey||!cfg.projectId)throw new Error();localStorage.setItem(FIREBASE_KEY,raw);$("settingsDialog").close();await connectFirebase()}catch{toast("Firebase config 형식을 확인해주세요.")}});
-$("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+$("saveApiKeys").addEventListener("click",async()=>{
+  const keys={aladin:$("aladinKeyInput").value.trim(),tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
+  localStorage.setItem(API_KEY_STORE,JSON.stringify(keys));
+  if(state.firebase.connected&&!state.firebase.user?.isAnonymous)await saveCloudApiKeys(keys);
+  renderApiSettings();
+  toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
+});
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
 </script>
 </body>
