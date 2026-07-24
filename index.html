@@ -691,7 +691,7 @@ function showAccountDialog(mode){
 async function activateFirebaseUser(user,{pushLocalKeys=false}={}){
   state.firebase.user=user;state.firebase.uid=user.uid;state.firebase.connected=true;
   setFirebaseStatus(true);
-  await firebaseLoad();
+  attachRealtime();
   await loadCloudApiKeys({pushLocal:pushLocalKeys});
   renderApiSettings();renderAccountStatus();
   if($("accountDialog")?.open)$("accountDialog").close();
@@ -729,6 +729,7 @@ async function signOutGarden(){
   if(!state.firebase.auth)return;
   if(!confirm("이 기기에서 Google 계정을 로그아웃할까요?\n클라우드 데이터는 삭제되지 않습니다."))return;
   await state.firebase.api.signOut(state.firebase.auth);
+  detachRealtime();
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(API_KEY_STORE);
   state.sources=[];state.fragments=[];state.threads=[];state.projects=[];
@@ -745,7 +746,10 @@ async function connectFirebase(){
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js")]);
     const app=appApi.getApps().find(a=>a.name==="garden")||appApi.initializeApp(config,"garden"),
-          auth=authApi.getAuth(app),db=fireApi.getFirestore(app),storage=storageApi.getStorage(app);
+          auth=authApi.getAuth(app),storage=storageApi.getStorage(app);
+    let db;
+    try{ db=fireApi.initializeFirestore(app,{localCache:fireApi.persistentLocalCache({tabManager:fireApi.persistentMultipleTabManager()})}); }
+    catch(e){ console.warn("오프라인 캐시 활성화 실패, 기본 모드로 진행",e); db=fireApi.getFirestore(app); }
     state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi},user:null,ready:true};
 
     let redirectResult=null;
@@ -777,6 +781,18 @@ function setFirebaseStatus(ok,error=""){
     $("storageText").textContent=error?`연결 오류: ${error}`:"Google 로그인 전에는 이 기기의 로컬 데이터만 사용할 수 있습니다.";
   }
 }
+let realtimeUnsub=[];
+function attachRealtime(){
+  detachRealtime();
+  const {api,db,uid}=state.firebase;
+  realtimeUnsub=["sources","fragments","threads","projects"].map(key=>
+    api.onSnapshot(api.collection(db,"users",uid,key),
+      snap=>{ state[key]=snap.docs.map(d=>({id:d.id,...d.data()})); localSave(); renderAll(); },
+      err=>{ console.warn("실시간 동기화 오류("+key+")",err); }
+    )
+  );
+}
+function detachRealtime(){ realtimeUnsub.forEach(u=>{try{u&&u()}catch(e){}}); realtimeUnsub=[]; }
 async function firebaseLoad(){
   const {api,db,uid}=state.firebase;
   for(const key of ["sources","fragments","threads","projects"]){
