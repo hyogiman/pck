@@ -856,14 +856,16 @@ function renderHome(){
   </div>`;
   $("homeProjects").innerHTML=state.projects.length?state.projects.slice(0,3).map(projectCard).join(""):empty("🏭","진행 중인 Studio가 없어요.","Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
 }
-function renderResurface(){
+function renderResurface(reshuffle){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
-  let f=c.find(x=>x.id===state.resurfaceId);if(!f){f=c[Math.floor(Math.random()*c.length)];state.resurfaceId=f.id}
+  if(!state.resurfaceSeen)state.resurfaceSeen=[];
+  let f=reshuffle?null:c.find(x=>x.id===state.resurfaceId);
+  if(!f){let pool=c.filter(x=>!state.resurfaceSeen.includes(x.id));if(!pool.length){state.resurfaceSeen=[];pool=c;}f=pool[Math.floor(Math.random()*pool.length)];state.resurfaceId=f.id;state.resurfaceSeen.push(f.id);}
   const src=state.sources.find(s=>s.id===f.sourceId);
   $("resurfaceBox").innerHTML=`<div class="card"><div class="card-head"><span class="chip">${fragIcon(f.type)} ${daysAgo(f.date||f.createdAt)}일 전</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
     ${src?`<div class="source-sub">${sourceIcon(src.type)} ${esc(src.title)}</div>`:""}
     ${f.externalText?`<div class="source-line">${esc(f.externalText)}</div>`:""}<div class="thought">${esc(f.thought||f.text||"")}</div>
-    <div class="actions"><button class="btn soft" data-continue="${f.id}" type="button">지금 생각 덧붙이기</button><button class="btn" data-link="${f.id}" type="button">🌱 Thread 연결</button></div></div>`;
+    <div class="actions"><button class="btn soft" data-continue="${f.id}" type="button">지금 생각 덧붙이기</button><button class="btn" data-link="${f.id}" type="button">🌱 Thread 연결</button><button class="btn" data-resurface-next type="button">🔀 다른 조각</button></div></div>`;
 }
 function renderLibrary(){
   const q=$("sourceSearch").value.trim().toLowerCase(),filter=$("sourceFilter").value;
@@ -975,11 +977,22 @@ function projectCard(p){
   const slots=projectSlots(p),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
   return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${p.format==="shorts"?"Shorts":p.format==="podcast"?"Podcast":"블로그"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div></article>`;
 }
+function downloadText(text,name){const b=new Blob([text],{type:"text/markdown;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();}
+function exportProject(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const slots=projectSlots(p);
+  const paras=slots.map(s=>(s.text||"").trim()).filter(Boolean);
+  if(!paras.length){toast("아직 작성한 내용이 없어요. 이야기 구조 칸을 채워보세요.");return}
+  const body=("# "+(p.title||"제목 없음")+"\n\n"+paras.join("\n\n")).trim();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(body).then(()=>toast("글이 복사됐어요 — 블로그에 붙여넣기 하세요. ✍️")).catch(()=>downloadText(body,(p.title||"draft")+".md"));
+  }else downloadText(body,(p.title||"draft")+".md");
+}
 function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
   const pool=t?threadFragments(t.id):state.fragments.slice(0,12),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
-  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
+  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div></div>
     <div class="studio-layout section">
       <aside class="material-pool"><div class="section-head"><div><h2>재료함</h2><p>내가 이미 남긴 생각.</p></div></div>${pool.length?pool.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,120))}</b></div>`).join(""):empty("🧺","재료가 없어요.","Garden에서 생각을 먼저 연결해보세요.")}</aside>
@@ -996,6 +1009,10 @@ function slotHTML(p,s){
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
+const CAPTURE_DRAFT_KEY="tg_capture_draft";
+function saveCaptureDraft(){try{localStorage.setItem(CAPTURE_DRAFT_KEY,JSON.stringify({t:$("captureText").value,e:$("captureExternal").value,l:$("captureLocator").value}))}catch(_){}}
+function clearCaptureDraft(){try{localStorage.removeItem(CAPTURE_DRAFT_KEY)}catch(_){}}
+function loadCaptureDraft(){try{return JSON.parse(localStorage.getItem(CAPTURE_DRAFT_KEY)||"null")}catch(_){return null}}
 function openCapture(prefill=""){
   $("captureText").value=prefill;
   $("captureExternal").value="";
@@ -1003,6 +1020,7 @@ function openCapture(prefill=""){
   state.pendingFiles.capture=[];renderPendingFiles("capture");$("captureFiles").value="";
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
+  if(!prefill){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
   $("captureDialog").showModal();
   setTimeout(()=>$("captureText").focus(),60);
 }
@@ -1015,7 +1033,7 @@ async function saveCapture(){
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id);
-    state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();
+    state.fragments.unshift(f);await persist("fragments",f);clearCaptureDraft();$("captureDialog").close();renderAll();
     $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
@@ -1456,6 +1474,8 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
+  const rn=e.target.closest("[data-resurface-next]");if(rn)return renderResurface(true);
+  const ep=e.target.closest("[data-export-project]");if(ep)return exportProject(ep.dataset.exportProject);
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot)return openThread(ot.dataset.openThread);
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
@@ -1482,7 +1502,7 @@ $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
 $("signOutBtn").addEventListener("click",signOutGarden);
 $("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();renderAccountStatus();$("settingsDialog").showModal()});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
-$("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("saveCapture").addEventListener("click",saveCapture);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
 $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
