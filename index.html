@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
-  <title>생각의 텃밭 · V0.2</title>
+  <title>생각의 텃밭 · V0.3</title>
   <style>
     :root{
       --bg:#f5f2e9; --panel:#fffdf8; --panel2:#efede5; --text:#24251f; --muted:#77786f;
@@ -91,41 +91,78 @@
     .toast{position:fixed;left:50%;bottom:calc(var(--nav) + 95px);transform:translate(-50%,18px);background:#24271f;color:white;padding:11px 15px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;z-index:100;font-size:.8rem;max-width:88vw;text-align:center}
     .toast.show{opacity:1;transform:translate(-50%,0)}
     .divider{height:1px;background:var(--line);margin:14px 0}
+
+    .topbar-minimal{margin-bottom:0;min-height:44px}
+    .home-minimal{
+      min-height:calc(100vh - var(--nav) - 100px);
+      display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+      text-align:center;padding:4vh 10px 3vh;
+    }
+    .home-title h1{margin:8px 0 5px;font-size:clamp(1.8rem,7vw,2.6rem);letter-spacing:-.055em}
+    .home-title p{margin:0;color:var(--muted);font-size:.86rem}
+    .home-capture{display:flex;flex-direction:column;align-items:center;margin-top:-2vh}
+    .home-question{font-size:1.05rem;font-weight:780;letter-spacing:-.025em;margin:0 0 22px}
+    .capture-orb{
+      width:154px;height:154px;border-radius:50%;border:1px solid #cbd8ce;
+      background:radial-gradient(circle at 35% 30%,#f9fcf9,var(--accent2));
+      color:var(--accent);box-shadow:0 18px 50px rgba(54,95,72,.15);
+      cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      transition:.18s;
+    }
+    .capture-orb:active{transform:scale(.97)}
+    .capture-plus{font-size:3.1rem;line-height:1;font-weight:300}
+    .capture-caption{font-size:.78rem;font-weight:850;margin-top:8px}
+    .home-hint{color:var(--muted);font-size:.78rem;line-height:1.6;margin:20px 0 0}
+    .today-count{
+      border:0;background:transparent;color:var(--muted);cursor:pointer;
+      display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:999px;
+      font-size:.78rem;
+    }
+    .today-count:hover{background:var(--panel2)}
+    .today-count strong{
+      min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:var(--accent2);
+      color:var(--accent);display:grid;place-items:center;font-size:.85rem
+    }
+    .capture-main{min-height:180px;font-size:1rem}
+    .subtle-add{border:0;background:transparent;color:var(--accent);font-weight:780;cursor:pointer;padding:11px 2px 2px}
+    .post-save-actions{display:grid;gap:8px;margin-top:16px}
+    .post-save-btn{
+      border:1px solid var(--line);background:var(--panel);border-radius:17px;padding:13px;
+      text-align:left;cursor:pointer;display:grid;grid-template-columns:34px 1fr;column-gap:8px;align-items:center
+    }
+    .post-save-btn>span{grid-row:1/3;font-size:1.3rem}.post-save-btn b{font-size:.88rem}.post-save-btn small{color:var(--muted);font-size:.72rem;margin-top:2px}
+
     @media(max-width:680px){.library-grid,.studio-layout{grid-template-columns:1fr}.material-pool{position:static}.source-card{grid-template-columns:60px 1fr}.cover{width:60px;height:82px}.metrics{gap:7px}.metric{padding:11px 8px}.form-grid{grid-template-columns:1fr}.inline-two{grid-template-columns:88px 1fr}.app{padding-left:13px;padding-right:13px}.fab{right:18px}}
   </style>
 </head>
 <body>
 <main class="app">
-  <header class="topbar">
-    <div class="brand"><h1>생각의 텃밭 <span style="color:var(--accent);font-size:.7rem">V0.2</span></h1><p id="dateLabel">세상에서 한 조각 → 나의 한 줄 → 하나의 이야기</p></div>
+  <header class="topbar topbar-minimal">
+    <div></div>
     <button class="icon-btn" id="openSettings" type="button" aria-label="설정">⚙️</button>
   </header>
 
   <section class="view active" data-view="home">
-    <div class="hero">
-      <span class="eyebrow">HOME</span>
-      <h2>기록을 더 많이 남기는 앱이 아니라,<br>남긴 생각을 다시 쓰게 만드는 앱.</h2>
-      <p>오늘은 한 줄만 붙잡아도 충분합니다. 쌓인 조각은 Garden에서 이어지고, Studio에서 콘텐츠가 됩니다.</p>
-      <div class="metrics">
-        <div class="metric"><small>생각 조각</small><strong id="metricFragments">0</strong></div>
-        <div class="metric"><small>자라는 Thread</small><strong id="metricThreads">0</strong></div>
-        <div class="metric"><small>Studio 작업</small><strong id="metricProjects">0</strong></div>
+    <div class="home-minimal">
+      <div class="home-title">
+        <div class="eyebrow">THOUGHT GARDEN</div>
+        <h1>생각의 텃밭</h1>
+        <p id="dateLabel"></p>
       </div>
-    </div>
 
-    <div class="section">
-      <div class="section-head"><div><h2>🕰 과거의 나에게서</h2><p>저장했던 생각을 다시 생각으로 바꿉니다.</p></div><button class="text-btn" id="reshuffle" type="button">다른 기록</button></div>
-      <div id="resurfaceBox"></div>
-    </div>
+      <div class="home-capture">
+        <p class="home-question">지금 떠오르는 것이 있나요?</p>
+        <button class="capture-orb" id="homeCapture" type="button" aria-label="생각 남기기">
+          <span class="capture-plus">＋</span>
+          <span class="capture-caption">생각 남기기</span>
+        </button>
+        <p class="home-hint">정리하지 않아도 괜찮아요.<br>먼저 붙잡아두기만 하세요.</p>
+      </div>
 
-    <div class="section">
-      <div class="section-head"><div><h2>📚 이어서 볼 것</h2><p>최근에 생각을 남긴 책과 미디어.</p></div><button class="text-btn" data-go="library" type="button">Library</button></div>
-      <div id="continueSources"></div>
-    </div>
-
-    <div class="section">
-      <div class="section-head"><div><h2>🌱 지금 자라는 생각</h2><p>조각이 모이기 시작한 Thread.</p></div><button class="text-btn" data-go="garden" type="button">Garden</button></div>
-      <div id="growingThreads"></div>
+      <button class="today-count" id="openToday" type="button">
+        <span>오늘 남긴 생각</span>
+        <strong id="todayCount">0</strong>
+      </button>
     </div>
   </section>
 
@@ -140,7 +177,8 @@
 
   <section class="view" data-view="garden">
     <div id="gardenIndex">
-      <div class="section-head"><div><h2>🌱 Garden</h2><p>분류보다 연결. 비슷한 생각을 한 줄기로 키웁니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="section-head"><div><h2>🌱 Garden</h2><p>생각이 몇 개 쌓인 뒤, “이거 전에 했던 생각인데?” 싶을 때 Thread를 만듭니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="meta" id="gardenSummary"></div>
       <div class="search-row"><input class="input" id="gardenSearch" placeholder="Thread, 생각, 사람, 문장 검색" /><button class="btn" id="showUnlinked" type="button">미연결 조각</button></div>
       <div id="threadList"></div>
       <div class="section"><div class="section-head"><div><h2>💭 최근 생각 조각</h2><p>어디에 연결할지 아직 정하지 않아도 됩니다.</p></div></div><div id="recentFragments"></div></div>
@@ -167,19 +205,72 @@
 </nav>
 
 <dialog id="captureDialog">
-  <div class="modal">
-    <div class="modal-head"><div><div class="eyebrow">CAPTURE</div><h2>지금 남은 한 조각</h2></div><button class="close-btn" data-close="captureDialog" type="button">✕</button></div>
-    <div class="capture-mode">
-      <button class="mode-btn active" data-mode="thought" type="button">💭 생각</button>
-      <button class="mode-btn" data-mode="moment" type="button">🌿 순간</button>
-      <button class="mode-btn" data-mode="decision" type="button">⚖️ 결정</button>
+  <div class="modal capture-modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">CAPTURE</div><h2>지금 남기고 싶은 것</h2></div>
+      <button class="close-btn" data-close="captureDialog" type="button">✕</button>
     </div>
-    <input id="captureId" type="hidden" /><input id="captureMode" type="hidden" value="thought" />
-    <div class="field"><label for="captureText" id="captureLabel">무슨 생각이 났나요?</label><textarea class="textarea" id="captureText" placeholder="정리하지 말고, 떠오른 그대로 한 줄부터."></textarea></div>
-    <div class="field hidden" id="captureContextWrap"><label for="captureContext">맥락 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="captureContext" placeholder="예: 박OO와 점심 / 회의 후 / 러닝 중" /></div>
-    <div class="field hidden" id="captureChoiceWrap"><label for="captureChoice">결정 / 선택지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="captureChoice" placeholder="예: Shorts로 다시 시작한다" /></div>
-    <div class="field"><label for="captureThread">연결할 Thread <span style="color:var(--muted);font-weight:500">(나중에 해도 됨)</span></label><select class="select" id="captureThread"><option value="">연결하지 않음</option></select></div>
-    <div class="modal-actions"><button class="btn" data-close="captureDialog" type="button">취소</button><button class="btn primary" id="saveCapture" type="button">저장</button></div>
+
+    <div class="field">
+      <label for="captureText">내 생각</label>
+      <textarea class="textarea capture-main" id="captureText" placeholder="떠오른 그대로 적어보세요. 한 줄이어도 충분합니다."></textarea>
+    </div>
+
+    <button class="subtle-add" id="toggleExternal" type="button">＋ 문장 · 장면 · 누군가의 말도 함께 남기기</button>
+    <div id="externalWrap" class="hidden">
+      <div class="field">
+        <label for="captureExternal">세상에서 가져온 한 조각</label>
+        <textarea class="textarea" id="captureExternal" placeholder="책의 문장, 영화의 대사, 누군가의 말, 기억하고 싶은 장면"></textarea>
+      </div>
+      <div class="field">
+        <label for="captureLocator">위치 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
+        <input class="input" id="captureLocator" placeholder="예: p.132 / 6화 / 12:31 / 점심 대화" />
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" data-close="captureDialog" type="button">취소</button>
+      <button class="btn primary" id="saveCapture" type="button">남겨두기</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="afterSaveDialog">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">SAVED</div><h2>생각을 붙잡아뒀어요.</h2></div>
+      <button class="close-btn" data-close="afterSaveDialog" type="button">✕</button>
+    </div>
+    <p class="body" style="margin-top:0">지금 정리하지 않아도 됩니다. 필요할 때만 연결하세요.</p>
+    <input id="afterSaveFragmentId" type="hidden" />
+    <div class="post-save-actions">
+      <button class="post-save-btn" id="afterDone" type="button"><span>✓</span><b>그냥 끝내기</b><small>가장 기본적인 선택</small></button>
+      <button class="post-save-btn" id="afterLibrary" type="button"><span>📚</span><b>Library에 연결</b><small>책 · 영화 · 영상의 조각이라면</small></button>
+      <button class="post-save-btn" id="afterThread" type="button"><span>🌱</span><b>Thread에 연결</b><small>전에 했던 생각과 이어진다면</small></button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="sourceLinkDialog">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">LIBRARY</div><h2>어디에서 얻은 생각인가요?</h2></div>
+      <button class="close-btn" data-close="sourceLinkDialog" type="button">✕</button>
+    </div>
+    <input id="sourceLinkFragmentId" type="hidden" />
+    <input class="input" id="sourceLinkSearch" placeholder="등록된 책 · 미디어 검색" />
+    <div id="sourceLinkList" style="margin-top:10px"></div>
+    <button class="btn soft block" id="sourceLinkNew" type="button" style="margin-top:10px">+ Library에 새 작품 등록</button>
+  </div>
+</dialog>
+
+<dialog id="todayDialog">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">TODAY</div><h2>오늘 남긴 생각</h2></div>
+      <button class="close-btn" data-close="todayDialog" type="button">✕</button>
+    </div>
+    <div id="todayFragmentList"></div>
   </div>
 </dialog>
 
@@ -262,7 +353,7 @@
 <script>
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig";
 const state={sources:[],fragments:[],threads:[],projects:[],view:"home",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
-  gardenUnlinked:false,pendingLinkFragmentId:null,
+  gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,uid:null,connected:false,api:null}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
@@ -323,17 +414,11 @@ function setView(v){
 }
 function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects()}
 function refreshSelects(){
-  const threadOpts='<option value="">연결하지 않음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
-  $("captureThread").innerHTML=threadOpts;$("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
+  $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
 function renderHome(){
-  $("dateLabel").textContent=new Intl.DateTimeFormat("ko-KR",{month:"long",day:"numeric",weekday:"short"}).format(new Date());
-  $("metricFragments").textContent=state.fragments.length;$("metricThreads").textContent=state.threads.length;$("metricProjects").textContent=state.projects.length;
-  renderResurface();
-  const srcs=[...state.sources].sort((a,b)=>lastSourceActivity(b.id).localeCompare(lastSourceActivity(a.id))).slice(0,3);
-  $("continueSources").innerHTML=srcs.length?srcs.map(s=>sourceCard(s,true)).join(""):empty("📚","아직 Library가 비어 있어요.","한 작품을 등록하고 그 안에 생각을 계속 쌓아보세요.");
-  const ts=[...state.threads].sort((a,b)=>threadFragments(b.id).length-threadFragments(a.id).length).slice(0,3);
-  $("growingThreads").innerHTML=ts.length?ts.map(t=>threadCard(t,true)).join(""):empty("🌱","아직 자라는 생각이 없어요.","비슷한 조각이 보이면 Thread로 연결해보세요.");
+  $("dateLabel").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"}).format(new Date());
+  $("todayCount").textContent=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today()).length;
 }
 function renderResurface(){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
@@ -374,6 +459,7 @@ function openSource(id){
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>f.createdAt||f.date||"").sort().reverse()[0]||state.sources.find(s=>s.id===id)?.updatedAt||""}
 function renderGarden(){
+  $("gardenSummary").innerHTML=`<span class="status">생각 ${state.fragments.length}</span><span class="status">Thread ${state.threads.length}</span><span class="status">Studio ${state.projects.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
   const ts=state.threads.filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q));
   $("threadList").innerHTML=ts.length?ts.map(t=>threadCard(t)).join(""):empty("🌱","아직 Thread가 없어요.","같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
@@ -463,18 +549,53 @@ function slotHTML(p,s){
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
-function setCaptureMode(mode){$("captureMode").value=mode;$$(".mode-btn").forEach(b=>b.classList.toggle("active",b.dataset.mode===mode));$("captureContextWrap").classList.toggle("hidden",mode==="thought");$("captureChoiceWrap").classList.toggle("hidden",mode!=="decision");$("captureLabel").textContent=mode==="thought"?"무슨 생각이 났나요?":mode==="moment"?"무슨 일이 마음에 남았나요?":"이 결정에 대해 지금 무엇을 생각하나요?"}
-function openCapture(mode="thought",prefill=""){$("captureId").value="";$("captureText").value=prefill;$("captureContext").value="";$("captureChoice").value="";setCaptureMode(mode);refreshSelects();$("captureDialog").showModal();setTimeout(()=>$("captureText").focus(),60)}
+function openCapture(prefill=""){
+  $("captureText").value=prefill;
+  $("captureExternal").value="";
+  $("captureLocator").value="";
+  $("externalWrap").classList.add("hidden");
+  $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
+  $("captureDialog").showModal();
+  setTimeout(()=>$("captureText").focus(),60);
+}
 async function saveCapture(){
-  const text=$("captureText").value.trim();if(!text)return toast("한 줄만 남겨주세요.");
-  const threadId=$("captureThread").value,f={id:uid(),type:$("captureMode").value,thought:text,context:$("captureContext").value.trim(),choice:$("captureChoice").value.trim(),threadIds:threadId?[threadId]:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();toast("생각을 붙잡았습니다. 🌱");
+  const thought=$("captureText").value.trim(),externalText=$("captureExternal").value.trim();
+  if(!thought&&!externalText)return toast("한 줄만 남겨주세요.");
+  const f={
+    id:uid(),type:"thought",thought,externalText,locator:$("captureLocator").value.trim(),
+    threadIds:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+  };
+  state.fragments.unshift(f);await persist("fragments",f);$("captureDialog").close();renderAll();
+  $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
+}
+function renderTodayDialog(){
+  const list=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today());
+  $("todayFragmentList").innerHTML=list.length?list.map(fragmentCard).join(""):empty("💭","오늘은 아직 비어 있어요.","첫 생각을 한 줄 남겨보세요.");
+}
+function openSourceLinkDialog(fid){
+  state.pendingSourceLinkFragmentId=fid;$("sourceLinkFragmentId").value=fid;$("sourceLinkSearch").value="";
+  renderSourceLinkList();$("sourceLinkDialog").showModal();
+}
+function renderSourceLinkList(){
+  const q=$("sourceLinkSearch").value.trim().toLowerCase();
+  const arr=state.sources.filter(s=>[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q));
+  $("sourceLinkList").innerHTML=arr.length?arr.map(s=>`<button class="card click-card" data-link-to-source="${s.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</div><div class="title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div></button>`).join(""):empty("📚","등록된 작품이 없어요.","지금 새로 등록하면 앞으로는 다시 입력하지 않아도 됩니다.");
+}
+async function linkFragmentToSource(fid,sid){
+  const f=state.fragments.find(x=>x.id===fid);if(!f)return;
+  f.sourceId=sid;f.type="source";f.updatedAt=new Date().toISOString();await persist("fragments",f);
+  state.pendingSourceLinkFragmentId=null;$("sourceLinkDialog").close();renderAll();toast("Library에 연결했습니다.");
 }
 function openSourceDialog(s=null){$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=s?.status||"active";$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceDialog").showModal()}
 async function saveSource(){
   const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");const old=state.sources.find(s=>s.id===$("sourceId").value);
   const s={id:old?.id||uid(),type:$("sourceType").value,status:$("sourceStatus").value,title,creator:$("sourceCreator").value.trim(),platform:$("sourcePlatform").value.trim(),image:$("sourceImage").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];await persist("sources",s);$("sourceDialog").close();renderAll();if(old)openSource(s.id);toast("Library에 저장했습니다.");
+  state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];await persist("sources",s);$("sourceDialog").close();
+  if(!old && state.pendingSourceLinkFragmentId){
+    const fid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;await linkFragmentToSource(fid,s.id);
+  }else{
+    renderAll();if(old)openSource(s.id);toast("Library에 저장했습니다.");
+  }
 }
 async function saveSourceFragment(sourceId){
   const thought=$("sourceThought").value.trim(),externalText=$("sourceExternalText").value.trim();if(!thought&&!externalText)return toast("문장이나 내 생각 중 하나는 남겨주세요.");
@@ -558,7 +679,8 @@ document.addEventListener("click",async e=>{
   const st=e.target.closest("[data-save-thread-thought]");if(st)return addThreadThought(st.dataset.saveThreadThought);
   const li=e.target.closest("[data-link]");if(li)return openLinkDialog(li.dataset.link);
   const lt=e.target.closest("[data-link-to-thread]");if(lt)return linkFragment($("linkFragmentId").value,lt.dataset.linkToThread);
-  const ct=e.target.closest("[data-continue]");if(ct){const f=state.fragments.find(x=>x.id===ct.dataset.continue);return openCapture("thought",`예전의 나는 이렇게 생각했다.\n“${f?.thought||f?.text||""}”\n\n지금은 `)}
+  const ls=e.target.closest("[data-link-to-source]");if(ls)return linkFragmentToSource($("sourceLinkFragmentId").value,ls.dataset.linkToSource);
+  const ct=e.target.closest("[data-continue]");if(ct){const f=state.fragments.find(x=>x.id===ct.dataset.continue);return openCapture(`예전의 나는 이렇게 생각했다.\n“${f?.thought||f?.text||""}”\n\n지금은 `)}
   const df=e.target.closest("[data-delete-fragment]");if(df)return deleteFragment(df.dataset.deleteFragment);
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
@@ -568,17 +690,27 @@ document.addEventListener("click",async e=>{
   const saveSlots=e.target.closest("[data-save-all-slots]");if(saveSlots)return saveAllSlots(saveSlots.dataset.saveAllSlots);
   const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
 });
-$("fab").addEventListener("click",()=>openCapture("thought"));$("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
+$("fab").addEventListener("click",()=>openCapture());$("homeCapture").addEventListener("click",()=>openCapture());
+$("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
+$("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast("그대로 잘 남겨뒀어요.")});
+$("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
+$("afterThread").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openLinkDialog(fid)});
+$("openToday").addEventListener("click",()=>{renderTodayDialog();$("todayDialog").showModal()});
+$("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
+$("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
+$("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
+$("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",renderGarden);
 $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;renderGarden()});
-$("reshuffle").addEventListener("click",()=>{state.resurfaceId=null;renderResurface()});$("openSettings").addEventListener("click",()=>$("settingsDialog").showModal());
-$("linkNewThread").addEventListener("click",()=>{$("linkDialog").close();openThreadDialog()});
+$("openSettings").addEventListener("click",()=>$("settingsDialog").showModal());
+$("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
 $("seedDemo").addEventListener("click",seedDemo);$("migrateV01").addEventListener("click",migrateV01);$("exportData").addEventListener("click",exportData);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("saveFirebaseConfig").addEventListener("click",async()=>{try{const raw=$("firebaseConfigInput").value.trim(),cfg=normalizeFirebaseConfig(raw);if(!cfg.apiKey||!cfg.projectId)throw new Error();localStorage.setItem(FIREBASE_KEY,raw);$("settingsDialog").close();await connectFirebase()}catch{toast("Firebase config 형식을 확인해주세요.")}});
 $("clearFirebaseConfig").addEventListener("click",async()=>{localStorage.removeItem(FIREBASE_KEY);if(state.firebase.app&&state.firebase.api?.deleteApp)try{await state.firebase.api.deleteApp(state.firebase.app)}catch{}state.firebase={app:null,auth:null,db:null,uid:null,connected:false,api:null};setFirebaseStatus(false);localLoad();toast("Firebase 연결을 해제했습니다.")});
-["captureDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
 </script>
 </body>
