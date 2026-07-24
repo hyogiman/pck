@@ -186,6 +186,9 @@
     .search-result-title{font-weight:800;font-size:.82rem;line-height:1.35}
     .search-result-sub{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.35}
     .api-status{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+    .search-diagnostic{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:10px 0 4px;padding:9px 10px;border-radius:13px;background:var(--panel2);font-size:.72rem;color:var(--muted)}
+    .search-diagnostic .ok{color:var(--accent);font-weight:800}
+    .search-diagnostic .bad{color:var(--danger);font-weight:800}
     .api-badge{background:var(--panel2);color:var(--muted);border-radius:999px;padding:5px 8px;font-size:.7rem}
     .api-badge.ok{background:var(--accent2);color:var(--accent)}
 
@@ -402,7 +405,7 @@
         <button class="btn primary" id="runApiSearch" type="button">검색</button>
       </div>
       <div class="search-results" id="apiSearchResults"></div>
-      <div class="helper">책은 알라딘 국내도서를 먼저 검색하고, 결과가 없거나 호출이 실패하면 Google Books를 보조 검색합니다. 검색 결과를 누르면 작품 정보가 자동 입력됩니다.</div>
+      <div class="helper">책은 알라딘과 Google Books를 동시에 검색하고 알라딘 결과를 우선 표시합니다. 검색 결과 위에서 각 API가 몇 건을 반환했는지도 바로 확인할 수 있습니다.</div>
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
@@ -1069,13 +1072,16 @@ function renderBookSearchResults(results,providerLabel){
     </button>`;
   }).join("");
 }
-async function googleBooksFallback(query,reason=""){
-  const box=$("apiSearchResults");
-  box.innerHTML=`<div class="helper">${reason?esc(reason)+" ":""}Google Books에서 보조 검색 중…</div>`;
-  const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=12&printType=books&langRestrict=ko`);
-  if(!r.ok)throw new Error("Google Books 보조 검색 실패");
+async function googleBooksSearch(query){
+  const url=`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=20&printType=books`;
+  const r=await fetch(url,{headers:{Accept:"application/json"}});
+  if(!r.ok){
+    let detail="";
+    try{detail=(await r.json())?.error?.message||""}catch{}
+    throw new Error(`Google Books ${r.status}${detail?` · ${detail}`:""}`);
+  }
   const d=await r.json();
-  const results=(d.items||[]).map(x=>{
+  return (d.items||[]).map(x=>{
     const v=x.volumeInfo||{};
     const isbn13=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_13")?.identifier||"";
     const isbn10=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_10")?.identifier||"";
@@ -1086,29 +1092,82 @@ async function googleBooksFallback(query,reason=""){
       isbn13:isbn13||isbn10,link:v.infoLink||""
     };
   });
-  renderBookSearchResults(results,"Google Books");
 }
-async function searchBookPreferAladin(query){
-  const box=$("apiSearchResults"),key=getApiKeys().aladin;
-  if(!key){
-    await googleBooksFallback(query,"알라딘 TTB Key가 없어");
+async function aladinBookSearch(query){
+  const data=await aladinJsonpSearch(query);
+  const raw=Array.isArray(data?.item)?data.item:
+            Array.isArray(data?.channel?.item)?data.channel.item:[];
+  return raw.map(x=>({
+    kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
+    creator:x.author||"",publisher:x.publisher||"",pubDate:x.pubDate||"",
+    image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
+  }));
+}
+function bookIdentity(r){
+  const isbn=normalizeIsbn(r.isbn13);
+  if(isbn)return `isbn:${isbn}`;
+  return `title:${String(r.title||"").trim().toLowerCase()}|${String(r.creator||"").trim().toLowerCase()}`;
+}
+function mergeBookResults(aladin=[],google=[]){
+  const seen=new Set(),merged=[];
+  for(const r of [...aladin,...google]){
+    const key=bookIdentity(r);
+    if(seen.has(key))continue;
+    seen.add(key);merged.push(r);
+  }
+  return merged;
+}
+function renderCombinedBookResults(results,status){
+  state.apiResults=results;
+  const box=$("apiSearchResults");
+  const aladinText=status.aladinError
+    ? `<span class="bad">알라딘 오류</span><span>${esc(status.aladinError)}</span>`
+    : `<span class="ok">알라딘 ${status.aladinCount}건</span>`;
+  const googleText=status.googleError
+    ? `<span class="bad">Google Books 오류</span><span>${esc(status.googleError)}</span>`
+    : `<span class="ok">Google Books ${status.googleCount}건</span>`;
+  const diagnostic=`<div class="search-diagnostic">${aladinText}<span>·</span>${googleText}</div>`;
+
+  if(!results.length){
+    box.innerHTML=diagnostic+empty("📚","두 검색처 모두 결과를 찾지 못했어요.","다른 검색어로 시도하거나 아래에서 직접 작품 정보를 입력해보세요.");
     return;
   }
-  box.innerHTML='<div class="helper">알라딘 국내도서 검색 중…</div>';
-  try{
-    const data=await aladinJsonpSearch(query);
-    const raw=Array.isArray(data?.item)?data.item:[];
-    const results=raw.map(x=>({
-      kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
-      creator:x.author||"",publisher:x.publisher||"",pubDate:x.pubDate||"",
-      image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
-    }));
-    if(results.length)renderBookSearchResults(results,"알라딘");
-    else await googleBooksFallback(query,"알라딘에서 결과를 찾지 못해");
-  }catch(e){
-    console.warn("Aladin fallback:",e);
-    await googleBooksFallback(query,"알라딘 검색에 실패해");
-  }
+  box.innerHTML=diagnostic+results.map((r,i)=>{
+    const dup=existingSourceByIsbn(r.isbn13);
+    return `<button class="search-result" data-api-result-index="${i}" type="button">
+      <span class="search-thumb">${r.image?`<img src="${esc(r.image)}" alt="">`:"📚"}</span>
+      <span>
+        <span class="search-result-title">${esc(r.title||"제목 없음")}</span>
+        <span class="search-result-sub">${esc([r.creator,r.publisher,r.pubDate].filter(Boolean).join(" · "))}</span>
+        <span class="api-status" style="margin-top:5px">
+          <span class="api-badge ${r.provider==="Aladin"?"ok":""}">${esc(r.provider)}</span>
+          ${r.isbn13?`<span class="api-badge">ISBN ${esc(r.isbn13)}</span>`:""}
+          ${dup?`<span class="api-badge ok">✓ 이미 Library에 있음</span>`:""}
+        </span>
+      </span>
+    </button>`;
+  }).join("");
+}
+async function searchBooksCombined(query){
+  const box=$("apiSearchResults");
+  box.innerHTML='<div class="helper">알라딘과 Google Books를 함께 검색 중…</div>';
+
+  const hasAladin=!!getApiKeys().aladin;
+  const aladinPromise=hasAladin
+    ? aladinBookSearch(query)
+    : Promise.reject(new Error("TTB Key 미설정"));
+  const googlePromise=googleBooksSearch(query);
+
+  const [a,g]=await Promise.allSettled([aladinPromise,googlePromise]);
+  const aladin=a.status==="fulfilled"?a.value:[];
+  const google=g.status==="fulfilled"?g.value:[];
+  const status={
+    aladinCount:aladin.length,
+    googleCount:google.length,
+    aladinError:a.status==="rejected"?(a.reason?.message||"호출 실패"):"",
+    googleError:g.status==="rejected"?(g.reason?.message||"호출 실패"):""
+  };
+  renderCombinedBookResults(mergeBookResults(aladin,google),status);
 }
 async function searchSourceApi(){
   const type=$("apiSearchType").value,q=$("apiSearchQuery").value.trim();
@@ -1116,7 +1175,7 @@ async function searchSourceApi(){
   const box=$("apiSearchResults");box.innerHTML='<div class="helper">검색 중…</div>';
   try{
     if(type==="book"){
-      await searchBookPreferAladin(q);
+      await searchBooksCombined(q);
     }else if(type==="tmdb"){
       const k=getApiKeys().tmdb;if(!k)throw new Error("설정에서 TMDB API 키를 먼저 입력해주세요.");
       const headers=k.startsWith("ey")?{Authorization:`Bearer ${k}`,accept:"application/json"}:{accept:"application/json"};
