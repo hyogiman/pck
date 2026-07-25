@@ -32,6 +32,8 @@
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .today-group{margin-top:22px;padding-top:16px;border-top:1px dashed var(--line)}
+    .today-group-title{font-size:.72rem;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:11px}
     .pick-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
     .pick-chip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:.75rem;font-weight:600;cursor:pointer;transition:.12s}
     .pick-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent3)}
@@ -547,6 +549,7 @@
     <div class="field"><label for="editThought">내 생각</label><textarea class="textarea" id="editThought" placeholder="나의 생각·해석"></textarea></div>
     <div class="field"><label for="editExternal">문장 · 장면 · 누군가의 말 <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="editExternal" placeholder="책의 문장, 영화의 대사 등"></textarea></div>
     <div class="field"><label for="editLocator">위치 / 페이지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="editLocator" placeholder="예: p.132 / 6화 / 12:31" /></div>
+    <div class="field"><label for="editDate">날짜</label><input class="input" type="date" id="editDate" /></div>
     <div class="field"><label for="editSource">연결된 책 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="input" id="editSource"></select></div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
   </div>
@@ -1088,6 +1091,7 @@ function openEditFragment(fid){
   $("editThought").value=f.thought||f.text||"";
   $("editExternal").value=f.externalText||"";
   $("editLocator").value=f.locator||"";
+  $("editDate").value=(f.date||f.createdAt||"").slice(0,10)||today();
   $("editSource").innerHTML='<option value="">연결 없음</option>'+state.sources.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join("");
   $("editSource").value=f.sourceId||"";
   $("editFragmentDialog").showModal();
@@ -1097,6 +1101,7 @@ async function saveEditFragment(){
   f.thought=$("editThought").value.trim();delete f.text;
   f.externalText=$("editExternal").value.trim();
   f.locator=$("editLocator").value.trim();
+  f.date=$("editDate").value||f.date||today();
   const sid=$("editSource").value;
   if(sid){f.sourceId=sid;if(f.type!=="source")f.type="source";}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
   f.updatedAt=new Date().toISOString();
@@ -1219,8 +1224,14 @@ async function saveCapture(){
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function renderTodayDialog(){
-  const list=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today());
-  $("todayFragmentList").innerHTML=list.length?list.map(fragmentCard).join(""):empty("💭","오늘은 아직 비어 있어요.","첫 생각을 한 줄 남겨보세요.");
+  const t=today();
+  const isToday=f=>(f.date||f.createdAt||"").slice(0,10)===t;
+  const list=state.fragments.filter(isToday);
+  const moved=state.fragments.filter(f=>!isToday(f)&&(f.createdAt||"").slice(0,10)===t)
+    .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  let html=list.length?list.map(f=>fragmentCard(f)).join(""):empty("💭","오늘은 아직 비어 있어요.","첫 생각을 한 줄 남겨보세요.");
+  if(moved.length)html+=`<div class="today-group"><div class="today-group-title">오늘 옮겨 적은 지난 기록 ${moved.length}</div>${moved.map(f=>fragmentCard(f)).join("")}</div>`;
+  $("todayFragmentList").innerHTML=html;
 }
 function openSourceLinkDialog(fid){
   state.pendingSourceLinkFragmentId=fid;$("sourceLinkFragmentId").value=fid;$("sourceLinkSearch").value="";
