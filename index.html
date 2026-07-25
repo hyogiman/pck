@@ -4,7 +4,15 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
-  <title>생각의 텃밭 · V0.7.1</title>
+  <title>생각의 텃밭</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#375f47" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="생각의 텃밭" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&display=swap');
     :root{
@@ -24,6 +32,10 @@
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .pick-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .pick-chip{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:.75rem;font-weight:600;cursor:pointer;transition:.12s}
+    .pick-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent3)}
+    .pick-chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
     .status.done{background:#dfeadf;color:#2f5a3d;font-weight:700}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
     .topbar-minimal{margin-bottom:0;min-height:44px}
@@ -492,7 +504,7 @@
       <div class="eyebrow">SEARCH FIRST</div>
       <div class="api-search-row" style="margin-top:8px">
         <select class="select" id="apiSearchType">
-          <option value="book">📚 책 · 알라딘 우선</option>
+          <option value="book">📚 책</option>
           <option value="tmdb">🎬 영화·드라마</option>
           <option value="youtube">▶️ YouTube</option>
         </select>
@@ -500,7 +512,7 @@
         <button class="btn primary" id="runApiSearch" type="button">검색</button>
       </div>
       <div class="search-results" id="apiSearchResults"></div>
-      <div class="helper">책은 알라딘(Firebase 검색 서버)과 Google Books를 동시에 검색하고 알라딘 결과를 우선 표시합니다. 검색 결과 위에서 각 검색처의 건수와 실제 오류를 바로 확인할 수 있습니다.</div>
+      
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
@@ -509,7 +521,7 @@
     <div class="field"><label for="sourceTitleInput">제목</label><input class="input" id="sourceTitleInput" placeholder="책 / 영화 / 영상 제목" /></div>
     <div class="form-grid">
       <div class="field"><label for="sourceCreator">저자 / 제작자</label><input class="input" id="sourceCreator" placeholder="선택" /></div>
-      <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="어디서 봤나요? (넷플릭스·티빙…) / 출판사" list="platformOptions" /><datalist id="platformOptions"><option value="넷플릭스"></option><option value="디즈니+"></option><option value="티빙"></option><option value="웨이브"></option><option value="쿠팡플레이"></option><option value="왓챠"></option><option value="유튜브"></option><option value="극장"></option></datalist></div>
+      <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="어디서 봤나요? / 출판사" /><div class="pick-chips" id="platformChips"></div></div>
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceIsbn">ISBN13 <span style="color:var(--muted);font-weight:500">(자동)</span></label><input class="input" id="sourceIsbn" placeholder="검색 결과에서 자동 입력" /></div>
@@ -1419,7 +1431,7 @@ async function searchSourceApi(){
       const d=await r.json();
       state.apiResults=(d.items||[]).map(x=>({
         kind:"media",provider:"YouTube",externalId:x.id?.videoId||"",title:x.snippet?.title||"",
-        creator:x.snippet?.channelTitle||"",publisher:"YouTube",pubDate:x.snippet?.publishedAt||"",
+        creator:x.snippet?.channelTitle||"",publisher:"유튜브",pubDate:x.snippet?.publishedAt||"",
         image:x.snippet?.thumbnails?.medium?.url||x.snippet?.thumbnails?.default?.url||"",isbn13:"",
         link:x.id?.videoId?`https://www.youtube.com/watch?v=${x.id.videoId}`:""
       }));
@@ -1454,11 +1466,17 @@ async function applyApiResultByIndex(index){
   $("sourceImage").value=r.image||"";
   $("sourceIsbn").value=r.isbn13||"";
   $("sourceProvider").value=r.provider||"";
+  renderPlatformChips();
   $("sourceDialog").dataset.externalId=r.externalId||"";
   $("sourceDialog").dataset.externalLink=r.link||"";
   $("apiSearchResults").innerHTML='<div class="helper">검색 결과를 작품 정보에 반영했습니다. 아래 내용을 확인하고 저장하세요.</div>';
 }
-function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=(s?.status==="done"?"done":"active");$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";$("sourceDialog").showModal()}
+const PLATFORM_PICKS={media:["넷플릭스","디즈니+","티빙","웨이브","쿠팡플레이","왓챠","유튜브","극장"],book:["종이책","전자책","밀리의 서재","오디오북"]};
+function renderPlatformChips(){
+  const type=$("sourceType").value==="book"?"book":"media",cur=$("sourcePlatform").value.trim();
+  $("platformChips").innerHTML=PLATFORM_PICKS[type].map(p=>`<button class="pick-chip ${cur===p?"on":""}" data-platform-pick="${esc(p)}" type="button">${esc(p)}</button>`).join("");
+}
+function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=(s?.status==="done"?"done":"active");$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";renderPlatformChips();$("sourceDialog").showModal()}
 async function saveSource(){
   const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");
   const old=state.sources.find(s=>s.id===$("sourceId").value);
@@ -1644,6 +1662,7 @@ document.addEventListener("click",async e=>{
   const sso=e.target.closest("[data-search-source]");if(sso){$("searchDialog").close();setView("library");return openSource(sso.dataset.searchSource)}
   const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
+  const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
@@ -1681,6 +1700,7 @@ $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.targe
 $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
 
+$("sourceType").addEventListener("change",renderPlatformChips);
 $("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
 $("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast("그대로 잘 남겨뒀어요.")});
 $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
@@ -1713,6 +1733,12 @@ $("saveApiKeys").addEventListener("click",async()=>{
 });
 ["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
+
+/* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기 ── */
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW 등록 실패",e))});
+}
+try{ if(new URLSearchParams(location.search).get("action")==="capture") setTimeout(()=>openCapture(),400); }catch(e){}
 </script>
 </body>
 </html>
