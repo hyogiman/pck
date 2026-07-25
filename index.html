@@ -962,7 +962,7 @@ function setView(v){
   $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
   closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
 }
-function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();if($("todayDialog").open)renderTodayDialog();}
+function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
@@ -1031,7 +1031,7 @@ function openSource(id){
   setTimeout(()=>{$("sourceFiles")?.addEventListener("change",e=>setPendingFiles("source",e.target.files));renderPendingFiles("source")},0);
 }
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
-function lastSourceActivity(id){return sourceFragments(id).map(f=>f.createdAt||f.date||"").sort().reverse()[0]||state.sources.find(s=>s.id===id)?.updatedAt||""}
+function lastSourceActivity(id){return sourceFragments(id).map(f=>(f.date||f.createdAt||"").slice(0,10)).filter(Boolean).sort().reverse()[0]||(state.sources.find(s=>s.id===id)?.updatedAt||"")}
 function renderGarden(){
   $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span><span class="status">💭 생각 ${state.fragments.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
