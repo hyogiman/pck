@@ -23,7 +23,8 @@
     button:focus-visible{outline:3px solid rgba(55,95,71,.22);outline-offset:2px}
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
-    .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(96px + env(safe-area-inset-bottom))}
+    .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .status.done{background:#dfeadf;color:#2f5a3d;font-weight:700}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
     .topbar-minimal{margin-bottom:0;min-height:44px}
     .section{margin-top:34px}
@@ -87,9 +88,9 @@
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
     .note{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px 20px;box-shadow:var(--card-shadow);margin-bottom:12px;transition:box-shadow .14s ease,transform .14s ease}
-    .note-quote{font-family:var(--serif);margin:0 0 13px;padding:3px 0 3px 15px;border-left:2px solid var(--accent);color:#3f5a49;font-size:1.06rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-quote{font-family:var(--serif);font-style:italic;margin:0 0 14px;padding:3px 0 3px 15px;border-left:2px solid #b9cbbe;color:#6c7a70;font-size:1.02rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.7rem;color:var(--muted);letter-spacing:.02em}
-    .note-body{font-family:var(--serif);margin:0;color:var(--text);font-size:1.08rem;line-height:1.74;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-body{font-family:var(--serif);margin:0;color:#1d2419;font-weight:700;font-size:1.1rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-context{font-size:.76rem;color:var(--muted);margin-top:10px}
     .note-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
     .note-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-top:12px;border-top:1px solid var(--line)}
@@ -503,12 +504,12 @@
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
-      <div class="field"><label for="sourceStatus">상태</label><select class="select" id="sourceStatus"><option value="active">읽는/보는 중</option><option value="paused">잠시 멈춤</option><option value="done">완료</option></select></div>
+      <div class="field"><label for="sourceStatus">상태</label><select class="select" id="sourceStatus"><option value="active">읽는/보는 중</option><option value="done">완료</option></select></div>
     </div>
     <div class="field"><label for="sourceTitleInput">제목</label><input class="input" id="sourceTitleInput" placeholder="책 / 영화 / 영상 제목" /></div>
     <div class="form-grid">
       <div class="field"><label for="sourceCreator">저자 / 제작자</label><input class="input" id="sourceCreator" placeholder="선택" /></div>
-      <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="선택" /></div>
+      <div class="field"><label for="sourcePlatform">플랫폼 / 출판사</label><input class="input" id="sourcePlatform" placeholder="어디서 봤나요? (넷플릭스·티빙…) / 출판사" list="platformOptions" /><datalist id="platformOptions"><option value="넷플릭스"></option><option value="디즈니+"></option><option value="티빙"></option><option value="웨이브"></option><option value="쿠팡플레이"></option><option value="왓챠"></option><option value="유튜브"></option><option value="극장"></option></datalist></div>
     </div>
     <div class="form-grid">
       <div class="field"><label for="sourceIsbn">ISBN13 <span style="color:var(--muted);font-weight:500">(자동)</span></label><input class="input" id="sourceIsbn" placeholder="검색 결과에서 자동 입력" /></div>
@@ -564,7 +565,7 @@
     <input id="projectId" type="hidden" />
     <div class="field"><label for="projectTitleInput">제목</label><input class="input" id="projectTitleInput" placeholder="예: 나는 왜 늘 시작하고 그만둘까" /></div>
     <div class="form-grid">
-      <div class="field"><label for="projectFormat">형태</label><select class="select" id="projectFormat"><option value="blog">블로그</option><option value="shorts">Shorts</option><option value="podcast">떠드는 도서관 / Podcast</option></select></div>
+      <div class="field"><label for="projectFormat">어디에 올릴 글인가요?</label><select class="select" id="projectFormat"><option value="blog">블로그 — 소제목이 있는 긴 글</option><option value="shorts">유튜브 · 쇼츠 — 말하는 대본</option><option value="instagram">인스타 — 요약 카드</option></select></div>
       <div class="field"><label for="projectThread">시작 Thread <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="select" id="projectThread"><option value="">없음</option></select></div>
     </div>
     <div class="modal-actions"><button class="btn" data-close="projectDialog" type="button">취소</button><button class="btn primary" id="saveProject" type="button">작업대 만들기</button></div>
@@ -992,7 +993,7 @@ function sourceCard(s,compact=false){
   return `<article class="card click-card source-card" data-open-source="${s.id}">
     <div class="cover">${cover}</div><div><div class="card-head"><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</span><span class="date">${last?fmt(last.slice(0,10)):""}</span></div>
     <div class="source-title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · ")||"")}</div>
-    <div class="meta">${s.provider?`<span class="status">${esc(s.provider)}</span>`:""}${s.isbn13?`<span class="status">ISBN ${esc(s.isbn13)}</span>`:""}<span class="status">생각 ${count}개</span><span class="status">${s.status==="done"?"완료":s.status==="paused"?"잠시 멈춤":"이어가는 중"}</span></div></div></article>`;
+    <div class="meta"><span class="status">생각 ${count}개</span>${s.status==="done"?`<span class="status done">✓ 완료</span>`:""}</div></div></article>`;
 }
 function openSource(id){
   state.pendingFiles.source=[];state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
@@ -1017,7 +1018,7 @@ function openSource(id){
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>f.createdAt||f.date||"").sort().reverse()[0]||state.sources.find(s=>s.id===id)?.updatedAt||""}
 function renderGarden(){
-  $("gardenSummary").innerHTML=`<span class="status">생각 ${state.fragments.length}</span><span class="status">Thread ${state.threads.length}</span><span class="status">Studio ${state.projects.length}</span>`;
+  $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span><span class="status">💭 생각 ${state.fragments.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
   const ts=state.threads.filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q));
   $("threadList").innerHTML=ts.length?ts.map(t=>threadCard(t)).join(""):empty("🌱","아직 Thread가 없어요.","같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
@@ -1108,33 +1109,41 @@ function renderStudio(){
 }
 const templates={
   blog:[
-    {id:"hook",title:"1. 시작 / Hook",prompt:"첫 문단에서 독자가 멈춰 읽게 할 내 경험이나 질문은?"},
-    {id:"experience",title:"2. 나의 경험",prompt:"내가 실제로 겪은 장면·실패·사건은?"},
-    {id:"outside",title:"3. 외부의 시선",prompt:"책·미디어·누군가의 말 중 이 생각을 확장한 재료는?"},
-    {id:"meaning",title:"4. 나의 해석",prompt:"그래서 나는 이것을 어떻게 다르게 보게 되었나?"},
+    {id:"hook",title:"1. 여는 글",prompt:"독자가 멈춰 읽게 할 내 경험이나 질문은?"},
+    {id:"experience",title:"2. 소제목 ① — 나의 경험",prompt:"내가 실제로 겪은 장면·실패·사건은?"},
+    {id:"outside",title:"3. 소제목 ② — 외부의 시선",prompt:"책·미디어·누군가의 말 중 이 생각을 확장한 재료는?"},
+    {id:"meaning",title:"4. 소제목 ③ — 나의 해석",prompt:"그래서 나는 이것을 어떻게 다르게 보게 되었나?"},
     {id:"counter",title:"5. 반론",prompt:"반대로 생각하는 사람은 뭐라고 말할까? 내가 합리화하고 있는 건 없나?"},
-    {id:"conclusion",title:"6. 지금의 결론",prompt:"지금 시점에서 내가 말하고 싶은 한 문장은?"}
+    {id:"conclusion",title:"6. 닫는 글",prompt:"지금 시점에서 내가 말하고 싶은 한 문장은?"}
   ],
   shorts:[
-    {id:"hook",title:"1. 3초 Hook",prompt:"스크롤을 멈추게 할 한 문장은?"},
-    {id:"situation",title:"2. 상황",prompt:"아주 짧게 맥락을 보여준다."},
-    {id:"turn",title:"3. 전환",prompt:"예상과 다른 생각이나 깨달음은?"},
-    {id:"point",title:"4. 핵심 한 문장",prompt:"이 콘텐츠의 단 하나의 메시지는?"},
-    {id:"close",title:"5. 마무리",prompt:"시청자 머릿속에 남길 질문 또는 문장은?"}
+    {id:"hook",title:"1. 3초 훅 (첫 대사)",prompt:"스크롤을 멈추게 할 첫 마디는? 말하듯 짧게."},
+    {id:"situation",title:"2. 상황 설명",prompt:"맥락을 두세 문장으로. 실제 내뱉을 말투로."},
+    {id:"turn",title:"3. 반전 · 전환",prompt:"'그런데' 이후에 올 예상 밖의 생각은?"},
+    {id:"point",title:"4. 핵심 한 문장",prompt:"이 영상이 남길 단 하나의 메시지는?"},
+    {id:"close",title:"5. 마무리 · 클로징",prompt:"끝맺는 말과 남길 질문은?"}
+  ],
+  instagram:[
+    {id:"cover",title:"1. 표지 문구",prompt:"한 장에 박힐 굵은 한 문장은? (12자 안팎)"},
+    {id:"body",title:"2. 핵심 3줄",prompt:"내용을 딱 세 줄로 압축한다면?"},
+    {id:"quote",title:"3. 인용 한 줄",prompt:"카드에 얹을 책·영상 속 문장은?"},
+    {id:"caption",title:"4. 캡션",prompt:"짧은 소개 글. 왜 이 생각을 남겼는지."},
+    {id:"tags",title:"5. 해시태그",prompt:"이 글을 찾을 사람들이 검색할 말은?"}
   ],
   podcast:[
     {id:"open",title:"1. 오프닝 질문",prompt:"오늘 청취자에게 던질 질문은?"},
     {id:"line",title:"2. 책/미디어 한 줄",prompt:"오늘 이야기를 여는 외부의 한 줄은?"},
     {id:"experience",title:"3. 내 경험",prompt:"그 한 줄과 맞닿는 내 실제 이야기는?"},
-    {id:"counter",title:"4. 반론 / 백번읽꾸",prompt:"이 생각에 가장 날카롭게 반박한다면?"},
+    {id:"counter",title:"4. 반론",prompt:"이 생각에 가장 날카롭게 반박한다면?"},
     {id:"meaning",title:"5. 내 생각",prompt:"반론을 지나고도 남는 내 생각은?"},
     {id:"question",title:"6. 청취자 질문",prompt:"듣는 사람에게 어떤 질문을 남길까?"}
   ]
 };
+const FORMAT_LABEL={blog:"블로그",shorts:"유튜브 · 쇼츠",instagram:"인스타",podcast:"팟캐스트"};
 function projectSlots(p){const base=templates[p.format]||templates.blog;return base.map(b=>({ ...b, ...(p.slots?.find(s=>s.id===b.id)||{text:"",fragmentIds:[]})}))}
 function projectCard(p){
   const slots=projectSlots(p),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
-  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${p.format==="shorts"?"Shorts":p.format==="podcast"?"Podcast":"블로그"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div></article>`;
+  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"블로그"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div></article>`;
 }
 function downloadText(text,name){const b=new Blob([text],{type:"text/markdown;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();}
 function exportProject(pid){
@@ -1399,7 +1408,7 @@ async function searchSourceApi(){
       const d=await r.json();
       state.apiResults=(d.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).slice(0,12).map(x=>({
         kind:"media",provider:"TMDB",externalId:String(x.id||""),title:x.title||x.name||"",
-        creator:"",publisher:"TMDB",pubDate:x.release_date||x.first_air_date||"",
+        creator:"",publisher:"",pubDate:x.release_date||x.first_air_date||"",
         image:x.poster_path?`https://image.tmdb.org/t/p/w342${x.poster_path}`:"",isbn13:"",link:""
       }));
       box.innerHTML=state.apiResults.length?state.apiResults.map((x,i)=>`<button class="search-result" data-api-result-index="${i}" type="button"><span class="search-thumb">${x.image?`<img src="${esc(x.image)}" alt="">`:"🎬"}</span><span><span class="search-result-title">${esc(x.title)}</span><span class="search-result-sub">${esc(x.pubDate?.slice(0,4)||"")}</span><span class="api-status" style="margin-top:5px"><span class="api-badge ok">TMDB</span></span></span></button>`).join(""):empty("🎬","검색 결과가 없어요.","직접 입력해도 됩니다.");
@@ -1449,7 +1458,7 @@ async function applyApiResultByIndex(index){
   $("sourceDialog").dataset.externalLink=r.link||"";
   $("apiSearchResults").innerHTML='<div class="helper">검색 결과를 작품 정보에 반영했습니다. 아래 내용을 확인하고 저장하세요.</div>';
 }
-function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=s?.status||"active";$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";$("sourceDialog").showModal()}
+function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=(s?.status==="done"?"done":"active");$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";$("sourceDialog").showModal()}
 async function saveSource(){
   const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");
   const old=state.sources.find(s=>s.id===$("sourceId").value);
