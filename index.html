@@ -1745,7 +1745,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
 ["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
 
-/* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기. ── */
+/* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기 ── */
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW 등록 실패",e))});
 }
