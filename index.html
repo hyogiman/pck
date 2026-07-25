@@ -19,6 +19,12 @@
     button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(54,95,72,.2);outline-offset:2px}
     .app{width:min(100%,920px);margin:0 auto;padding:18px 16px calc(var(--nav) + 44px)}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+    .search-group{margin-top:16px}
+    .search-group-title{font-size:.72rem;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:7px}
+    .search-item{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:11px 13px;margin-bottom:7px;cursor:pointer}
+    .search-item:hover{border-color:var(--accent)}
+    .search-item b{display:block;font-size:.92rem;line-height:1.4;margin-bottom:2px}
+    .search-item small{color:var(--muted);font-size:.74rem}
     .brand h1{margin:0;font-size:1.16rem;letter-spacing:-.035em}.brand p{margin:5px 0 0;color:var(--muted);font-size:.8rem}
     .icon-btn,.round-btn{border:1px solid var(--line);background:rgba(255,253,248,.82);border-radius:50%;display:grid;place-items:center;cursor:pointer}
     .icon-btn{width:42px;height:42px}.round-btn{width:38px;height:38px}
@@ -257,6 +263,13 @@
 
     <div class="section">
       <div class="section-head">
+        <div><h2>다시, 만나다</h2><p>7일 이상 지난 생각을 무작위로 다시 꺼내옵니다.</p></div>
+      </div>
+      <div id="resurfaceBox"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
         <div><h2>최근 Studio</h2><p>다시 이어서 만들 수 있는 작업.</p></div>
       </div>
       <div id="homeProjects"></div>
@@ -307,6 +320,7 @@
     <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
     <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
+    <button class="sheet-nav" id="sheetSearch" type="button"><span>🔍</span><b>검색</b></button>
     <button class="sheet-nav" id="sheetSettings" type="button"><span>⚙️</span><b>설정</b></button>
   </div>
 </div>
@@ -422,6 +436,26 @@
     </div>
     <div class="field"><label for="sourceImage">표지 이미지 URL <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="sourceImage" placeholder="https://..." /></div>
     <div class="modal-actions"><button class="btn" data-close="sourceDialog" type="button">취소</button><button class="btn primary" id="saveSource" type="button">저장</button></div>
+  </div>
+</dialog>
+
+<dialog id="searchDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">SEARCH</div><h2>전체 검색</h2></div><button class="close-btn" data-close="searchDialog" type="button">✕</button></div>
+    <div class="field"><input class="input" id="searchInput" placeholder="생각·문장·책·영상·Thread·프로젝트 모두 검색" autocomplete="off" /></div>
+    <div id="searchResults"></div>
+  </div>
+</dialog>
+
+<dialog id="editFragmentDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">EDIT</div><h2>생각 수정</h2></div><button class="close-btn" data-close="editFragmentDialog" type="button">✕</button></div>
+    <input id="editFragmentId" type="hidden" />
+    <div class="field"><label for="editThought">내 생각</label><textarea class="textarea" id="editThought" placeholder="나의 생각·해석"></textarea></div>
+    <div class="field"><label for="editExternal">문장 · 장면 · 누군가의 말 <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="editExternal" placeholder="책의 문장, 영화의 대사 등"></textarea></div>
+    <div class="field"><label for="editLocator">위치 / 페이지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="editLocator" placeholder="예: p.132 / 6화 / 12:31" /></div>
+    <div class="field"><label for="editSource">연결된 책 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="input" id="editSource"></select></div>
+    <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
   </div>
 </dialog>
 
@@ -832,7 +866,7 @@ function setView(v){
   $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
   closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
 }
-function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects()}
+function renderAll(){state.fragments.sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
@@ -855,6 +889,7 @@ function renderHome(){
     <div class="recent-summary-item"><small>Thread에 연결됨</small><strong>${linkedRecent}</strong></div>
   </div>`;
   $("homeProjects").innerHTML=state.projects.length?state.projects.slice(0,3).map(projectCard).join(""):empty("🏭","진행 중인 Studio가 없어요.","Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
+  renderResurface();
 }
 function renderResurface(reshuffle){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
@@ -936,13 +971,51 @@ function openThread(id){
     <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","Garden의 다른 조각을 이 Thread에 연결해보세요.")}</div></div>`;
   setTimeout(()=>{$("threadFiles")?.addEventListener("change",e=>setPendingFiles("thread",e.target.files));renderPendingFiles("thread")},0);
 }
+function searchGroup(title,items){return `<div class="search-group"><div class="search-group-title">${esc(title)}</div>${items}</div>`}
+function openSearch(){$("searchInput").value="";$("searchResults").innerHTML=`<div class="helper" style="padding:10px 2px;color:var(--muted)">생각·문장·책·영상·Thread·프로젝트를 한 번에 찾습니다.</div>`;$("searchDialog").showModal();setTimeout(()=>$("searchInput").focus(),60)}
+function runSearch(){
+  const q=$("searchInput").value.trim().toLowerCase(),box=$("searchResults");
+  if(!q){box.innerHTML=`<div class="helper" style="padding:10px 2px;color:var(--muted)">검색어를 입력하세요.</div>`;return}
+  const has=v=>(v||"").toLowerCase().includes(q);
+  const frags=state.fragments.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return has(f.thought)||has(f.text)||has(f.externalText)||has(f.locator)||has(f.context)||has(f.choice)||(s&&has(s.title))});
+  const srcs=state.sources.filter(s=>has(s.title)||has(s.creator)||has(s.platform));
+  const ths=state.threads.filter(t=>has(t.title)||has(t.question));
+  const prjs=state.projects.filter(p=>has(p.title));
+  if(!(frags.length+srcs.length+ths.length+prjs.length)){box.innerHTML=empty("🔍","결과가 없어요.","다른 검색어로 시도해보세요.");return}
+  let html="";
+  if(frags.length)html+=searchGroup(`💭 생각 ${frags.length}`,frags.slice(0,25).map(f=>`<button class="search-item" data-search-fragment="${f.id}" type="button"><b>${esc((f.thought||f.text||f.externalText||"").slice(0,90))||"(내용 없음)"}</b><small>${esc(fmt((f.date||f.createdAt||"").slice(0,10)))}${f.locator?" · "+esc(f.locator):""}</small></button>`).join(""));
+  if(srcs.length)html+=searchGroup(`📚 서재 ${srcs.length}`,srcs.map(s=>`<button class="search-item" data-search-source="${s.id}" type="button"><b>${esc(s.title)}</b><small>${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</small></button>`).join(""));
+  if(ths.length)html+=searchGroup(`🌱 Thread ${ths.length}`,ths.map(t=>`<button class="search-item" data-search-thread="${t.id}" type="button"><b>${esc(t.title)}</b>${t.question?`<small>${esc(t.question)}</small>`:""}</button>`).join(""));
+  if(prjs.length)html+=searchGroup(`🏭 Studio ${prjs.length}`,prjs.map(p=>`<button class="search-item" data-search-project="${p.id}" type="button"><b>${esc(p.title)}</b></button>`).join(""));
+  box.innerHTML=html;
+}
+function openEditFragment(fid){
+  const f=state.fragments.find(x=>x.id===fid);if(!f)return;
+  $("editFragmentId").value=f.id;
+  $("editThought").value=f.thought||f.text||"";
+  $("editExternal").value=f.externalText||"";
+  $("editLocator").value=f.locator||"";
+  $("editSource").innerHTML='<option value="">연결 없음</option>'+state.sources.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join("");
+  $("editSource").value=f.sourceId||"";
+  $("editFragmentDialog").showModal();
+}
+async function saveEditFragment(){
+  const f=state.fragments.find(x=>x.id===$("editFragmentId").value);if(!f)return;
+  f.thought=$("editThought").value.trim();delete f.text;
+  f.externalText=$("editExternal").value.trim();
+  f.locator=$("editLocator").value.trim();
+  const sid=$("editSource").value;
+  if(sid){f.sourceId=sid;if(f.type!=="source")f.type="source";}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
+  f.updatedAt=new Date().toISOString();
+  await persist("fragments",f);$("editFragmentDialog").close();renderAll();toast("수정했습니다.");
+}
 function fragmentCard(f,compact=false){
   const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
   return `<article class="card"><div class="card-head"><span class="chip">${src?sourceIcon(src.type):fragIcon(f.type)} ${src?esc(src.title):f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
     ${f.context?`<div class="source-sub">${esc(f.context)}</div>`:""}${f.externalText?`<div class="source-line">${esc(f.externalText)}${f.locator?`<div class="date" style="margin-top:4px">${esc(f.locator)}</div>`:""}</div>`:""}
     ${f.thought||f.text?`<div class="thought">${esc(f.thought||f.text||"")}</div>`:""}${attachmentsHTML(f.attachments||[])}${f.choice?`<div class="meta"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     <div class="meta">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>
-    <div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div></article>`;
+    <div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn soft" data-edit-fragment="${f.id}" type="button">수정</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div></article>`;
 }
 function renderStudio(){
   $("projectList").innerHTML=state.projects.length?state.projects.map(projectCard).join(""):empty("🏭","아직 Studio 작업이 없어요.","Thread 하나를 골라 콘텐츠 작업대로 보내보세요.");
@@ -1471,6 +1544,11 @@ document.addEventListener("click",async e=>{
   const c=e.target.closest("[data-close]");if(c)return $(c.dataset.close).close();
   const m=e.target.closest("[data-mode]");if(m)return setCaptureMode(m.dataset.mode);
   const os=e.target.closest("[data-open-source]");if(os)return openSource(os.dataset.openSource);
+  const sf=e.target.closest("[data-search-fragment]");if(sf){$("searchDialog").close();return openEditFragment(sf.dataset.searchFragment)}
+  const sso=e.target.closest("[data-search-source]");if(sso){$("searchDialog").close();setView("library");return openSource(sso.dataset.searchSource)}
+  const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
+  const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
+  const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
@@ -1512,6 +1590,7 @@ $("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast(
 $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
 $("afterThread").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openLinkDialog(fid)});
 $("openToday").addEventListener("click",()=>{renderTodayDialog();$("todayDialog").showModal()});
+$("sheetSearch").addEventListener("click",openSearch);$("searchInput").addEventListener("input",runSearch);$("saveEditFragment").addEventListener("click",saveEditFragment);
 $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
@@ -1536,7 +1615,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   renderApiSettings();
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 connectFirebase();
 </script>
 </body>
