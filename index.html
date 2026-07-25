@@ -25,10 +25,10 @@
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(96px + env(safe-area-inset-bottom))}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
     .topbar-minimal{margin-bottom:0;min-height:44px}
-    .section{margin-top:28px}
-    .section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:14px}
-    .section-head h2{font-family:var(--serif);margin:0;font-size:1.16rem;font-weight:700;letter-spacing:-.01em}
-    .section-head p{margin:5px 0 0;color:var(--muted);font-size:.78rem}
+    .section{margin-top:34px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-bottom:15px}
+    .section-head h2{font-family:var(--serif);margin:0;font-size:1.18rem;font-weight:700;letter-spacing:-.01em}
+    .section-head p{margin:4px 0 0;color:var(--muted);font-size:.74rem;opacity:.82}
     .divider{height:1px;background:var(--line);margin:16px 0}
     .hidden{display:none!important}
     .view{display:none}.view.active{display:block;animation:up .22s ease-out}
@@ -81,6 +81,19 @@
     .empty{text-align:center;padding:34px 18px;border:1px dashed var(--line);border-radius:20px;color:var(--muted);background:rgba(253,252,247,.5);width:100%;grid-column:1/-1}
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
+    .note{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px 20px;box-shadow:var(--card-shadow);margin-bottom:12px;transition:box-shadow .14s ease,transform .14s ease}
+    .note-quote{font-family:var(--serif);margin:0 0 13px;padding:3px 0 3px 15px;border-left:2px solid var(--accent);color:#3f5a49;font-size:1.06rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.7rem;color:var(--muted);letter-spacing:.02em}
+    .note-body{font-family:var(--serif);margin:0;color:var(--text);font-size:1.08rem;line-height:1.74;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-context{font-size:.76rem;color:var(--muted);margin-top:10px}
+    .note-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+    .note-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-top:12px;border-top:1px solid var(--line)}
+    .note-meta{font-size:.72rem;color:var(--muted);display:inline-flex;align-items:center;gap:5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .note-acts{display:inline-flex;gap:2px;flex:0 0 auto}
+    .note-act{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:.74rem;padding:5px 10px;border-radius:9px;cursor:pointer;transition:.12s}
+    .note-act:hover{background:var(--accent3);color:var(--accent)}
+    .note-act.danger{color:#b06a63}.note-act.danger:hover{background:#fbf3f1;color:var(--danger)}
+
     .hero{background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:26px;box-shadow:var(--shadow);position:relative;overflow:hidden}
     .hero:after{content:"🌱";position:absolute;right:20px;top:12px;font-size:4.2rem;opacity:.08;transform:rotate(8deg)}
     .hero h2{font-family:var(--serif);font-size:clamp(1.5rem,5vw,2.05rem);font-weight:700;line-height:1.28;letter-spacing:-.01em;margin:10px 0 10px;max-width:670px}
@@ -90,13 +103,14 @@
     .metric small{display:block;color:var(--muted);font-size:.72rem}
     .metric strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.35rem;font-weight:700}
     .home-dashboard-head{margin-top:8px}
-    .dashboard-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-    .dashboard-stat{border:1px solid var(--line);background:var(--panel);border-radius:18px;padding:16px;text-align:left;cursor:pointer;min-width:0;box-shadow:var(--card-shadow);transition:.14s}
-    .dashboard-stat:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:#cdd8cd}
-    .dashboard-stat span,.dashboard-stat small{display:block;color:var(--muted);font-size:.72rem}
-    .dashboard-stat strong{font-family:var(--serif);display:block;font-size:1.7rem;font-weight:700;margin:6px 0;letter-spacing:-.01em}
+    .dashboard-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+    .dashboard-stat{border:0;background:var(--panel);border-radius:16px;padding:15px 16px;text-align:left;cursor:pointer;min-width:0;transition:.14s;box-shadow:0 1px 5px rgba(40,44,32,.045)}
+    .dashboard-stat:hover{background:#fbfcf9;transform:translateY(-1px)}
+    .dashboard-stat span{display:block;color:var(--muted);font-size:.72rem;font-weight:600}
+    .dashboard-stat small{display:none}
+    .dashboard-stat strong{font-family:var(--serif);display:block;font-size:1.75rem;font-weight:700;margin:5px 0 0;letter-spacing:-.01em}
     .recent-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-    .recent-summary-item{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .recent-summary-item{background:var(--panel);border:0;border-radius:14px;padding:14px;box-shadow:0 1px 5px rgba(40,44,32,.045)}
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
@@ -390,6 +404,11 @@
     <div class="field">
       <label for="captureText">내 생각</label>
       <textarea class="textarea capture-main" id="captureText" placeholder="떠오른 그대로 적어보세요. 한 줄이어도 충분합니다."></textarea>
+    </div>
+
+    <button class="subtle-add" id="toggleDate" type="button">🗓 지난 날짜로 기록 (기본: 오늘)</button>
+    <div id="dateWrap" class="hidden">
+      <div class="field"><label for="captureDate">날짜</label><input class="input" type="date" id="captureDate" /></div>
     </div>
 
     <button class="subtle-add" id="toggleExternal" type="button">＋ 문장 · 장면 · 누군가의 말도 함께 남기기</button>
@@ -1066,11 +1085,17 @@ async function saveEditFragment(){
 }
 function fragmentCard(f,compact=false){
   const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
-  return `<article class="card"><div class="card-head"><span class="chip">${src?sourceIcon(src.type):fragIcon(f.type)} ${src?esc(src.title):f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
-    ${f.context?`<div class="source-sub">${esc(f.context)}</div>`:""}${f.externalText?`<div class="source-line">${esc(f.externalText)}${f.locator?`<div class="date" style="margin-top:4px">${esc(f.locator)}</div>`:""}</div>`:""}
-    ${f.thought||f.text?`<div class="thought">${esc(f.thought||f.text||"")}</div>`:""}${attachmentsHTML(f.attachments||[])}${f.choice?`<div class="meta"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
-    <div class="meta">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>
-    <div class="actions"><button class="btn soft" data-link="${f.id}" type="button">Thread 연결</button><button class="btn soft" data-edit-fragment="${f.id}" type="button">수정</button><button class="btn danger" data-delete-fragment="${f.id}" type="button">삭제</button></div></article>`;
+  const label=src?esc(src.title):(f.type==="moment"?"순간":f.type==="decision"?"결정":"생각");
+  const icon=src?sourceIcon(src.type):fragIcon(f.type);
+  return `<article class="note">
+    ${f.externalText?`<blockquote class="note-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${f.thought||f.text?`<p class="note-body">${esc(f.thought||f.text||"")}</p>`:""}
+    ${f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
+    ${attachmentsHTML(f.attachments||[])}
+    ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
+    ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
+    <div class="note-foot"><span class="note-meta">${icon} ${label} · ${fmt((f.date||f.createdAt||"").slice(0,10))}</span><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
+  </article>`;
 }
 function renderStudio(){
   $("projectList").innerHTML=state.projects.length?state.projects.map(projectCard).join(""):empty("🏭","아직 Studio 작업이 없어요.","Thread 하나를 골라 콘텐츠 작업대로 보내보세요.");
@@ -1148,6 +1173,9 @@ function openCapture(prefill=""){
   state.pendingFiles.capture=[];renderPendingFiles("capture");$("captureFiles").value="";
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
+  $("captureDate").value=today();
+  $("dateWrap").classList.add("hidden");
+  $("toggleDate").textContent="🗓 지난 날짜로 기록 (기본: 오늘)";
   if(!prefill){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
   $("captureDialog").showModal();
   setTimeout(()=>$("captureText").focus(),60);
@@ -1157,7 +1185,7 @@ async function saveCapture(){
   if(!thought&&!externalText&&!state.pendingFiles.capture.length)return toast("한 줄이나 미디어 하나는 남겨주세요.");
   const f={
     id:uid(),type:"thought",thought,externalText,locator:$("captureLocator").value.trim(),
-    threadIds:[],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
+    threadIds:[],attachments:[],date:$("captureDate").value||today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id);
@@ -1641,6 +1669,7 @@ $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
 
 $("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
+$("toggleDate").addEventListener("click",()=>{const hidden=$("dateWrap").classList.toggle("hidden");$("toggleDate").textContent=hidden?"🗓 지난 날짜로 기록 (기본: 오늘)":"− 날짜 접기"});
 $("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast("그대로 잘 남겨뒀어요.")});
 $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
 $("afterThread").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openLinkDialog(fid)});
