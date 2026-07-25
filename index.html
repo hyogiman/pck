@@ -20,7 +20,8 @@
     body{margin:0;background:radial-gradient(1200px 500px at 100% -5%,rgba(55,95,71,.06),transparent 60%),var(--bg);
       color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
     button,input,textarea,select{font:inherit}button{color:inherit}
-    button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid rgba(55,95,71,.22);outline-offset:2px}
+    button:focus-visible{outline:3px solid rgba(55,95,71,.22);outline-offset:2px}
+    input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(96px + env(safe-area-inset-bottom))}
     .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
@@ -61,8 +62,12 @@
     .icon-btn,.round-btn{border:1px solid var(--line);background:rgba(253,252,247,.85);border-radius:50%;display:grid;place-items:center;cursor:pointer;transition:.12s}
     .icon-btn:hover,.round-btn:hover{border-color:#cdd8cd}
     .icon-btn{width:42px;height:42px}.round-btn{width:38px;height:38px}
-    .subtle-add{border:1px dashed var(--line);background:transparent;color:var(--accent);font-weight:700;cursor:pointer;padding:10px 14px;border-radius:12px;font-size:.8rem;transition:.12s}
+    .subtle-add{display:block;width:100%;text-align:center;border:1px dashed var(--line);background:transparent;color:var(--accent);font-weight:700;cursor:pointer;padding:11px 14px;border-radius:12px;font-size:.8rem;transition:.12s;margin-top:14px}
     .subtle-add:hover{background:var(--accent3);border-color:#cdd8cd}
+    .locator-inline{margin-top:8px;max-width:200px;padding:9px 12px;font-size:.8rem;color:var(--muted)}
+    .capture-extra-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .date-inline{display:inline-flex;align-items:center;gap:7px;color:var(--muted)}
+    .date-input{width:auto;padding:9px 12px;font-size:.82rem;color:var(--text)}
     .mode-btn{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:8px 13px;color:var(--muted);cursor:pointer;font-size:.76rem;font-weight:700;transition:.12s}
     .mode-btn:hover{border-color:#cdd8cd}
     .mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
@@ -139,7 +144,7 @@
     .input,.textarea,.select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 14px;color:var(--text);transition:border-color .12s,box-shadow .12s}
     .input:focus,.textarea:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(55,95,71,.1)}
     .textarea{min-height:108px;resize:vertical;line-height:1.6}
-    .field{margin-top:14px}
+    .field{margin-top:16px}
     .field label{display:block;font-size:.77rem;font-weight:700;margin-bottom:7px;color:#3a3e33}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-bottom:12px}
@@ -256,6 +261,11 @@
 
     @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
     @media(max-width:680px){
+      .modal{padding:20px 16px}
+      .modal-actions .btn{flex:1}
+      .capture-extra-row{align-items:stretch}
+      .capture-extra-row .file-pick{flex:1;text-align:center}
+      .date-inline{flex:1;justify-content:flex-end}
       .api-search-row{grid-template-columns:1fr}
       .dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
       .nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -406,11 +416,6 @@
       <textarea class="textarea capture-main" id="captureText" placeholder="떠오른 그대로 적어보세요. 한 줄이어도 충분합니다."></textarea>
     </div>
 
-    <button class="subtle-add" id="toggleDate" type="button">🗓 지난 날짜로 기록 (기본: 오늘)</button>
-    <div id="dateWrap" class="hidden">
-      <div class="field"><label for="captureDate">날짜</label><input class="input" type="date" id="captureDate" /></div>
-    </div>
-
     <button class="subtle-add" id="toggleExternal" type="button">＋ 문장 · 장면 · 누군가의 말도 함께 남기기</button>
     <div id="externalWrap" class="hidden">
       <div class="field">
@@ -424,9 +429,10 @@
     </div>
 
     <div class="field">
-      <label>사진 · 음성 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
-      <div class="attachment-tools">
+      <label>사진 · 음성 · 영상 · 기록 날짜 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
+      <div class="capture-extra-row">
         <label class="btn file-pick">📎 파일 추가<input id="captureFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
+        <span class="date-inline">🗓 <input class="input date-input" type="date" id="captureDate" title="지난 날짜로 기록하려면 바꿔주세요"></span>
       </div>
       <div class="selected-files" id="captureFileList"></div>
       <div class="helper">Firebase Storage가 연결된 경우에만 파일이 실제로 저장됩니다.</div>
@@ -996,8 +1002,8 @@ function openSource(id){
     <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type)}</div><div><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"BOOK":"MEDIA"}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
     <div class="quick-capture">
       <div class="eyebrow">한 줄 + 나의 한 줄</div>
-      <div class="field"><label>${s.type==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${s.type==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea></div>
-      <div class="inline-two"><input class="input" id="sourceLocator" placeholder="${s.type==="book"?"p.132":"6화 / 12:31"}"><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
+      <div class="field"><label>${s.type==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${s.type==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea><input class="input locator-inline" id="sourceLocator" placeholder="${s.type==="book"?"🗓 p.132 (위치)":"🗓 6화 / 12:31 (위치)"}"></div>
+      <div class="field"><label>나의 한 줄</label><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
       <div class="attachment-tools">
         <label class="btn file-pick">📎 사진·음성·영상<input id="sourceFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
       </div>
@@ -1174,8 +1180,6 @@ function openCapture(prefill=""){
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
   $("captureDate").value=today();
-  $("dateWrap").classList.add("hidden");
-  $("toggleDate").textContent="🗓 지난 날짜로 기록 (기본: 오늘)";
   if(!prefill){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
   $("captureDialog").showModal();
   setTimeout(()=>$("captureText").focus(),60);
@@ -1669,7 +1673,6 @@ $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
 
 $("toggleExternal").addEventListener("click",()=>{const hidden=$("externalWrap").classList.toggle("hidden");$("toggleExternal").textContent=hidden?"＋ 문장 · 장면 · 누군가의 말도 함께 남기기":"− 외부 문장 접기"});
-$("toggleDate").addEventListener("click",()=>{const hidden=$("dateWrap").classList.toggle("hidden");$("toggleDate").textContent=hidden?"🗓 지난 날짜로 기록 (기본: 오늘)":"− 날짜 접기"});
 $("afterDone").addEventListener("click",()=>{$("afterSaveDialog").close();toast("그대로 잘 남겨뒀어요.")});
 $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openSourceLinkDialog(fid)});
 $("afterThread").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openLinkDialog(fid)});
