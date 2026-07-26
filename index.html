@@ -176,7 +176,8 @@
     .dashboard-stat small{display:none}
     .dashboard-stat strong{font-family:var(--serif);display:block;font-size:1.75rem;font-weight:700;margin:5px 0 0;letter-spacing:-.01em}
     .recent-summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-    .recent-summary-item{background:var(--panel);border:0;border-radius:14px;padding:14px;box-shadow:0 1px 5px rgba(40,44,32,.045)}
+    .recent-summary-item{background:var(--panel);border:0;border-radius:14px;padding:14px;box-shadow:0 1px 5px rgba(40,44,32,.045);cursor:pointer;text-align:left;width:100%;transition:.14s}
+    .recent-summary-item:hover{background:#fbfcf9}
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
@@ -276,6 +277,8 @@
     .frag-selects{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
     .frag-selects .select{font-size:.82rem;padding:10px 12px}
     .frag-count{font-size:.74rem;color:var(--muted);margin-top:10px;padding-left:2px}
+    .frag-tip{font-size:.7rem;color:var(--ink-faint,#9aa3a8);opacity:.75;margin-top:3px;padding-left:2px}
+    #listDialogBody{max-height:66vh;overflow:auto;-webkit-overflow-scrolling:touch}
     mark{background:#fdf0a8;color:inherit;border-radius:3px;padding:0 2px;font-style:normal}
     .note-quote mark{background:#f3e6a0}
     .more-btn{width:100%;border:1px dashed var(--line);background:transparent;color:var(--accent);
@@ -364,6 +367,15 @@
     .search-results{display:grid;gap:7px;margin-top:11px;max-height:360px;overflow:auto}
     #sourceLinkList,#linkThreadList{max-height:46vh;overflow:auto;-webkit-overflow-scrolling:touch}
     .link-top{position:sticky;top:0;z-index:2;background:var(--panel);padding-bottom:4px}
+    #editSourceList{max-height:46vh;overflow:auto;-webkit-overflow-scrolling:touch}
+    .link-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+    .link-current{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+      border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:11px 13px;
+      font-size:.9rem;color:var(--muted);cursor:pointer;text-align:left;min-width:0}
+    .link-current.has{color:var(--ink);font-weight:600}
+    .link-current>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .link-chev{color:var(--muted);flex:0 0 auto;font-size:.8rem}
+    .link-current:hover{border-color:var(--accent)}
     .search-result{border:1px solid var(--line);background:var(--panel);border-radius:13px;padding:11px;display:grid;grid-template-columns:48px minmax(0,1fr);gap:11px;text-align:left;cursor:pointer;width:100%;transition:.12s}
     .search-result:hover{border-color:#cdd8cd}
     .search-thumb{width:48px;height:68px;border-radius:8px;background:var(--panel2);display:grid;place-items:center;overflow:hidden}
@@ -517,6 +529,7 @@
         </select>
       </div>
       <div class="frag-count" id="fragCount"></div>
+      <div class="frag-tip">카드를 누르면 수정할 수 있어요.</div>
     </div>
     <div id="fragmentArchive"></div>
   </section>
@@ -703,7 +716,12 @@
     <div class="field"><label for="editLocator">위치 / 페이지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="editLocator" placeholder="예: p.132 / 6화 / 12:31" /></div>
     <div class="field"><label for="editDate">날짜</label><input class="input" type="date" id="editDate" /></div>
     <div class="field" id="editAttachWrap"><label>첨부된 사진 · 음성 · 영상</label><div class="edit-attachments" id="editAttachments"></div></div>
-    <div class="field"><label for="editSource">연결된 책 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="input" id="editSource"></select></div>
+    <div class="field"><label>연결된 책 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label>
+      <div class="link-row">
+        <button class="link-current" id="editSourceBtn" type="button"><span id="editSourceLabel">연결 없음</span><span class="link-chev">▾</span></button>
+        <button class="btn" id="editSourceClear" type="button">해제</button>
+      </div>
+    </div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
   </div>
 </dialog>
@@ -740,6 +758,21 @@
       <div class="field"><label for="projectThread">시작 Thread <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="select" id="projectThread"><option value="">없음</option></select></div>
     </div>
     <div class="modal-actions"><button class="btn" data-close="projectDialog" type="button">취소</button><button class="btn primary" id="saveProject" type="button">작업대 만들기</button></div>
+  </div>
+</dialog>
+
+<dialog id="listDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">RECENT</div><h2 id="listDialogTitle">생각 목록</h2></div><button class="close-btn" data-close="listDialog" type="button">✕</button></div>
+    <div id="listDialogBody"></div>
+  </div>
+</dialog>
+
+<dialog id="editSourcePicker">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">LIBRARY</div><h2>어떤 작품과 연결할까요?</h2></div><button class="close-btn" data-close="editSourcePicker" type="button">✕</button></div>
+    <div class="link-top"><input class="input" id="editSourceSearch" placeholder="책 · 영화 · 유튜브 검색" autocomplete="off"></div>
+    <div id="editSourceList" style="margin-top:12px"></div>
   </div>
 </dialog>
 
@@ -1233,7 +1266,7 @@ function fragArchiveCard(f,q){
     ${attachmentsHTML(f.attachments||[])}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
     <div class="note-foot"><span class="note-meta"><span class="nm-src">${icon} ${label}</span><span class="nm-date">${esc(st.main)}</span></span></div>
-    <div class="note-tail">${st.moved?`<span class="moved-note">✎ ${esc(st.moved)}</span>`:""}<span class="note-acts"><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button></span></div>
+${st.moved?`<div class="note-tail"><span class="moved-note">✎ ${esc(st.moved)}</span></div>`:""}
   </article>`;
 }
 function renderFragments(){
@@ -1314,11 +1347,15 @@ function renderHome(){
   const freeRecent=recent.filter(f=>!f.sourceId).length;
   const linkedRecent=recent.filter(f=>(f.threadIds||[]).length).length;
   $("homeRecentSummary").innerHTML=`<div class="recent-summary-grid">
-    <div class="recent-summary-item"><small>최근 7일 생각</small><strong>${recent.length}</strong></div>
-    <div class="recent-summary-item"><small>Library에서 온 조각</small><strong>${sourceRecent}</strong></div>
-    <div class="recent-summary-item"><small>Thread에 연결됨</small><strong>${linkedRecent}</strong></div>
+    <button class="recent-summary-item" data-recent="all" type="button"><small>최근 7일 생각</small><strong>${recent.length}</strong></button>
+    <button class="recent-summary-item" data-recent="source" type="button"><small>Library에서 온 조각</small><strong>${sourceRecent}</strong></button>
+    <button class="recent-summary-item" data-recent="thread" type="button"><small>Thread에 연결됨</small><strong>${linkedRecent}</strong></button>
   </div>`;
-  $("homeProjects").innerHTML=state.projects.length?state.projects.slice(0,3).map(projectCard).join(""):empty("🏭","진행 중인 Studio가 없어요.","Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
+  const working=state.projects.filter(p=>p.status!=="published");
+  const published=state.projects.filter(p=>p.status==="published").length;
+  $("homeProjects").innerHTML=working.length
+    ? working.slice(0,3).map(projectCard).join("")
+    : empty("🏭",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
   renderResurface();
 }
 function renderResurface(reshuffle){
@@ -1439,12 +1476,35 @@ function openEditFragment(fid){
   $("editExternal").value=f.externalText||"";
   $("editLocator").value=f.locator||"";
   $("editDate").value=(f.date||f.createdAt||"").slice(0,10)||today();
-  $("editSource").innerHTML='<option value="">연결 없음</option>'+state.sources.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join("");
-  $("editSource").value=f.sourceId||"";
+  state.editSourceId=f.sourceId||"";
+  renderEditSource();
   state.editAttachments=(f.attachments||[]).slice();
   state.editRemovedAttachments=[];
   renderEditAttachments();
   $("editFragmentDialog").showModal();setTimeout(growAll,0);
+}
+function openFragmentList(title,list){
+  $("listDialogTitle").textContent=title;
+  $("listDialogBody").innerHTML=list.length
+    ? list.map(f=>fragArchiveCard(f,"")).join("")
+    : empty("💭","해당하는 생각이 없어요.","");
+  $("listDialog").showModal();
+}
+function renderEditSource(){
+  const s=state.editSourceId?state.sources.find(x=>x.id===state.editSourceId):null;
+  $("editSourceLabel").innerHTML=s?`${sourceIcon(srcType(s))} ${esc(s.title)}`:"연결 없음";
+  $("editSourceBtn").classList.toggle("has",!!s);
+  $("editSourceClear").style.display=s?"":"none";
+}
+function renderEditSourceList(){
+  const q=($("editSourceSearch")?.value||"").trim().toLowerCase();
+  let arr=state.sources.slice().sort((a,b)=>String(lastSourceActivity(b.id)||"").localeCompare(String(lastSourceActivity(a.id)||"")));
+  if(q)arr=arr.filter(s=>[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q));
+  const shown=arr.slice(0,20);
+  $("editSourceList").innerHTML=arr.length
+    ? shown.map(s=>`<button class="card click-card" data-pick-source="${s.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</div><div class="title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div></button>`).join("")
+      +(arr.length>shown.length?`<div class="pool-more">그 외 ${arr.length-shown.length}개 — 검색으로 좁혀보세요</div>`:"")
+    : empty("📚",q?"찾는 작품이 없어요.":"등록된 작품이 없어요.",q?"다른 말로 검색해보세요.":"Library에서 먼저 등록해주세요.");
 }
 function renderEditAttachments(){
   const list=state.editAttachments||[];
@@ -1462,7 +1522,7 @@ async function saveEditFragment(){
   f.externalText=$("editExternal").value.trim();
   f.locator=$("editLocator").value.trim();
   f.date=$("editDate").value||f.date||today();
-  const sid=$("editSource").value;
+  const sid=state.editSourceId||"";
   if(sid){f.sourceId=sid;if(f.type!=="source")f.type="source";}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
   f.attachments=(state.editAttachments||[]).slice();
   f.updatedAt=new Date().toISOString();
@@ -1926,7 +1986,7 @@ async function applyApiResultByIndex(index){
     const existing=existingSourceByIsbn(r.isbn13);
     if(existing){
       if(state.pendingSourceLinkFragmentId){
-        const fid=state.pendingSourceLinkFragmentId;
+        const fid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;
         $("sourceDialog").close();
         await linkFragmentToSource(fid,existing.id);
         setView("library");openSource(existing.id);
@@ -1962,11 +2022,9 @@ async function saveSource(){
   if(!old&&isbn13){
     const duplicate=existingSourceByIsbn(isbn13);
     if(duplicate){
+      const dupFid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;
       $("sourceDialog").close();
-      if(state.pendingSourceLinkFragmentId){
-        const fid=state.pendingSourceLinkFragmentId;
-        await linkFragmentToSource(fid,duplicate.id);
-      }
+      if(dupFid) await linkFragmentToSource(dupFid,duplicate.id);
       setView("library");openSource(duplicate.id);toast("같은 ISBN의 책이 이미 등록되어 있어 기존 책을 열었습니다.");return;
     }
   }
@@ -1978,10 +2036,12 @@ async function saveSource(){
     externalLink:$("sourceDialog").dataset.externalLink||old?.externalLink||"",
     createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
   };
+  const pendingFid=(!old && state.pendingSourceLinkFragmentId)?state.pendingSourceLinkFragmentId:null;
+  state.pendingSourceLinkFragmentId=null;              // 대기 상태는 여기서 반드시 끝낸다
   state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];
   await persist("sources",s);$("sourceDialog").close();
-  if(!old && state.pendingSourceLinkFragmentId){
-    const fid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;await linkFragmentToSource(fid,s.id);
+  if(pendingFid){
+    await linkFragmentToSource(pendingFid,s.id);
   }else{
     renderAll();if(old)openSource(s.id);toast("Library에 저장했습니다.");
   }
@@ -1999,11 +2059,12 @@ function openThreadDialog(t=null){$("threadId").value=t?.id||"";$("threadTitleIn
 async function saveThread(){
   const title=$("threadTitleInput").value.trim();if(!title)return toast("Thread 이름을 적어주세요.");const old=state.threads.find(t=>t.id===$("threadId").value);
   const t={id:old?.id||uid(),title,question:$("threadQuestion").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const pendingFid=(!old && state.pendingLinkFragmentId)?state.pendingLinkFragmentId:null;
+  state.pendingLinkFragmentId=null;                    // 대기 상태는 여기서 반드시 끝낸다
   state.threads=old?state.threads.map(x=>x.id===t.id?t:x):[t,...state.threads];await persist("threads",t);
-  if(!old && state.pendingLinkFragmentId){
-    const f=state.fragments.find(x=>x.id===state.pendingLinkFragmentId);
+  if(pendingFid){
+    const f=state.fragments.find(x=>x.id===pendingFid);
     if(f){f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f);}
-    state.pendingLinkFragmentId=null;
   }
   $("threadDialog").close();renderAll();toast(old?"Thread를 수정했습니다.":"생각의 줄기를 만들었습니다. 🌱");
 }
@@ -2214,6 +2275,17 @@ document.addEventListener("click",async e=>{
   const dtc=e.target.closest("[data-detach]");if(dtc)return detachFragment(dtc.dataset.project,dtc.dataset.slot,dtc.dataset.detach);
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
+  const rc=e.target.closest("[data-recent]");
+  if(rc){
+    const recent=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)<=6);
+    const k=rc.dataset.recent;
+    if(k==="source")openFragmentList("Library에서 온 조각 · 최근 7일",recent.filter(f=>f.sourceId));
+    else if(k==="thread")openFragmentList("Thread에 연결된 조각 · 최근 7일",recent.filter(f=>(f.threadIds||[]).length));
+    else openFragmentList("최근 7일의 생각",recent);
+    return;
+  }
+  const ps=e.target.closest("[data-pick-source]");
+  if(ps){state.editSourceId=ps.dataset.pickSource;renderEditSource();$("editSourcePicker").close();return}
   const ra=e.target.closest("[data-remove-attach]");
   if(ra){
     const i=+ra.dataset.removeAttach,gone=(state.editAttachments||[])[i];
@@ -2255,8 +2327,13 @@ $("afterLibrary").addEventListener("click",()=>{const fid=$("afterSaveFragmentId
 $("afterThread").addEventListener("click",()=>{const fid=$("afterSaveFragmentId").value;$("afterSaveDialog").close();openLinkDialog(fid)});
 $("openToday").addEventListener("click",()=>{renderTodayDialog();$("todayDialog").showModal()});
 $("sheetSearch").addEventListener("click",openSearch);$("searchInput").addEventListener("input",runSearch);$("saveEditFragment").addEventListener("click",saveEditFragment);
+$("editSourceBtn").addEventListener("click",()=>{$("editSourceSearch").value="";renderEditSourceList();$("editSourcePicker").showModal()});
+$("editSourceClear").addEventListener("click",()=>{state.editSourceId="";renderEditSource()});
+$("editSourceSearch").addEventListener("input",renderEditSourceList);
 $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
+$("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentId=null});
+$("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=4;state.gardenFragLimit=6;renderGarden()});
@@ -2294,7 +2371,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   renderApiSettings();
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","publishDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
