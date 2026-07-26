@@ -212,8 +212,18 @@
     .timeline-item{position:relative;margin:0 0 15px}
     .timeline-item:before{content:"";position:absolute;left:-18px;top:9px;width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--bg)}
 
-    .studio-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.35fr);gap:13px;align-items:start}
+    .studio-layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:13px;align-items:start}
     .material-pool{position:sticky;top:10px}
+    .pool-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:13px 16px;cursor:pointer;
+      font-size:.85rem;font-weight:700;color:var(--ink);box-shadow:var(--card-shadow)}
+    .pool-toggle:hover{border-color:#cdd8cd}
+    .pool-toggle b{color:var(--accent);margin-left:3px}
+    .pool-caret{color:var(--muted);transition:transform .2s}
+    .pool-toggle.open .pool-caret{transform:rotate(180deg)}
+    .pool-body{margin-top:9px}
+    .pool-search{margin-bottom:9px;font-size:.85rem;padding:10px 13px}
+    .pool-empty,.pool-more{font-size:.76rem;color:var(--muted);padding:9px 4px;text-align:center}
     .material{background:var(--panel2);border-radius:12px;padding:11px 12px;margin-top:8px;font-size:.8rem;line-height:1.5}
     .slot{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:15px;margin-bottom:10px;box-shadow:var(--card-shadow)}
     .slot-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -624,6 +634,7 @@
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">MATERIAL</div><h2>이 칸에 넣을 생각 조각</h2></div><button class="close-btn" data-close="attachDialog" type="button">✕</button></div>
     <input id="attachProjectId" type="hidden" /><input id="attachSlotId" type="hidden" />
+    <input class="input" id="attachSearch" placeholder="재료 검색 (문장·책 제목)" autocomplete="off" style="margin-bottom:12px">
     <div id="attachFragmentList"></div>
   </div>
 </dialog>
@@ -1229,17 +1240,35 @@ function exportProject(pid){
 function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
-  const pool=t?threadFragments(t.id):state.fragments.slice(0,12),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
+  const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
   const next=slots.find(s=>!(s.text||(s.fragmentIds||[]).length));
   const nextLine=next?`<div class="next-question"><span class="next-label">다음 질문</span><p class="serif">${esc(next.prompt)}</p></div>`
     :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
   $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
     <div class="studio-layout section">
-      <aside class="material-pool"><div class="section-head"><div><h2>재료함</h2><p>내가 이미 남긴 생각.</p></div></div>${pool.length?pool.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,120))}</b></div>`).join(""):empty("🧺","재료가 없어요.","Garden에서 생각을 먼저 연결해보세요.")}</aside>
-      <section><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
+      <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
       ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block" data-save-all-slots="${p.id}" type="button">작업대 저장</button></section>
+      <aside class="material-pool">
+        <button class="pool-toggle" id="poolToggle" type="button"><span>🧺 재료함 <b>${pool.length}</b></span><span class="pool-caret">▾</span></button>
+        <div class="pool-body hidden" id="poolBody">
+          <input class="input pool-search" id="poolSearch" placeholder="재료 검색" autocomplete="off">
+          <div id="poolList"></div>
+        </div>
+      </aside>
     </div>`;
+  state.poolFragments=pool;
+  renderPool();
+}
+function renderPool(){
+  const box=$("poolList");if(!box)return;
+  const q=($("poolSearch")?.value||"").trim().toLowerCase();
+  let list=state.poolFragments||[];
+  if(q)list=list.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
+  if(!list.length){box.innerHTML=`<div class="pool-empty">${q?"검색 결과가 없어요.":"재료가 없어요. Garden에서 생각을 먼저 쌓아보세요."}</div>`;return}
+  const shown=list.slice(0,8);
+  box.innerHTML=shown.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,90))}</b></div>`).join("")
+    +(list.length>shown.length?`<div class="pool-more">그 외 ${list.length-shown.length}개 — 검색으로 찾아보세요</div>`:"");
 }
 function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(s.type)} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
 function slotHTML(p,s){
@@ -1640,8 +1669,20 @@ async function saveProject(){
   state.projects.unshift(p);await persist("projects",p);$("projectDialog").close();renderStudio();openProject(p.id);toast("Studio 작업대를 만들었습니다.");
 }
 function openAttachDialog(pid,slotId){
-  $("attachProjectId").value=pid;$("attachSlotId").value=slotId;const p=state.projects.find(x=>x.id===pid),pool=p?.threadId?threadFragments(p.threadId):state.fragments;
-  $("attachFragmentList").innerHTML=pool.length?pool.map(f=>`<button class="card click-card" data-attach-fragment="${f.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${srcLabel(f)}</div><div class="body">${esc((f.thought||f.text||f.externalText||"").slice(0,180))}</div></button>`).join(""):empty("🧺","연결할 재료가 없어요.","Garden에서 생각을 먼저 쌓아보세요.");$("attachDialog").showModal();
+  $("attachProjectId").value=pid;$("attachSlotId").value=slotId;
+  const p=state.projects.find(x=>x.id===pid);
+  state.attachPool=p?.threadId?threadFragments(p.threadId):state.fragments;
+  $("attachSearch").value="";renderAttachList();$("attachDialog").showModal();
+}
+function renderAttachList(){
+  const q=($("attachSearch")?.value||"").trim().toLowerCase();
+  let pool=state.attachPool||[];
+  if(q)pool=pool.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
+  const shown=pool.slice(0,20);
+  $("attachFragmentList").innerHTML=shown.length
+    ? shown.map(f=>`<button class="card click-card" data-attach-fragment="${f.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${srcLabel(f)}</div><div class="body">${esc((f.thought||f.text||f.externalText||"").slice(0,180))}</div></button>`).join("")
+      +(pool.length>shown.length?`<div class="pool-more">그 외 ${pool.length-shown.length}개 — 검색으로 좁혀보세요</div>`:"")
+    : empty("🧺",q?"검색 결과가 없어요.":"연결할 재료가 없어요.",q?"다른 말로 찾아보세요.":"Garden에서 생각을 먼저 쌓아보세요.");
 }
 async function attachFragment(pid,slotId,fid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p),slot=slots.find(s=>s.id===slotId);slot.fragmentIds=[...new Set([...(slot.fragmentIds||[]),fid])];p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);$("attachDialog").close();openProject(pid);toast("재료를 배치했습니다.");
@@ -1835,6 +1876,14 @@ function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightbo
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
 $("lightbox").addEventListener("close",()=>{$("lightboxImg").src=""});
 $("lightboxClose").addEventListener("click",closeLightbox);
+document.addEventListener("input",e=>{
+  if(e.target.id==="poolSearch")renderPool();
+  if(e.target.id==="attachSearch")renderAttachList();
+});
+document.addEventListener("click",e=>{
+  const pt=e.target.closest("#poolToggle");
+  if(pt){const b=$("poolBody");const opened=b.classList.toggle("hidden")===false;pt.classList.toggle("open",opened);if(opened)setTimeout(()=>$("poolSearch")?.focus(),80)}
+});
 connectFirebase();
 
 /* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기 ── */
