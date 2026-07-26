@@ -141,7 +141,8 @@
     .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
     .actions-split{flex-wrap:nowrap}
-    .actions-split>.btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap}
+    .actions-split>.btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap;
+      font-size:clamp(.71rem,3.1vw,.8rem)}
     .empty{text-align:center;padding:34px 18px;border:1px dashed var(--line);border-radius:20px;color:var(--muted);background:rgba(253,252,247,.5);width:100%;grid-column:1/-1}
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
@@ -186,11 +187,15 @@
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
     .home-minimal{
-      /* 하단 '메뉴' 알약(밑에서 14px 띄운 52px 높이)을 피해 카드가 앉을 자리를 남긴다 */
-      min-height:calc(100vh - 134px);
-      min-height:calc(100dvh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+      /* 높이는 '화면에서 .app 위 여백만 뺀 값' = 정확히 한 판.
+         카드 아래 알약 자리(--menu-zone)는 화면 계산이 아니라 이 요소의 안쪽 여백으로 확보한다.
+         그래야 화면이 짧거나 글자 배율이 커서 내용이 넘쳐도, 끝까지 내렸을 때 카드가 알약을 피한다. */
+      --menu-zone:110px;
+      min-height:calc(100vh - 20px);
+      min-height:calc(100dvh - 20px - env(safe-area-inset-top));
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;
-      text-align:center;padding:10px 10px 0;gap:10px}
+      text-align:center;padding:10px 10px calc(var(--menu-zone) + env(safe-area-inset-bottom));gap:10px}
+    @media (max-height:640px){.home-minimal{--menu-zone:92px;gap:6px}}
     .home-minimal>*{flex:0 0 auto;width:100%}
     .home-title h1{font-family:var(--display);margin:6px 0 4px;font-size:clamp(1.85rem,7.2vw,2.6rem);font-weight:400;letter-spacing:.01em;position:relative;display:inline-block}
     .home-title h1:after{content:"";position:absolute;left:14%;right:14%;bottom:2px;height:7px;background:var(--seal);opacity:.16;border-radius:3px}
