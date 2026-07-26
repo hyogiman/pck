@@ -222,6 +222,11 @@
     .pool-caret{color:var(--muted);transition:transform .2s}
     .pool-toggle.open .pool-caret{transform:rotate(180deg)}
     .pool-body{margin-top:9px}
+    .pool-tabs{display:flex;gap:6px;margin-bottom:9px}
+    .pool-tab{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:11px;
+      padding:8px 6px;font-size:.74rem;font-weight:700;cursor:pointer;transition:.12s}
+    .pool-tab:hover{border-color:#cdd8cd}
+    .pool-tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
     .pool-search{margin-bottom:9px;font-size:.85rem;padding:10px 13px}
     .pool-empty,.pool-more{font-size:.76rem;color:var(--muted);padding:9px 4px;text-align:center}
     .material{background:var(--panel2);border-radius:12px;padding:11px 12px;margin-top:8px;font-size:.8rem;line-height:1.5}
@@ -642,6 +647,7 @@
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">MATERIAL</div><h2>이 칸에 넣을 생각 조각</h2></div><button class="close-btn" data-close="attachDialog" type="button">✕</button></div>
     <input id="attachProjectId" type="hidden" /><input id="attachSlotId" type="hidden" />
+    <div id="attachTabs"></div>
     <input class="input" id="attachSearch" placeholder="재료 검색 (문장·책 제목)" autocomplete="off" style="margin-bottom:12px">
     <div id="attachFragmentList"></div>
   </div>
@@ -1260,18 +1266,30 @@ function openProject(id){
       <aside class="material-pool">
         <button class="pool-toggle" id="poolToggle" type="button"><span>🧺 재료함 <b>${pool.length}</b></span><span class="pool-caret">▾</span></button>
         <div class="pool-body hidden" id="poolBody">
+          <div id="poolTabs"></div>
           <input class="input pool-search" id="poolSearch" placeholder="재료 검색" autocomplete="off">
           <div id="poolList"></div>
         </div>
       </aside>
     </div>`;
-  state.poolFragments=pool;
+  state.poolThread=t?threadFragments(t.id):null;
+  state.poolAll=state.fragments;
+  state.poolMode=t?"thread":"all";
   renderPool();
 }
+function poolTabs(){
+  if(!state.poolThread)return "";
+  return `<div class="pool-tabs">
+    <button class="pool-tab ${state.poolMode==="thread"?"on":""}" data-pool-mode="thread" type="button">이 Thread ${state.poolThread.length}</button>
+    <button class="pool-tab ${state.poolMode==="all"?"on":""}" data-pool-mode="all" type="button">전체 ${state.poolAll.length}</button>
+  </div>`;
+}
+function currentPool(){return (state.poolMode==="thread"&&state.poolThread)?state.poolThread:state.poolAll}
 function renderPool(){
   const box=$("poolList");if(!box)return;
+  const tabs=$("poolTabs");if(tabs)tabs.innerHTML=poolTabs();
   const q=($("poolSearch")?.value||"").trim().toLowerCase();
-  let list=state.poolFragments||[];
+  let list=currentPool()||[];
   if(q)list=list.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
   if(!list.length){box.innerHTML=`<div class="pool-empty">${q?"검색 결과가 없어요.":"재료가 없어요. Garden에서 생각을 먼저 쌓아보세요."}</div>`;return}
   const shown=list.slice(0,8);
@@ -1684,12 +1702,18 @@ async function saveProject(){
 function openAttachDialog(pid,slotId){
   $("attachProjectId").value=pid;$("attachSlotId").value=slotId;
   const p=state.projects.find(x=>x.id===pid);
-  state.attachPool=p?.threadId?threadFragments(p.threadId):state.fragments;
+  state.attachThread=p?.threadId?threadFragments(p.threadId):null;
+  state.attachAll=state.fragments;
+  state.attachMode=state.attachThread?"thread":"all";
   $("attachSearch").value="";renderAttachList();$("attachDialog").showModal();
 }
 function renderAttachList(){
+  const tabs=$("attachTabs");
+  if(tabs)tabs.innerHTML=state.attachThread?`<div class="pool-tabs">
+    <button class="pool-tab ${state.attachMode==="thread"?"on":""}" data-attach-mode="thread" type="button">이 Thread ${state.attachThread.length}</button>
+    <button class="pool-tab ${state.attachMode==="all"?"on":""}" data-attach-mode="all" type="button">전체 ${state.attachAll.length}</button></div>`:"";
   const q=($("attachSearch")?.value||"").trim().toLowerCase();
-  let pool=state.attachPool||[];
+  let pool=(state.attachMode==="thread"&&state.attachThread)?state.attachThread:state.attachAll;
   if(q)pool=pool.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
   const shown=pool.slice(0,20);
   $("attachFragmentList").innerHTML=shown.length
@@ -1919,9 +1943,40 @@ document.addEventListener("input",e=>{
   }
 });
 document.addEventListener("click",e=>{
+  const pm=e.target.closest("[data-pool-mode]");
+  if(pm){state.poolMode=pm.dataset.poolMode;renderPool();return}
+  const am=e.target.closest("[data-attach-mode]");
+  if(am){state.attachMode=am.dataset.attachMode;renderAttachList();return}
   const pt=e.target.closest("#poolToggle");
   if(pt){const b=$("poolBody");const opened=b.classList.toggle("hidden")===false;pt.classList.toggle("open",opened);if(opened)setTimeout(()=>$("poolSearch")?.focus(),80)}
 });
+/* ── 안드로이드 뒤로가기: 앱을 끄지 말고 한 단계씩 돌아가기 ── */
+function pushGuard(){try{history.pushState({tgGuard:1},"")}catch(e){}}
+function handleBack(){
+  // 1) 확대한 사진
+  if($("lightbox")?.open){closeLightbox();return true}
+  // 2) 열려 있는 팝업 (가장 마지막에 열린 것부터)
+  const dlgs=[...document.querySelectorAll("dialog[open]")];
+  if(dlgs.length){dlgs[dlgs.length-1].close();return true}
+  // 3) 재료함이 펼쳐져 있으면 접기
+  const pb=$("poolBody");
+  if(pb&&!pb.classList.contains("hidden")){pb.classList.add("hidden");$("poolToggle")?.classList.remove("open");return true}
+  // 4) 상세 화면 → 목록으로
+  if(state.openProjectId){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");renderStudio();return true}
+  if(state.openThreadId){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");renderGarden();return true}
+  if(state.openSourceId){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");renderLibrary();return true}
+  // 5) 다른 탭 → 첫 화면으로
+  if(state.view&&state.view!=="capture"){setView("capture");return true}
+  return false;
+}
+let exitArmedAt=0;
+window.addEventListener("popstate",()=>{
+  if(handleBack()){pushGuard();return}
+  if(Date.now()-exitArmedAt<2000)return;   // 두 번째 누름 → 그대로 닫힘
+  exitArmedAt=Date.now();toast("한 번 더 누르면 앱이 닫혀요.");pushGuard();
+});
+pushGuard();
+
 connectFirebase();
 
 /* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기 ── */
