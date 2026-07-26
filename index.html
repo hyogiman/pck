@@ -222,6 +222,13 @@
     .pool-caret{color:var(--muted);transition:transform .2s}
     .pool-toggle.open .pool-caret{transform:rotate(180deg)}
     .pool-body{margin-top:9px}
+    .shelf-done{margin-top:26px;padding-top:18px;border-top:1px dashed var(--line)}
+    .shelf-done-head{font-size:.75rem;font-weight:800;letter-spacing:.04em;color:var(--muted);margin-bottom:11px}
+    .shelf-done-head b{color:var(--accent)}
+    .card.published{background:#fbfcfa;border-color:#dbe5dc}
+    .card.published .title{color:#4a5450}
+    .pub-line{font-size:.75rem;color:var(--muted);margin-top:10px}
+    .pub-line a{color:var(--accent);font-weight:700;text-decoration:none}
     .more-btn{width:100%;border:1px dashed var(--line);background:transparent;color:var(--accent);
       border-radius:13px;padding:12px;font-size:.79rem;font-weight:700;cursor:pointer;margin-top:4px;transition:.12s}
     .more-btn:hover{background:var(--accent3);border-color:#cdd8cd}
@@ -641,6 +648,17 @@
       <div class="field"><label for="projectThread">시작 Thread <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="select" id="projectThread"><option value="">없음</option></select></div>
     </div>
     <div class="modal-actions"><button class="btn" data-close="projectDialog" type="button">취소</button><button class="btn primary" id="saveProject" type="button">작업대 만들기</button></div>
+  </div>
+</dialog>
+
+<dialog id="publishDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">DONE</div><h2>내보낸 글로 표시</h2></div><button class="close-btn" data-close="publishDialog" type="button">✕</button></div>
+    <input id="publishProjectId" type="hidden" />
+    <p class="helper" style="margin:0 0 4px">한 편을 끝냈다는 표시예요. 작업대와 글은 그대로 남습니다.</p>
+    <div class="field"><label for="publishUrl">올린 곳 주소 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="publishUrl" placeholder="https://blog.naver.com/..." /></div>
+    <div class="field"><label for="publishDate">내보낸 날</label><input class="input" type="date" id="publishDate" /></div>
+    <div class="modal-actions"><button class="btn" data-close="publishDialog" type="button">취소</button><button class="btn primary" id="confirmPublish" type="button">내보냄으로 표시</button></div>
   </div>
 </dialog>
 
@@ -1217,7 +1235,19 @@ function fragmentCard(f,compact=false){
   </article>`;
 }
 function renderStudio(){
-  $("projectList").innerHTML=state.projects.length?state.projects.map(projectCard).join(""):empty("🏭","아직 Studio 작업이 없어요.","Thread 하나를 골라 콘텐츠 작업대로 보내보세요.");
+  const working=state.projects.filter(p=>p.status!=="published");
+  const done=state.projects.filter(p=>p.status==="published")
+    .sort((a,b)=>String(b.publishedAt||"").localeCompare(String(a.publishedAt||"")));
+  if(state.doneLimit==null)state.doneLimit=3;
+  const shown=done.slice(0,state.doneLimit);
+  $("projectList").innerHTML=(working.length
+      ? working.map(projectCard).join("")
+      : empty("🏭",done.length?"진행 중인 작업이 없어요.":"아직 Studio 작업이 없어요.",done.length?"다음 글을 시작해보세요.":"Thread 하나를 골라 콘텐츠 작업대로 보내보세요."))
+    +(done.length?`<div class="shelf-done">
+        <div class="shelf-done-head">📚 내보낸 글 <b>${done.length}</b></div>
+        ${shown.map(projectCard).join("")}
+        ${done.length>shown.length?`<button class="more-btn" data-more="done" type="button">${done.length-shown.length}개 더 보기</button>`:""}
+      </div>`:"");
 }
 const templates={
   blog:[
@@ -1255,7 +1285,34 @@ const FORMAT_LABEL={blog:"블로그",shorts:"유튜브 · 쇼츠",instagram:"인
 function projectSlots(p){const base=templates[p.format]||templates.blog;return base.map(b=>({ ...b, ...(p.slots?.find(s=>s.id===b.id)||{text:"",fragmentIds:[]})}))}
 function projectCard(p){
   const slots=projectSlots(p),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
-  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"블로그"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div></article>`;
+  const pub=p.status==="published";
+  return `<article class="card click-card ${pub?"published":""}" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"블로그"}</span>${pub?`<span class="status done">✓ 내보냄</span>`:`<span class="date">${pct}%</span>`}</div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
+    ${pub
+      ? `<div class="pub-line">${esc(fmt((p.publishedAt||"").slice(0,10)))}${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">글 보러가기 ↗</a>`:""}</div>`
+      : `<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div>`}
+  </article>`;
+}
+function openPublishDialog(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  $("publishProjectId").value=pid;
+  $("publishUrl").value=p.url||"";
+  $("publishDate").value=(p.publishedAt||"").slice(0,10)||today();
+  $("publishDialog").showModal();
+}
+async function confirmPublish(){
+  const p=state.projects.find(x=>x.id===$("publishProjectId").value);if(!p)return;
+  p.status="published";p.url=$("publishUrl").value.trim();
+  p.publishedAt=$("publishDate").value||today();
+  p.updatedAt=new Date().toISOString();
+  await persist("projects",p);
+  $("publishDialog").close();renderAll();openProject(p.id);
+  const n=state.projects.filter(x=>x.status==="published").length;
+  toast(`내보낸 글 ${n}편째예요. 🌾`);
+}
+async function unpublishProject(pid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  p.status="writing";p.updatedAt=new Date().toISOString();
+  await persist("projects",p);renderAll();openProject(pid);toast("다시 작업 중으로 되돌렸어요.");
 }
 function downloadText(text,name){const b=new Blob([text],{type:"text/markdown;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();}
 function exportProject(pid){
@@ -1275,7 +1332,7 @@ function openProject(id){
   const next=slots.find(s=>!(s.text||(s.fragmentIds||[]).length));
   const nextLine=next?`<div class="next-question"><span class="next-label">다음 질문</span><p class="serif">${esc(next.prompt)}</p></div>`
     :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
-  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
+  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button>${p.status==="published"?`<button class="text-btn" data-unpublish="${p.id}" type="button">작업 중으로 되돌리기</button>`:`<button class="text-btn" data-publish="${p.id}" type="button">✓ 내보냄 표시</button>`}<button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
     <div class="studio-layout section">
       <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div><span class="save-hint" id="saveHint"></span></div>
@@ -1882,9 +1939,12 @@ document.addEventListener("click",async e=>{
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  const pubB=e.target.closest("[data-publish]");if(pubB)return openPublishDialog(pubB.dataset.publish);
+  const unpubB=e.target.closest("[data-unpublish]");if(unpubB)return unpublishProject(unpubB.dataset.unpublish);
   const mb=e.target.closest("[data-more]");
   if(mb){
     if(mb.dataset.more==="threads")state.gardenThreadLimit=(state.gardenThreadLimit||4)+6;
+    else if(mb.dataset.more==="done"){state.doneLimit=(state.doneLimit||3)+10;return renderStudio()}
     else state.gardenFragLimit=(state.gardenFragLimit||6)+10;
     return renderGarden();
   }
@@ -1937,6 +1997,7 @@ $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff
 $("exportData").addEventListener("click",exportData);
 $("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
+$("confirmPublish").addEventListener("click",confirmPublish);
 $("saveApiKeys").addEventListener("click",async()=>{
   const old=getApiKeys();
   const keys={...old,tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
@@ -1946,7 +2007,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   renderApiSettings();
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","publishDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
