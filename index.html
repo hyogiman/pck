@@ -32,6 +32,12 @@
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .attachment-image.zoomable{cursor:zoom-in}
+    .lightbox{position:fixed;inset:0;z-index:120;background:rgba(20,22,15,.94);display:none;align-items:center;justify-content:center;padding:16px}
+    .lightbox.open{display:flex}
+    .lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+    .lightbox-close{position:absolute;top:calc(14px + env(safe-area-inset-top,0));right:16px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:1.2rem;cursor:pointer}
+    .lightbox-close:hover{background:rgba(255,255,255,.28)}
     .next-question{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
     .next-question .next-label{font-size:.68rem;font-weight:800;letter-spacing:.1em;color:var(--seal);text-transform:uppercase}
     .next-question p{margin:7px 0 0;font-size:1.06rem;line-height:1.55;color:var(--text)}
@@ -429,6 +435,11 @@
   </div>
 </div>
 
+<div id="lightbox" class="lightbox" role="dialog" aria-modal="true">
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="닫기">✕</button>
+  <img id="lightboxImg" alt="확대한 이미지">
+</div>
+
 <dialog id="captureDialog">
   <div class="modal capture-modal">
     <div class="modal-head">
@@ -781,7 +792,7 @@ async function deleteAttachments(attachments=[]){
 function attachmentsHTML(list=[]){
   if(!list.length)return "";
   return `<div class="attachments">${list.map(a=>{
-    if(a.type?.startsWith("image/"))return `<img class="attachment-image" src="${esc(a.url)}" alt="${esc(a.name||"첨부 이미지")}">`;
+    if(a.type?.startsWith("image/"))return `<img class="attachment-image zoomable" src="${esc(a.url)}" alt="${esc(a.name||"첨부 이미지")}" data-zoom="${esc(a.url)}" loading="lazy">`;
     if(a.type?.startsWith("audio/"))return `<audio class="attachment-audio" controls preload="metadata" src="${esc(a.url)}"></audio>`;
     if(a.type?.startsWith("video/"))return `<video class="attachment-video" controls preload="metadata" src="${esc(a.url)}"></video>`;
     return `<a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.name||"첨부 파일")}</a>`;
@@ -961,7 +972,22 @@ function setView(v){
   $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
   closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
 }
-function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();if($("todayDialog").open)renderTodayDialog();}
+function refreshOpenDetail(){
+  try{
+    if(state.openSourceId&&state.sources.some(s=>s.id===state.openSourceId)){
+      const keep={q:$("sourceExternalText")?.value||"",t:$("sourceThought")?.value||"",l:$("sourceLocator")?.value||""};
+      openSource(state.openSourceId);
+      if($("sourceExternalText")){$("sourceExternalText").value=keep.q;$("sourceThought").value=keep.t;$("sourceLocator").value=keep.l}
+    }
+    if(state.openThreadId&&state.threads.some(t=>t.id===state.openThreadId)) openThread(state.openThreadId);
+    if(state.openProjectId&&state.projects.some(p=>p.id===state.openProjectId)){
+      const keep={};$$("[data-slot-text]").forEach(el=>{if(el.value)keep[el.dataset.slotText]=el.value});
+      openProject(state.openProjectId);
+      $$("[data-slot-text]").forEach(el=>{const v=keep[el.dataset.slotText];if(v)el.value=v});
+    }
+  }catch(e){console.warn("상세 화면 갱신 실패",e)}
+}
+function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
@@ -1721,6 +1747,7 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
+  const zi=e.target.closest("[data-zoom]");if(zi){e.stopPropagation();return openLightbox(zi.dataset.zoom)}
   const ans=e.target.closest("[data-answer-slot]");
   if(ans){
     const p=state.projects.find(x=>x.id===ans.dataset.project);if(!p)return;
@@ -1770,6 +1797,11 @@ $("saveApiKeys").addEventListener("click",async()=>{
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
 ["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+function openLightbox(url){$("lightboxImg").src=url;$("lightbox").classList.add("open")}
+function closeLightbox(){$("lightbox").classList.remove("open");$("lightboxImg").src=""}
+$("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
+$("lightboxClose").addEventListener("click",closeLightbox);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("lightbox").classList.contains("open"))closeLightbox()});
 connectFirebase();
 
 /* ── PWA: 홈 화면 앱으로 설치 + 오프라인 껍데기 ── */
