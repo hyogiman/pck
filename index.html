@@ -36,13 +36,13 @@
     .card:active,.note:active,.book:active{transform:scale(.995)}
     .capture-orb:active{transform:scale(.95)}
     .fab:active{transform:scale(.93)}
-    body{margin:0;background:radial-gradient(1200px 500px at 100% -5%,rgba(55,95,71,.06),transparent 60%),var(--bg);
+    body{margin:0;overflow-anchor:none;background:radial-gradient(1200px 500px at 100% -5%,rgba(55,95,71,.06),transparent 60%),var(--bg);
       color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
     button,input,textarea,select{font:inherit}button{color:inherit}
     button:focus-visible{outline:3px solid rgba(55,95,71,.22);outline-offset:2px}
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
-    .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(92px + env(safe-area-inset-bottom))}
+    .app{width:min(100%,920px);margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom))}
     .edit-attachments{display:grid;gap:7px}
     .ea-item{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:8px 10px}
     .ea-item img{width:44px;height:44px;object-fit:cover;border-radius:8px;flex:0 0 auto}
@@ -87,6 +87,8 @@
     .divider{height:1px;background:var(--line);margin:16px 0}
     .hidden{display:none!important}
     .view{display:none}.view.active{display:block;animation:up .22s ease-out}
+    /* 첫 화면은 딱 한 판. 아래 여백을 상쇄해 스크롤 자체를 없앤다 */
+    .view.active[data-view="capture"]{margin-bottom:calc(-92px - env(safe-area-inset-bottom))}
     .view[data-view="capture"]{margin-bottom:-88px}
     @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -186,7 +188,7 @@
     .home-minimal{
       /* 하단 '메뉴' 알약(밑에서 14px 띄운 52px 높이)을 피해 카드가 앉을 자리를 남긴다 */
       min-height:calc(100vh - 134px);
-      min-height:calc(100dvh - 134px - env(safe-area-inset-bottom));
+      min-height:calc(100dvh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;
       text-align:center;padding:10px 10px 0;gap:10px}
     .home-minimal>*{flex:0 0 auto;width:100%}
@@ -1218,6 +1220,9 @@ function toggleMenu(){
   $("navSheet").classList.toggle("open",open);$("navSheet").setAttribute("aria-hidden",String(!open));
   $("menuTrigger").classList.toggle("open",open);$("menuTrigger").setAttribute("aria-expanded",String(open));
 }
+/* 화면을 바꾸면 스크롤은 항상 맨 위에서 시작한다.
+   smooth로 하면 다시 그리는 도중 애니메이션이 끊겨 어중간한 위치에 멈춘다. */
+function resetScroll(){requestAnimationFrame(()=>window.scrollTo(0,0))}
 function setView(v){
   state.view=v;state.openSourceId=null;state.openThreadId=null;state.openProjectId=null;
   $$(".view").forEach(x=>x.classList.toggle("active",x.dataset.view===v));
@@ -1226,7 +1231,7 @@ function setView(v){
   $("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");
   $("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");
   $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
-  closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
+  closeMenu();renderAll();resetScroll();
 }
 function isTyping(){const a=document.activeElement;return !!a&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT"||a.isContentEditable)}
 function refreshOpenDetail(){
@@ -2255,6 +2260,7 @@ async function migrateV01(){
 function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
 async function importData(file){try{const d=JSON.parse(await file.text());for(const k of ["sources","fragments","threads","projects"]){if(Array.isArray(d[k])){const m=new Map(state[k].map(x=>[x.id,x]));d[k].forEach(x=>m.set(x.id||uid(),x));state[k]=[...m.values()]}}if(state.firebase.connected){for(const k of ["sources","fragments","threads","projects"])for(const x of state[k])await persist(k,x)}else localSave();renderAll();toast("백업을 가져왔습니다.")}catch(e){console.error(e);toast("백업 파일을 읽지 못했습니다.")}}
 
+document.addEventListener("close",()=>{if(state.view==="capture")resetScroll()},true);
 document.addEventListener("click",async e=>{
   const apiResult=e.target.closest("[data-api-result-index]");if(apiResult)return applyApiResultByIndex(apiResult.dataset.apiResultIndex);
   const n=e.target.closest("[data-view-target]");if(n)return setView(n.dataset.viewTarget);
