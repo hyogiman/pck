@@ -42,7 +42,7 @@
     button:focus-visible{outline:3px solid rgba(55,95,71,.22);outline-offset:2px}
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
-    .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(92px + env(safe-area-inset-bottom))}
     .edit-attachments{display:grid;gap:7px}
     .ea-item{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:8px 10px}
     .ea-item img{width:44px;height:44px;object-fit:cover;border-radius:8px;flex:0 0 auto}
@@ -182,41 +182,43 @@
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
     .home-minimal{
-      min-height:calc(100vh - 100px);
-      min-height:calc(100dvh - 100px);
+      /* 하단 '메뉴' 알약(밑에서 14px 띄운 52px 높이)을 피해 카드가 앉을 자리를 남긴다 */
+      min-height:calc(100vh - 134px);
+      min-height:calc(100dvh - 134px - env(safe-area-inset-bottom));
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;
-      text-align:center;padding:16px 10px 0;gap:16px}
+      text-align:center;padding:10px 10px 0;gap:10px}
     .home-minimal>*{flex:0 0 auto;width:100%}
-    .home-title h1{font-family:var(--display);margin:8px 0 6px;font-size:clamp(2rem,8vw,2.9rem);font-weight:400;letter-spacing:.01em;position:relative;display:inline-block}
+    .home-title h1{font-family:var(--display);margin:6px 0 4px;font-size:clamp(1.85rem,7.2vw,2.6rem);font-weight:400;letter-spacing:.01em;position:relative;display:inline-block}
     .home-title h1:after{content:"";position:absolute;left:14%;right:14%;bottom:2px;height:7px;background:var(--seal);opacity:.16;border-radius:3px}
     .home-title p{margin:0;color:var(--muted);font-size:.88rem}
-    .home-title .today-count{margin:14px auto 0;padding:8px 8px 8px 15px;font-size:.76rem;gap:9px;max-width:100%;white-space:nowrap}
+    .home-title .today-count{margin:10px auto 0;padding:8px 8px 8px 15px;font-size:.76rem;gap:9px;max-width:100%;white-space:nowrap}
     .tc-div{width:1px;height:13px;background:var(--line);flex:0 0 auto}
     .home-title .today-count strong{min-width:24px;height:24px;font-size:.79rem;padding:0 7px}
     #sparkBox{width:100%;max-width:520px;margin:0 auto}
-    .spark-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px 18px 15px;
+    .spark-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px 17px 13px;
       box-shadow:var(--card-shadow);text-align:left;position:relative;overflow:hidden}
     .spark-card:after{content:"🌸";position:absolute;right:-6px;bottom:-10px;font-size:3.4rem;opacity:.07;transform:rotate(-10deg)}
-    .spark-head{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;
-      padding:0;margin-bottom:11px;cursor:pointer;text-align:left}
+    .spark-head{display:flex;align-items:center;gap:7px;width:100%;border:0;background:none;padding:0;
+      margin-bottom:11px;cursor:pointer;text-align:left;position:relative;z-index:1;-webkit-tap-highlight-color:transparent}
+    .spark-head:active .spark-fold{transform:scale(.9)}
+    .spark-card.folded{padding:13px 18px}
     .spark-card.folded .spark-head{margin-bottom:0}
-    .spark-card.folded{padding:14px 18px}
-    .spark-fold{margin-left:auto;color:var(--muted);font-size:1rem;width:24px;height:24px;
-      display:grid;place-items:center;border-radius:50%;background:var(--panel2);flex:0 0 auto}
+    .spark-fold{margin-left:auto;flex:0 0 auto;width:26px;height:26px;display:grid;place-items:center;
+      border-radius:50%;background:var(--accent2);color:var(--accent);font-size:.95rem;font-weight:700;
+      line-height:1;transition:transform .12s ease}
     .spark-label{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--seal)}
     .spark-cat{font-size:.67rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:3px 10px;font-weight:700;flex:0 0 auto}
     .spark-q{-webkit-user-select:text;user-select:text;font-size:1.08rem;line-height:1.58;margin:0 0 13px;color:#2b3134}
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
-    .spark-cat{margin-left:auto}
     .spark-acts .btn{flex:1;font-size:.79rem;padding:11px}
     .home-capture{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0}
-    .home-question{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 24px;color:#33372c}
-    .capture-orb{width:158px;height:158px;border-radius:50%;border:1px solid #cdd9ce;background:radial-gradient(circle at 36% 30%,#fbfdfa,var(--accent2));color:var(--accent);box-shadow:0 20px 55px rgba(55,95,71,.16),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.18s}
+    .home-question{font-family:var(--serif);font-size:1.1rem;font-weight:700;letter-spacing:-.01em;margin:0 0 12px;color:#33372c}
+    .capture-orb{width:clamp(108px,16vh,152px);height:clamp(108px,16vh,152px);border-radius:50%;border:1px solid #cdd9ce;background:radial-gradient(circle at 36% 30%,#fbfdfa,var(--accent2));color:var(--accent);box-shadow:0 20px 55px rgba(55,95,71,.16),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.18s}
     .capture-orb:hover{transform:translateY(-2px)}
     .capture-orb:active{transform:scale(.97)}
-    .capture-plus{font-size:3.1rem;line-height:1;font-weight:300}
+    .capture-plus{font-size:2.8rem;line-height:1;font-weight:300}
     .capture-caption{font-size:.76rem;font-weight:700;letter-spacing:.02em;margin-top:8px}
-    .home-hint{color:var(--muted);font-size:.79rem;line-height:1.7;margin:24px 0 0}
+    .home-hint{color:var(--muted);font-size:.79rem;line-height:1.55;margin:14px 0 0}
     .today-count{border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:999px;font-size:.78rem;font-weight:600;box-shadow:var(--card-shadow);transition:.12s}
     .today-count:hover{border-color:#cdd8cd}
     .today-count strong{font-family:var(--serif);min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:var(--accent2);color:var(--accent);display:grid;place-items:center;font-size:.9rem;font-weight:700}
@@ -344,6 +346,8 @@
     .close-btn:hover{background:#e2dfd3}
     .capture-mode{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
     .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+    .modal-danger{margin-top:15px;padding-top:13px;border-top:1px dashed var(--line);display:flex;justify-content:center}
+    .modal-danger .text-btn{font-size:.78rem;padding:7px 14px}
 
     .settings-card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:11px;background:var(--panel)}
     .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
@@ -729,6 +733,7 @@
       </div>
     </div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
+    <div class="modal-danger"><button class="text-btn danger-text" data-delete-current-frag type="button">🗑 이 생각 삭제</button></div>
   </div>
 </dialog>
 
@@ -777,10 +782,7 @@
 <dialog id="editSourcePicker">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">LIBRARY</div><h2>어떤 작품과 연결할까요?</h2></div><button class="close-btn" data-close="editSourcePicker" type="button">✕</button></div>
-    <div class="link-top">
-      <input class="input" id="editSourceSearch" placeholder="책 · 영화 · 유튜브 검색" autocomplete="off">
-      <button class="btn soft" id="editSourceNew" type="button">+ 새 작품</button>
-    </div>
+    <div class="link-top"><input class="input" id="editSourceSearch" placeholder="책 · 영화 · 유튜브 검색" autocomplete="off"></div>
     <div id="editSourceList" style="margin-top:12px"></div>
   </div>
 </dialog>
@@ -852,7 +854,7 @@
     </div>
     <div class="settings-card">
       <strong>🌸 Blooming Question</strong>
-      <div class="helper">첫 화면 아래에 매일 질문 하나가 피어납니다. 답하면 그대로 생각 조각이 됩니다. (질문 365개)</div>
+      <div class="helper">첫 화면 아래에 매일 질문 하나가 피어납니다. 답하면 그대로 생각 조각이 됩니다. (질문 365개)<br>카드 오른쪽 ＋/− 를 누르면 접어둘 수 있습니다. 접어둔 상태는 그날 하루만 유지되고, 다음 날 새 질문과 함께 다시 열립니다.</div>
       <div class="row2" style="margin-top:10px">
         <div><label class="field-lbl" for="sparkTime">받고 싶은 시각</label><input class="input" type="time" id="sparkTime"></div>
         <div style="display:flex;align-items:flex-end"><button class="btn" id="sparkToggle" type="button" style="width:100%">끄기</button></div>
@@ -1323,16 +1325,19 @@ function todaySpark(force){
   saveSparkState({day:today(),i:pick,seen:[...seen,pick]});
   return SPARKS[pick];
 }
+/* 접어두기는 그날 하루만 유효 — 날짜가 바뀌면 새 질문과 함께 다시 열린다 */
+function isSparkFolded(){try{return localStorage.getItem("tg_spark_fold")===today()}catch(e){return false}}
+function setSparkFolded(v){try{v?localStorage.setItem("tg_spark_fold",today()):localStorage.removeItem("tg_spark_fold")}catch(e){}}
 function renderSpark(){
   const box=$("sparkBox");if(!box)return;
   if(localStorage.getItem("tg_spark_off")==="1"){box.innerHTML="";return}
   const sp=todaySpark(false);if(!sp){box.innerHTML="";return}
-  const folded=localStorage.getItem("tg_spark_fold")==="1";
+  const folded=isSparkFolded();
   box.innerHTML=`<div class="spark-card ${folded?"folded":""}">
-    <button class="spark-head" data-spark-fold type="button" aria-expanded="${folded?"false":"true"}">
+    <button class="spark-head" data-spark-fold type="button" aria-expanded="${folded?"false":"true"}" aria-label="${folded?"오늘의 질문 펼치기":"오늘의 질문 접어두기"}">
       <span class="spark-label">🌸 Blooming Question</span>
       ${folded?"":`<span class="spark-cat">${esc(sp.c)}</span>`}
-      <span class="spark-fold">${folded?"＋":"−"}</span>
+      <span class="spark-fold" aria-hidden="true">${folded?"＋":"−"}</span>
     </button>
     ${folded?"":`
     <p class="spark-q serif">${esc(sp.q)}</p>
@@ -1996,10 +2001,6 @@ async function applyApiResultByIndex(index){
   const r=state.apiResults[Number(index)];if(!r)return;
   if(r.kind==="book"&&r.isbn13){
     const existing=existingSourceByIsbn(r.isbn13);
-    if(existing&&state.pickSourceForEdit){
-      state.pickSourceForEdit=false;$("sourceDialog").close();
-      state.editSourceId=existing.id;renderEditSource();toast("이미 등록된 책이라 그 책에 연결했어요.");return;
-    }
     if(existing){
       if(state.pendingSourceLinkFragmentId){
         const fid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;
@@ -2039,9 +2040,7 @@ async function saveSource(){
     const duplicate=existingSourceByIsbn(isbn13);
     if(duplicate){
       const dupFid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;
-      const dupPick=state.pickSourceForEdit;state.pickSourceForEdit=false;
       $("sourceDialog").close();
-      if(dupPick){state.editSourceId=duplicate.id;renderEditSource();toast("이미 등록된 책이라 그 책에 연결했어요.");return}
       if(dupFid) await linkFragmentToSource(dupFid,duplicate.id);
       setView("library");openSource(duplicate.id);toast("같은 ISBN의 책이 이미 등록되어 있어 기존 책을 열었습니다.");return;
     }
@@ -2055,14 +2054,10 @@ async function saveSource(){
     createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
   };
   const pendingFid=(!old && state.pendingSourceLinkFragmentId)?state.pendingSourceLinkFragmentId:null;
-  const pickForEdit=(!old && state.pickSourceForEdit)?true:false;
   state.pendingSourceLinkFragmentId=null;              // 대기 상태는 여기서 반드시 끝낸다
-  state.pickSourceForEdit=false;
   state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];
   await persist("sources",s);$("sourceDialog").close();
-  if(pickForEdit){
-    state.editSourceId=s.id;renderEditSource();renderAll();toast("작품을 등록하고 이 생각에 연결했어요.");
-  }else if(pendingFid){
+  if(pendingFid){
     await linkFragmentToSource(pendingFid,s.id);
   }else{
     renderAll();if(old)openSource(s.id);toast("Library에 저장했습니다.");
@@ -2160,7 +2155,11 @@ async function detachFragment(pid,slotId,fid){
 async function saveAllSlots(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p);$$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value.trim()});p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);renderStudio();openProject(pid);toast("작업대를 저장했습니다.");
 }
-async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return;const target=state.fragments.find(f=>f.id===fid);if(target)await deleteAttachments(target.attachments||[]);await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.")}
+async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return false;const target=state.fragments.find(f=>f.id===fid);if(target)await deleteAttachments(target.attachments||[]);await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.");return true}
+async function deleteEditingFragment(){
+  const fid=$("editFragmentId").value;if(!fid)return;
+  if(await deleteFragment(fid))$("editFragmentDialog").close();
+}
 async function deleteProject(pid){if(!confirm("이 Studio 프로젝트를 삭제할까요?"))return;await remove("projects",pid);setView("studio");toast("프로젝트를 삭제했습니다.")}
 async function deleteSource(sid){
   const s=state.sources.find(x=>x.id===sid);if(!s)return;
@@ -2263,6 +2262,7 @@ document.addEventListener("click",async e=>{
   const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
+  if(e.target.closest("[data-delete-current-frag]"))return deleteEditingFragment();
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
   const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom]"))return openEditFragment(ofg.dataset.openFrag);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
@@ -2316,8 +2316,7 @@ document.addEventListener("click",async e=>{
   }
   const zi=e.target.closest("[data-zoom]");if(zi){e.stopPropagation();return openLightbox(zi.dataset.zoom)}
   if(e.target.closest("[data-spark-fold]")){
-    const folded=localStorage.getItem("tg_spark_fold")==="1";
-    localStorage.setItem("tg_spark_fold",folded?"0":"1");
+    setSparkFolded(!isSparkFolded());
     renderSpark();return;
   }
   if(e.target.closest("[data-spark-answer]")){
@@ -2356,14 +2355,9 @@ $("sheetSearch").addEventListener("click",openSearch);$("searchInput").addEventL
 $("editSourceBtn").addEventListener("click",()=>{$("editSourceSearch").value="";renderEditSourceList();$("editSourcePicker").showModal()});
 $("editSourceClear").addEventListener("click",()=>{state.editSourceId="";renderEditSource()});
 $("editSourceSearch").addEventListener("input",renderEditSourceList);
-$("editSourceNew").addEventListener("click",()=>{
-  state.pickSourceForEdit=true;                 // 등록이 끝나면 이 생각에 바로 연결
-  $("editSourcePicker").close();
-  openSourceDialog();
-});
 $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
-$("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentId=null;state.pickSourceForEdit=false});
+$("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentId=null});
 $("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
