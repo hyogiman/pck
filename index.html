@@ -132,8 +132,11 @@
     .note-body{font-family:var(--serif);margin:0;color:#1d2419;font-weight:700;font-size:1.1rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-context{font-size:.76rem;color:var(--muted);margin-top:10px}
     .note-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
-    .note-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;padding-top:12px;border-top:1px solid var(--line)}
-    .note-meta{font-size:.72rem;color:var(--muted);display:inline-flex;align-items:center;gap:5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .note-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:15px;padding-top:12px;border-top:1px solid var(--line)}
+    .note-meta{font-size:.72rem;color:var(--muted);display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
+    .nm-src{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .nm-date{flex:0 0 auto;white-space:nowrap}
+    .nm-date::before{content:"·";margin-right:8px;opacity:.6}
     .note-acts{display:inline-flex;gap:2px;flex:0 0 auto}
     .note-act{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:.74rem;padding:5px 10px;border-radius:9px;cursor:pointer;transition:.12s}
     .note-act:hover{background:var(--accent3);color:var(--accent)}
@@ -437,7 +440,7 @@
   <section class="view" data-view="library">
     <div id="libraryIndex">
       <div class="section-head"><div><h2>📚 Library</h2><p>책과 미디어는 한 번 등록하고, 그 안에 생각을 계속 쌓습니다.</p></div><button class="btn soft" id="newSource" type="button">+ 작품</button></div>
-      <div class="search-row"><input class="input" id="sourceSearch" placeholder="책, 영화, 드라마, 유튜브 검색" /><select class="select" id="sourceFilter" style="width:120px"><option value="all">전체</option><option value="book">책</option><option value="media">미디어</option></select></div>
+      <div class="search-row"><input class="input" id="sourceSearch" placeholder="책, 영화, 드라마, 유튜브 검색" /><select class="select" id="sourceFilter" style="width:130px"><option value="all">전체</option><option value="book">책</option><option value="video">영화·드라마</option><option value="youtube">유튜브</option></select></div>
       <div class="library-grid" id="sourceList"></div>
     </div>
     <div id="sourceDetail" class="hidden"></div>
@@ -457,7 +460,13 @@
           <option value="30">최근 30일</option>
           <option value="year">올해</option>
         </select>
-        <select class="select" id="fragSource"></select>
+        <select class="select" id="fragSource">
+          <option value="all">전체 매체</option>
+          <option value="book">📚 책</option>
+          <option value="video">🎬 영화·드라마</option>
+          <option value="youtube">▶️ 유튜브</option>
+          <option value="none">연결 없음</option>
+        </select>
       </div>
       <div class="frag-count" id="fragCount"></div>
     </div>
@@ -610,7 +619,7 @@
       
     </div>
     <div class="form-grid">
-      <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="media">🎬 미디어</option></select></div>
+      <div class="field"><label for="sourceType">종류</label><select class="select" id="sourceType"><option value="book">📚 책</option><option value="video">🎬 영화·드라마</option><option value="youtube">▶️ 유튜브</option></select></div>
       <div class="field"><label for="sourceStatus">상태</label><select class="select" id="sourceStatus"><option value="active">읽는/보는 중</option><option value="done">완료</option></select></div>
     </div>
     <div class="field"><label for="sourceTitleInput">제목</label><input class="input" id="sourceTitleInput" placeholder="책 / 영화 / 영상 제목" /></div>
@@ -773,7 +782,16 @@ const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random
 const today=()=>new Date().toLocaleDateString("en-CA");
 const fmt=d=>d?new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"short",day:"numeric"}).format(new Date(`${d.slice(0,10)}T00:00:00`)):"";
 const daysAgo=d=>{if(!d)return null;const x=new Date(`${d.slice(0,10)}T00:00:00`),n=new Date();n.setHours(0,0,0,0);return Math.max(0,Math.round((n-x)/86400000))};
-const sourceIcon=t=>t==="book"?"📚":"🎬";
+const SRC_TYPES={book:{icon:"📚",label:"책"},video:{icon:"🎬",label:"영화·드라마"},youtube:{icon:"▶️",label:"유튜브"}};
+// 예전 데이터 호환: type이 "media"면 플랫폼/출처로 유튜브인지 가려낸다
+function srcType(s){
+  if(!s)return "book";
+  if(SRC_TYPES[s.type])return s.type;
+  const hint=`${s.platform||""} ${s.provider||""}`.toLowerCase();
+  return (hint.includes("youtube")||hint.includes("유튜브"))?"youtube":"video";
+}
+const sourceIcon=t=>(SRC_TYPES[t]||SRC_TYPES.video).icon;
+const srcTypeLabel=s=>(SRC_TYPES[srcType(s)]||SRC_TYPES.video).label;
 const fragIcon=t=>({thought:"💭",moment:"🌿",decision:"⚖️",source:"✦"}[t]||"💭");
 
 function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),2100)}
@@ -1107,7 +1125,7 @@ function fragArchiveCard(f,q){
     ${f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
-    <div class="note-foot"><span class="note-meta">${icon} ${label} · ${esc(st.main)}</span>
+    <div class="note-foot"><span class="note-meta"><span class="nm-src">${icon} ${label}</span><span class="nm-date">${esc(st.main)}</span></span>
       <span class="note-acts"><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button></span></div>
     ${st.moved?`<div class="moved-note">✎ ${esc(st.moved)}</div>`:""}
   </article>`;
@@ -1119,17 +1137,6 @@ function renderFragments(){
   const period=$("fragPeriod")?.value||"all";
   const srcSel=$("fragSource")?.value||"all";
   if(state.fragLimit==null)state.fragLimit=5;
-
-  // 매체 선택지 (작품별)
-  const sel=$("fragSource");
-  if(sel&&sel.dataset.n!==String(state.sources.length)){
-    sel.dataset.n=String(state.sources.length);
-    const books=state.sources.filter(s=>s.type==="book"),medias=state.sources.filter(s=>s.type!=="book");
-    sel.innerHTML=`<option value="all">전체 매체</option><option value="none">연결 없음</option><option value="book">책 전체</option><option value="media">영상 전체</option>`
-      +(books.length?`<optgroup label="책">${books.map(s=>`<option value="s:${s.id}">${esc(s.title)}</option>`).join("")}</optgroup>`:"")
-      +(medias.length?`<optgroup label="영상">${medias.map(s=>`<option value="s:${s.id}">${esc(s.title)}</option>`).join("")}</optgroup>`:"");
-    sel.value=srcSel;
-  }
 
   let list=state.fragments.slice();
   // 기간
@@ -1144,9 +1151,7 @@ function renderFragments(){
   }
   // 매체
   if(srcSel==="none")list=list.filter(f=>!f.sourceId);
-  else if(srcSel==="book")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&s.type==="book"});
-  else if(srcSel==="media")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&s.type!=="book"});
-  else if(srcSel.startsWith("s:"))list=list.filter(f=>f.sourceId===srcSel.slice(2));
+  else if(srcSel!=="all")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&srcType(s)===srcSel});
   // 검색
   if(ql)list=list.filter(f=>[f.thought,f.text,f.externalText,f.context,f.locator,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(ql));
 
@@ -1194,14 +1199,14 @@ function renderResurface(reshuffle){
 }
 function renderLibrary(){
   const q=$("sourceSearch").value.trim().toLowerCase(),filter=$("sourceFilter").value;
-  const arr=state.sources.filter(s=>(filter==="all"||s.type===filter)&&[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q))
+  const arr=state.sources.filter(s=>(filter==="all"||srcType(s)===filter)&&[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q))
     .sort((a,b)=>String(lastSourceActivity(b.id)||"").localeCompare(String(lastSourceActivity(a.id)||"")));
   $("sourceList").innerHTML=arr.length?arr.map(s=>sourceCard(s)).join(""):empty("📚","등록된 작품이 없어요.","책이나 미디어는 딱 한 번만 등록합니다.");
 }
 function sourceCard(s,compact=false){
-  const count=sourceFragments(s.id).length,last=lastSourceActivity(s.id),cover=s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type);
+  const count=sourceFragments(s.id).length,last=lastSourceActivity(s.id),cover=s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(srcType(s));
   return `<article class="card click-card source-card" data-open-source="${s.id}">
-    <div class="cover">${cover}</div><div><div class="card-head"><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</span><span class="date">${last?fmt(last.slice(0,10)):""}</span></div>
+    <div class="cover">${cover}</div><div><div class="card-head"><span class="chip">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</span><span class="date">${last?fmt(last.slice(0,10)):""}</span></div>
     <div class="source-title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · ")||"")}</div>
     <div class="meta"><span class="status">생각 ${count}개</span>${s.status==="done"?`<span class="status done">✓ 완료</span>`:""}</div></div></article>`;
 }
@@ -1210,10 +1215,10 @@ function openSource(id){
   $("libraryIndex").classList.add("hidden");$("sourceDetail").classList.remove("hidden");
   const fs=sourceFragments(id);
   $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button><button class="text-btn danger-text" data-delete-source="${s.id}" type="button">작품 삭제</button></div></div>
-    <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(s.type)}</div><div><span class="chip">${sourceIcon(s.type)} ${s.type==="book"?"BOOK":"MEDIA"}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
+    <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(srcType(s))}</div><div><span class="chip">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
     <div class="quick-capture">
       <div class="eyebrow">한 줄 + 나의 한 줄</div>
-      <div class="field"><label>${s.type==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${s.type==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea><input class="input locator-inline" id="sourceLocator" placeholder="${s.type==="book"?"🗓 p.132 (위치)":"🗓 6화 / 12:31 (위치)"}"></div>
+      <div class="field"><label>${srcType(s)==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${srcType(s)==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea><input class="input locator-inline" id="sourceLocator" placeholder="${srcType(s)==="book"?"🗓 p.132 (위치)":"🗓 6화 / 12:31 (위치)"}"></div>
       <div class="field"><label>나의 한 줄</label><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
       <div class="attachment-tools">
         <label class="btn file-pick">📎 사진·음성·영상<input id="sourceFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
@@ -1342,7 +1347,7 @@ function fragmentCard(f,compact=false){
     ${attachmentsHTML(f.attachments||[])}
     ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
-    <div class="note-foot"><span class="note-meta">${icon} ${label} · ${fmt((f.date||f.createdAt||"").slice(0,10))}</span><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
+    <div class="note-foot"><span class="note-meta"><span class="nm-src">${icon} ${label}</span><span class="nm-date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></span><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
   </article>`;
 }
 function renderStudio(){
@@ -1482,7 +1487,7 @@ function renderPool(){
   box.innerHTML=shown.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,90))}</b></div>`).join("")
     +(list.length>shown.length?`<div class="pool-more">그 외 ${list.length-shown.length}개 — 검색으로 찾아보세요</div>`:"");
 }
-function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(s.type)} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
+function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(srcType(s))} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
 function readSlotTextInto(p){
   const slots=projectSlots(p);
   $$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value});
@@ -1565,7 +1570,7 @@ function openSourceLinkDialog(fid){
 function renderSourceLinkList(){
   const q=$("sourceLinkSearch").value.trim().toLowerCase();
   const arr=state.sources.filter(s=>[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q));
-  $("sourceLinkList").innerHTML=arr.length?arr.map(s=>`<button class="card click-card" data-link-to-source="${s.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${sourceIcon(s.type)} ${s.type==="book"?"책":"미디어"}</div><div class="title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div></button>`).join(""):empty("📚","등록된 작품이 없어요.","지금 새로 등록하면 앞으로는 다시 입력하지 않아도 됩니다.");
+  $("sourceLinkList").innerHTML=arr.length?arr.map(s=>`<button class="card click-card" data-link-to-source="${s.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</div><div class="title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div></button>`).join(""):empty("📚","등록된 작품이 없어요.","지금 새로 등록하면 앞으로는 다시 입력하지 않아도 됩니다.");
 }
 async function linkFragmentToSource(fid,sid){
   const f=state.fragments.find(x=>x.id===fid);if(!f)return;
@@ -1795,7 +1800,7 @@ async function applyApiResultByIndex(index){
       return;
     }
   }
-  $("sourceType").value=r.kind==="book"?"book":"media";
+  $("sourceType").value=r.kind==="book"?"book":(r.provider==="YouTube"||r.kind==="youtube"?"youtube":"video");
   $("sourceTitleInput").value=r.title||"";
   $("sourceCreator").value=r.creator||"";
   $("sourcePlatform").value=r.publisher||"";
