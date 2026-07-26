@@ -25,7 +25,17 @@
       --display:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
       --sans:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,"Segoe UI",sans-serif;
     }
-    *{box-sizing:border-box}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    button,a,label,summary,[role="button"],.card,.note,.click-card,.dashboard-stat,.book,.today-count,.capture-orb,.sheet-nav,.nav-btn,.pick-chip,.pool-tab,.search-item,.more-btn{touch-action:manipulation;-webkit-user-select:none;user-select:none}
+    /* 누르는 즉시 반응 — 기본 파란 하이라이트 대신 */
+    .btn:active,.text-btn:active,.back-btn:active,.icon-btn:active,.round-btn:active,.close-btn:active,
+    .subtle-add:active,.mode-btn:active,.more-btn:active,.note-act:active,.pick-chip:active,.pool-tab:active,
+    .sheet-nav:active,.nav-btn:active,.today-count:active,.pool-toggle:active,.menu-trigger:active,
+    .search-item:active,.post-save-btn:active,.dashboard-stat:active,.recent-summary-item:active{
+      transform:scale(.97);filter:brightness(.97)}
+    .card:active,.note:active,.book:active{transform:scale(.995)}
+    .capture-orb:active{transform:scale(.95)}
+    .fab:active{transform:scale(.93)}
     body{margin:0;background:radial-gradient(1200px 500px at 100% -5%,rgba(55,95,71,.06),transparent 60%),var(--bg);
       color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
     button,input,textarea,select{font:inherit}button{color:inherit}
@@ -77,6 +87,7 @@
     .divider{height:1px;background:var(--line);margin:16px 0}
     .hidden{display:none!important}
     .view{display:none}.view.active{display:block;animation:up .22s ease-out}
+    .view[data-view="capture"]{margin-bottom:-88px}
     @keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
     .eyebrow{color:var(--accent);font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
@@ -131,9 +142,9 @@
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
     .note{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px 20px;box-shadow:var(--card-shadow);margin-bottom:12px;transition:box-shadow .14s ease,transform .14s ease}
-    .note-quote{font-family:var(--serif);font-style:italic;margin:0 0 14px;padding:3px 0 3px 15px;border-left:2px solid #b9cbbe;color:#6c7a70;font-size:1.02rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-quote{-webkit-user-select:text;user-select:text;font-family:var(--serif);font-style:italic;margin:0 0 14px;padding:3px 0 3px 15px;border-left:2px solid #b9cbbe;color:#6c7a70;font-size:1.02rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.7rem;color:var(--muted);letter-spacing:.02em}
-    .note-body{font-family:var(--serif);margin:0;color:#1d2419;font-weight:700;font-size:1.1rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
+    .note-body{-webkit-user-select:text;user-select:text;font-family:var(--serif);margin:0;color:#1d2419;font-weight:700;font-size:1.1rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-context{font-size:.76rem;color:var(--muted);margin-top:10px}
     .note-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
     .note-foot{display:flex;align-items:center;gap:10px;margin-top:15px;padding-top:12px;border-top:1px solid var(--line)}
@@ -169,24 +180,29 @@
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
-    .home-minimal{min-height:calc(100vh - var(--nav) - 120px);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:5vh 10px 2vh;gap:7vh}
+    .home-minimal{
+      min-height:calc(100vh - 100px);
+      min-height:calc(100dvh - 100px);
+      display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+      text-align:center;padding:16px 10px 0;gap:16px}
+    .home-minimal>*{flex:0 0 auto;width:100%}
     .home-title h1{font-family:var(--display);margin:8px 0 6px;font-size:clamp(2rem,8vw,2.9rem);font-weight:400;letter-spacing:.01em;position:relative;display:inline-block}
     .home-title h1:after{content:"";position:absolute;left:14%;right:14%;bottom:2px;height:7px;background:var(--seal);opacity:.16;border-radius:3px}
     .home-title p{margin:0;color:var(--muted);font-size:.88rem}
     .home-title .today-count{margin:14px auto 0;padding:8px 8px 8px 15px;font-size:.76rem;gap:9px;max-width:100%;white-space:nowrap}
     .tc-div{width:1px;height:13px;background:var(--line);flex:0 0 auto}
     .home-title .today-count strong{min-width:24px;height:24px;font-size:.79rem;padding:0 7px}
-    #sparkBox{width:100%;max-width:520px;margin:5vh auto 0}
-    .spark-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 19px 17px;
+    #sparkBox{width:100%;max-width:520px;margin:0 auto}
+    .spark-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:16px 18px 15px;
       box-shadow:var(--card-shadow);text-align:left;position:relative;overflow:hidden}
     .spark-card:after{content:"🌸";position:absolute;right:-6px;bottom:-10px;font-size:3.4rem;opacity:.07;transform:rotate(-10deg)}
     .spark-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
     .spark-label{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--seal)}
     .spark-cat{font-size:.67rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:3px 10px;font-weight:700;flex:0 0 auto}
-    .spark-q{font-size:1.14rem;line-height:1.62;margin:0 0 15px;color:#2b3134}
+    .spark-q{-webkit-user-select:text;user-select:text;font-size:1.08rem;line-height:1.58;margin:0 0 13px;color:#2b3134}
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
     .spark-acts .btn{flex:1;font-size:.79rem;padding:11px}
-    .home-capture{display:flex;flex-direction:column;align-items:center;margin:2vh 0}
+    .home-capture{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0}
     .home-question{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 24px;color:#33372c}
     .capture-orb{width:158px;height:158px;border-radius:50%;border:1px solid #cdd9ce;background:radial-gradient(circle at 36% 30%,#fbfdfa,var(--accent2));color:var(--accent);box-shadow:0 20px 55px rgba(55,95,71,.16),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.18s}
     .capture-orb:hover{transform:translateY(-2px)}
@@ -204,7 +220,7 @@
     .post-save-btn>span{grid-row:1/3;font-size:1.3rem}
     .post-save-btn b{font-size:.88rem}.post-save-btn small{color:var(--muted);font-size:.72rem;margin-top:2px}
 
-    .input,.textarea,.select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 14px;color:var(--text);transition:border-color .12s,box-shadow .12s}
+    .input,.textarea,.select{-webkit-user-select:text;user-select:text;width:100%;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 14px;color:var(--text);transition:border-color .12s,box-shadow .12s}
     .input:focus,.textarea:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(55,95,71,.1)}
     .textarea{min-height:108px;resize:none;line-height:1.6;overflow-y:hidden}
     .field{margin-top:16px}
@@ -361,7 +377,8 @@
     .search-item b{display:block;font-size:.92rem;line-height:1.45;margin-bottom:3px}
     .search-item small{color:var(--muted);font-size:.74rem}
 
-    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+    @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}
+      .btn:active,.card:active,.note:active,.capture-orb:active,.fab:active{transform:none!important}}
     @media(max-width:680px){
       .section-head p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
       .modal{padding:20px 16px}
