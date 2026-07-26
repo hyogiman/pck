@@ -32,6 +32,16 @@
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .next-question{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+    .next-question .next-label{font-size:.68rem;font-weight:800;letter-spacing:.1em;color:var(--seal);text-transform:uppercase}
+    .next-question p{margin:7px 0 0;font-size:1.06rem;line-height:1.55;color:var(--text)}
+    .next-question.done .next-label{color:var(--accent)}
+    .slot.empty-slot{border-style:dashed;background:transparent}
+    .slot-question{font-size:1.12rem;line-height:1.55;color:#33372c;margin:9px 0 13px}
+    .slot-answer{width:100%;margin-bottom:11px}
+    .capture-question{background:var(--accent3);border:1px solid #d3e2d5;border-radius:14px;padding:13px 15px;margin-bottom:6px}
+    .capture-question .cq-label{font-size:.66rem;font-weight:800;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+    .capture-question p{margin:6px 0 0;font-size:1.04rem;line-height:1.5;color:#2c4a38}
     .today-group{margin-top:22px;padding-top:16px;border-top:1px dashed var(--line)}
     .today-group-title{font-size:.72rem;color:var(--muted);font-weight:700;letter-spacing:.04em;margin-bottom:11px}
     .pick-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -426,6 +436,8 @@
       <button class="close-btn" data-close="captureDialog" type="button">✕</button>
     </div>
 
+    <div id="captureQuestion" class="capture-question hidden"></div>
+
     <div class="field">
       <label for="captureText">내 생각</label>
       <textarea class="textarea capture-main" id="captureText" placeholder="떠오른 그대로 적어보세요. 한 줄이어도 충분합니다."></textarea>
@@ -627,28 +639,15 @@
     <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
     <div class="settings-card">
       <strong>🔎 콘텐츠 검색 API</strong>
-      <div class="helper">📚 알라딘 검색은 브라우저에서 직접 호출하지 않고 Firebase Function을 통해 호출합니다. TTB Key는 서버 Secret에 보관합니다.<br>Google Books는 아래 Google API Key를 사용합니다. 같은 키로 YouTube를 함께 쓸 수 있으며 Google Cloud에서 Books API와 YouTube Data API v3가 모두 허용되어 있어야 합니다.</div>
+      <div class="helper">책 검색(알라딘)은 이미 연결되어 있습니다. 아래는 영상 검색용 키입니다.</div>
       <div class="field"><label for="tmdbKeyInput">TMDB API Read Token 또는 v3 API Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
       <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
       <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
       <div class="api-status" id="apiStatus"></div>
     </div>
     <div class="settings-card">
-      <strong>🔥 Firebase 프로젝트</strong>
-      <div class="helper"><b>idea-pocket-56063</b> 프로젝트를 앱에 기본 연결했습니다. 이제 새 기기에서 Firebase config를 다시 붙여넣을 필요가 없습니다. 사진·음성·영상은 Firebase Storage를 사용합니다.</div>
-    </div>
-    <div class="settings-card"><strong>🧪 샘플 흐름</strong><div class="helper">Source → Fragment → Thread → Studio를 한 번에 확인하는 예시 데이터를 넣습니다.</div><button class="btn soft" id="seedDemo" type="button" style="margin-top:9px">샘플 데이터 넣기</button></div>
-    <div class="settings-card"><strong>♻️ V0.1 로컬 데이터</strong><div class="helper">이 브라우저에 이전 버전 기록이 남아 있으면 V0.2 구조로 가져옵니다.</div><button class="btn" id="migrateV01" type="button" style="margin-top:9px">V0.1 기록 가져오기</button></div>
-    <div class="settings-card">
       <strong>🧹 데이터 정리</strong>
-      <div class="helper">개별 삭제는 각 화면에서 할 수 있습니다. 아래는 범주별 전체 삭제입니다.</div>
-      <div class="danger-grid">
-        <button class="btn danger" id="deleteAllFragments" type="button">생각 전체 삭제</button>
-        <button class="btn danger" id="deleteAllSources" type="button">Library 전체 삭제</button>
-        <button class="btn danger" id="deleteAllThreads" type="button">Thread 전체 삭제</button>
-        <button class="btn danger" id="deleteAllProjects" type="button">Studio 전체 삭제</button>
-      </div>
-      <div class="divider"></div>
+      <div class="helper">개별 삭제는 각 화면에서 할 수 있습니다.</div>
       <button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button>
       <div class="helper">완전 초기화는 확인창에 <b>전체삭제</b>를 직접 입력해야 실행됩니다.</div>
     </div>
@@ -1127,18 +1126,18 @@ function renderStudio(){
 }
 const templates={
   blog:[
-    {id:"hook",title:"1. 여는 글",prompt:"독자가 멈춰 읽게 할 내 경험이나 질문은?"},
-    {id:"experience",title:"2. 소제목 ① — 나의 경험",prompt:"내가 실제로 겪은 장면·실패·사건은?"},
-    {id:"outside",title:"3. 소제목 ② — 외부의 시선",prompt:"책·미디어·누군가의 말 중 이 생각을 확장한 재료는?"},
-    {id:"meaning",title:"4. 소제목 ③ — 나의 해석",prompt:"그래서 나는 이것을 어떻게 다르게 보게 되었나?"},
-    {id:"counter",title:"5. 반론",prompt:"반대로 생각하는 사람은 뭐라고 말할까? 내가 합리화하고 있는 건 없나?"},
-    {id:"conclusion",title:"6. 닫는 글",prompt:"지금 시점에서 내가 말하고 싶은 한 문장은?"}
+    {id:"hook",title:"1. 여는 글",prompt:"독자가 멈춰 읽게 할 내 경험이나 질문은?",mind:true},
+    {id:"experience",title:"2. 소제목 ① — 나의 경험",prompt:"내가 실제로 겪은 장면·실패·사건은?",mind:true},
+    {id:"outside",title:"3. 소제목 ② — 외부의 시선",prompt:"책·미디어·누군가의 말 중 이 생각을 확장한 재료는?",mind:true},
+    {id:"meaning",title:"4. 소제목 ③ — 나의 해석",prompt:"그래서 나는 이것을 어떻게 다르게 보게 되었나?",mind:true},
+    {id:"counter",title:"5. 반론",prompt:"반대로 생각하는 사람은 뭐라고 말할까? 내가 합리화하고 있는 건 없나?",mind:true},
+    {id:"conclusion",title:"6. 닫는 글",prompt:"지금 시점에서 내가 말하고 싶은 한 문장은?",mind:true}
   ],
   shorts:[
     {id:"hook",title:"1. 3초 훅 (첫 대사)",prompt:"스크롤을 멈추게 할 첫 마디는? 말하듯 짧게."},
     {id:"situation",title:"2. 상황 설명",prompt:"맥락을 두세 문장으로. 실제 내뱉을 말투로."},
-    {id:"turn",title:"3. 반전 · 전환",prompt:"'그런데' 이후에 올 예상 밖의 생각은?"},
-    {id:"point",title:"4. 핵심 한 문장",prompt:"이 영상이 남길 단 하나의 메시지는?"},
+    {id:"turn",title:"3. 반전 · 전환",prompt:"'그런데' 이후에 올 예상 밖의 생각은?",mind:true},
+    {id:"point",title:"4. 핵심 한 문장",prompt:"이 영상이 남길 단 하나의 메시지는?",mind:true},
     {id:"close",title:"5. 마무리 · 클로징",prompt:"끝맺는 말과 남길 질문은?"}
   ],
   instagram:[
@@ -1149,12 +1148,12 @@ const templates={
     {id:"tags",title:"5. 해시태그",prompt:"이 글을 찾을 사람들이 검색할 말은?"}
   ],
   podcast:[
-    {id:"open",title:"1. 오프닝 질문",prompt:"오늘 청취자에게 던질 질문은?"},
+    {id:"open",title:"1. 오프닝 질문",prompt:"오늘 청취자에게 던질 질문은?",mind:true},
     {id:"line",title:"2. 책/미디어 한 줄",prompt:"오늘 이야기를 여는 외부의 한 줄은?"},
-    {id:"experience",title:"3. 내 경험",prompt:"그 한 줄과 맞닿는 내 실제 이야기는?"},
-    {id:"counter",title:"4. 반론",prompt:"이 생각에 가장 날카롭게 반박한다면?"},
-    {id:"meaning",title:"5. 내 생각",prompt:"반론을 지나고도 남는 내 생각은?"},
-    {id:"question",title:"6. 청취자 질문",prompt:"듣는 사람에게 어떤 질문을 남길까?"}
+    {id:"experience",title:"3. 내 경험",prompt:"그 한 줄과 맞닿는 내 실제 이야기는?",mind:true},
+    {id:"counter",title:"4. 반론",prompt:"이 생각에 가장 날카롭게 반박한다면?",mind:true},
+    {id:"meaning",title:"5. 내 생각",prompt:"반론을 지나고도 남는 내 생각은?",mind:true},
+    {id:"question",title:"6. 청취자 질문",prompt:"듣는 사람에게 어떤 질문을 남길까?",mind:true}
   ]
 };
 const FORMAT_LABEL={blog:"블로그",shorts:"유튜브 · 쇼츠",instagram:"인스타",podcast:"팟캐스트"};
@@ -1178,8 +1177,11 @@ function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
   const pool=t?threadFragments(t.id):state.fragments.slice(0,12),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
+  const next=slots.find(s=>!(s.text||(s.fragmentIds||[]).length));
+  const nextLine=next?`<div class="next-question"><span class="next-label">다음 질문</span><p class="serif">${esc(next.prompt)}</p></div>`
+    :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
   $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
-    <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div></div>
+    <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
     <div class="studio-layout section">
       <aside class="material-pool"><div class="section-head"><div><h2>재료함</h2><p>내가 이미 남긴 생각.</p></div></div>${pool.length?pool.map(f=>`<div class="material">${srcLabel(f)}<br><b>${esc((f.thought||f.text||f.externalText||"").slice(0,120))}</b></div>`).join(""):empty("🧺","재료가 없어요.","Garden에서 생각을 먼저 연결해보세요.")}</aside>
       <section><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
@@ -1189,9 +1191,13 @@ function openProject(id){
 function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(s.type)} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
-  return `<div class="slot ${(s.text||attached.length)?"done":""}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div><div class="slot-prompt">${esc(s.prompt)}</div>
+  const filled=!!(s.text||attached.length);
+  return `<div class="slot ${filled?"done":"empty-slot"}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
+    ${filled
+      ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
+      : `<p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}`}
     ${attached.map(f=>`<div class="material">${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
-    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea></div>`;
+    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="${filled?"여기에 내 말로 적어보세요.":"또는 여기에 바로 적어도 됩니다."}">${esc(s.text||"")}</textarea></div>`;
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
@@ -1199,7 +1205,11 @@ const CAPTURE_DRAFT_KEY="tg_capture_draft";
 function saveCaptureDraft(){try{localStorage.setItem(CAPTURE_DRAFT_KEY,JSON.stringify({t:$("captureText").value,e:$("captureExternal").value,l:$("captureLocator").value}))}catch(_){}}
 function clearCaptureDraft(){try{localStorage.removeItem(CAPTURE_DRAFT_KEY)}catch(_){}}
 function loadCaptureDraft(){try{return JSON.parse(localStorage.getItem(CAPTURE_DRAFT_KEY)||"null")}catch(_){return null}}
-function openCapture(prefill=""){
+function openCapture(prefill="",ctx=null){
+  state.pendingSlot=ctx||null;
+  const qb=$("captureQuestion");
+  if(ctx){qb.innerHTML=`<span class="cq-label">이 질문에 답하는 중</span><p class="serif">${esc(ctx.prompt)}</p>`;qb.classList.remove("hidden")}
+  else qb.classList.add("hidden");
   $("captureText").value=prefill;
   $("captureExternal").value="";
   $("captureLocator").value="";
@@ -1220,7 +1230,21 @@ async function saveCapture(){
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id);
-    state.fragments.unshift(f);await persist("fragments",f);clearCaptureDraft();$("captureDialog").close();renderAll();
+    state.fragments.unshift(f);await persist("fragments",f);clearCaptureDraft();$("captureDialog").close();
+    const ctx=state.pendingSlot;state.pendingSlot=null;
+    if(ctx){
+      const p=state.projects.find(x=>x.id===ctx.projectId);
+      if(p){
+        const slots=projectSlots(p);
+        const target=slots.find(s=>s.id===ctx.slotId);
+        if(target)target.fragmentIds=[...(target.fragmentIds||[]),f.id];
+        p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));
+        p.updatedAt=new Date().toISOString();
+        await persist("projects",p);
+        renderAll();openProject(p.id);toast("작업대에 넣고, 생각으로도 남겼어요. 🌱");return;
+      }
+    }
+    renderAll();
     $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
@@ -1697,6 +1721,12 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
+  const ans=e.target.closest("[data-answer-slot]");
+  if(ans){
+    const p=state.projects.find(x=>x.id===ans.dataset.project);if(!p)return;
+    const slot=projectSlots(p).find(s=>s.id===ans.dataset.answerSlot);if(!slot)return;
+    return openCapture("",{projectId:p.id,slotId:slot.id,prompt:slot.prompt});
+  }
   const saveSlots=e.target.closest("[data-save-all-slots]");if(saveSlots)return saveAllSlots(saveSlots.dataset.saveAllSlots);
   const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
 });
@@ -1727,11 +1757,7 @@ $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addE
 $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;renderGarden()});
 
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
-$("seedDemo").addEventListener("click",seedDemo);$("migrateV01").addEventListener("click",migrateV01);$("exportData").addEventListener("click",exportData);
-$("deleteAllFragments").addEventListener("click",deleteAllFragments);
-$("deleteAllSources").addEventListener("click",deleteAllSources);
-$("deleteAllThreads").addEventListener("click",deleteAllThreads);
-$("deleteAllProjects").addEventListener("click",deleteAllProjects);
+$("exportData").addEventListener("click",exportData);
 $("resetEverything").addEventListener("click",resetEverything);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("saveApiKeys").addEventListener("click",async()=>{
