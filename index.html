@@ -222,6 +222,9 @@
     .pool-caret{color:var(--muted);transition:transform .2s}
     .pool-toggle.open .pool-caret{transform:rotate(180deg)}
     .pool-body{margin-top:9px}
+    .more-btn{width:100%;border:1px dashed var(--line);background:transparent;color:var(--accent);
+      border-radius:13px;padding:12px;font-size:.79rem;font-weight:700;cursor:pointer;margin-top:4px;transition:.12s}
+    .more-btn:hover{background:var(--accent3);border-color:#cdd8cd}
     .pool-tabs{display:flex;gap:6px;margin-bottom:9px}
     .pool-tab{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:11px;
       padding:8px 6px;font-size:.74rem;font-weight:700;cursor:pointer;transition:.12s}
@@ -234,9 +237,7 @@
     .mat-del{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:8px;border:1px solid var(--line);
       background:var(--panel);color:var(--danger);cursor:pointer;font-size:.72rem;line-height:1}
     .mat-del:hover{background:#fbf3f1}
-    .save-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:6px}
-    .save-row .btn{flex:1}
-    .save-hint{font-size:.73rem;color:var(--accent);opacity:0;transition:opacity .2s;white-space:nowrap}
+    .save-hint{font-size:.72rem;color:var(--accent);opacity:0;transition:opacity .25s;white-space:nowrap;flex:0 0 auto;padding-bottom:2px}
     .save-hint.show{opacity:1}
     .slot{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:15px;margin-bottom:10px;box-shadow:var(--card-shadow)}
     .slot-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
@@ -1097,18 +1098,30 @@ function openSource(id){
 }
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>(f.date||f.createdAt||"").slice(0,10)).filter(Boolean).sort().reverse()[0]||(state.sources.find(s=>s.id===id)?.updatedAt||"")}
+function threadActivity(t){const fs=threadFragments(t.id);return fs.length?(fs.map(f=>(f.date||f.createdAt||"").slice(0,10)).sort().reverse()[0]):((t.createdAt||"").slice(0,10))}
 function renderGarden(){
   $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span><span class="status">💭 생각 ${state.fragments.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
-  const ts=state.threads.filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q));
-  $("threadList").innerHTML=ts.length?ts.map(t=>threadCard(t)).join(""):empty("🌱","아직 Thread가 없어요.","같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
-  const frags=state.fragments
+  if(state.gardenThreadLimit==null)state.gardenThreadLimit=4;
+  if(state.gardenFragLimit==null)state.gardenFragLimit=6;
+
+  const ts=state.threads
+    .filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q))
+    .sort((a,b)=>String(threadActivity(b)||"").localeCompare(String(threadActivity(a)||"")));
+  const tShown=ts.slice(0,state.gardenThreadLimit);
+  $("threadList").innerHTML=ts.length
+    ? tShown.map(t=>threadCard(t)).join("")+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
+    : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 말로 검색해보세요.":"같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
+
+  const all=state.fragments
     .filter(f=>!state.gardenUnlinked || !(f.threadIds||[]).length)
-    .filter(f=>[f.thought,f.externalText,f.context,f.choice].filter(Boolean).join(" ").toLowerCase().includes(q))
-    .slice(0,8);
+    .filter(f=>[f.thought,f.externalText,f.context,f.choice].filter(Boolean).join(" ").toLowerCase().includes(q));
+  const frags=all.slice(0,state.gardenFragLimit);
   $("showUnlinked").textContent=state.gardenUnlinked?"전체 조각":"미연결 조각";
   $("showUnlinked").classList.toggle("soft",state.gardenUnlinked);
-  $("recentFragments").innerHTML=frags.length?frags.map(fragmentCard).join(""):empty("💭",state.gardenUnlinked?"미연결 조각이 없어요.":"생각 조각이 없습니다.",state.gardenUnlinked?"모든 조각이 적어도 하나의 Thread에 연결되어 있습니다.":"+ 버튼으로 한 줄만 먼저 붙잡아보세요.");
+  $("recentFragments").innerHTML=all.length
+    ? frags.map(f=>fragmentCard(f)).join("")+(all.length>frags.length?`<button class="more-btn" data-more="frags" type="button">생각 ${all.length-frags.length}개 더 보기</button>`:"")
+    : empty("💭",state.gardenUnlinked?"미연결 조각이 없어요.":"생각 조각이 없습니다.",state.gardenUnlinked?"모든 조각이 적어도 하나의 Thread에 연결되어 있습니다.":"+ 버튼으로 한 줄만 먼저 붙잡아보세요.");
 }
 function threadFragments(id){return state.fragments.filter(f=>(f.threadIds||[]).includes(id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
 function threadCard(t,compact=false){
@@ -1265,8 +1278,8 @@ function openProject(id){
   $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button><button class="text-btn" data-delete-project="${p.id}" type="button">프로젝트 삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
     <div class="studio-layout section">
-      <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
-      ${slots.map(s=>slotHTML(p,s)).join("")}<div class="save-row"><button class="btn primary" data-save-all-slots="${p.id}" type="button">작업대 저장</button><span class="save-hint" id="saveHint"></span></div></section>
+      <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div><span class="save-hint" id="saveHint"></span></div>
+      ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block" data-save-all-slots="${p.id}" type="button">작업대 저장</button></section>
       <aside class="material-pool">
         <button class="pool-toggle" id="poolToggle" type="button"><span>🧺 재료함 <b>${pool.length}</b></span><span class="pool-caret">▾</span></button>
         <div class="pool-body hidden" id="poolBody">
@@ -1869,6 +1882,12 @@ document.addEventListener("click",async e=>{
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  const mb=e.target.closest("[data-more]");
+  if(mb){
+    if(mb.dataset.more==="threads")state.gardenThreadLimit=(state.gardenThreadLimit||4)+6;
+    else state.gardenFragLimit=(state.gardenFragLimit||6)+10;
+    return renderGarden();
+  }
   const dtc=e.target.closest("[data-detach]");if(dtc)return detachFragment(dtc.dataset.project,dtc.dataset.slot,dtc.dataset.detach);
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
@@ -1911,8 +1930,8 @@ $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
-$("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",renderGarden);
-$("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;renderGarden()});
+$("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=4;state.gardenFragLimit=6;renderGarden()});
+$("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;state.gardenFragLimit=6;renderGarden()});
 
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
 $("exportData").addEventListener("click",exportData);
