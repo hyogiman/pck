@@ -294,6 +294,14 @@
     .frag-selects{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
     .frag-selects .select{font-size:.82rem;padding:10px 12px}
     .frag-count{font-size:.74rem;color:var(--muted);margin-top:10px;padding-left:2px}
+    .trash-item{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--panel);margin-bottom:9px}
+    .trash-item .tq{font-family:var(--serif);font-size:.95rem;line-height:1.6;color:#2b3134;
+      display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin:0}
+    .trash-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;font-size:.68rem;color:var(--muted)}
+    .trash-left{background:var(--accent2);color:var(--accent);border-radius:999px;padding:2px 9px;font-weight:800}
+    .trash-left.soon{background:#fbf0ee;color:var(--danger)}
+    .trash-acts{display:flex;gap:7px;margin-top:11px}
+    .trash-acts .btn{flex:1 1 0;font-size:.75rem;padding:9px 6px}
     .frag-tip{font-size:.7rem;color:var(--ink-faint,#9aa3a8);opacity:.75;margin-top:3px;padding-left:2px}
     #listDialogBody{max-height:66vh;overflow:auto;-webkit-overflow-scrolling:touch}
     mark{background:#fdf0a8;color:inherit;border-radius:3px;padding:0 2px;font-style:normal}
@@ -591,6 +599,7 @@
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
     <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
     <button class="sheet-nav" id="sheetSearch" type="button"><span>🔍</span><b>검색</b></button>
+    <button class="sheet-nav" id="sheetTrash" type="button"><span>🗑</span><b>휴지통</b></button>
     <button class="sheet-nav" id="sheetSettings" type="button"><span>⚙️</span><b>설정</b></button>
   </div>
 </div>
@@ -727,6 +736,15 @@
   </div>
 </dialog>
 
+<dialog id="trashDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">TRASH</div><h2>휴지통</h2></div><button class="close-btn" data-close="trashDialog" type="button">✕</button></div>
+    <div class="helper" id="trashHelp"></div>
+    <div id="trashList" style="margin-top:14px"></div>
+    <div class="modal-actions"><button class="btn danger" id="emptyTrashBtn" type="button">휴지통 비우기</button><button class="btn primary" data-close="trashDialog" type="button">닫기</button></div>
+  </div>
+</dialog>
+
 <dialog id="editFragmentDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">EDIT</div><h2>생각 수정</h2></div><button class="close-btn" data-close="editFragmentDialog" type="button">✕</button></div>
@@ -743,7 +761,7 @@
       </div>
     </div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
-    <div class="modal-danger"><button class="text-btn danger-text" data-delete-current-frag type="button">🗑 이 생각 삭제</button></div>
+    <div class="modal-danger"><button class="text-btn danger-text" data-delete-current-frag type="button">🗑 휴지통으로 보내기</button></div>
   </div>
 </dialog>
 
@@ -888,7 +906,7 @@ const DEFAULT_FIREBASE_CONFIG={
   messagingSenderId:"894399979515",
   appId:"1:894399979515:web:834a298e37ef05dbd0f55e"
 };
-const state={sources:[],fragments:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
+const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[]};
@@ -1062,8 +1080,23 @@ function attachmentsHTML(list=[]){
   }).join("")}</div>`;
 }
 
-function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=d.sources||[];state.fragments=d.fragments||[];state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
-function localSave(){localStorage.setItem(STORAGE_KEY,JSON.stringify({sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects}))}
+/* 휴지통: 지운 생각은 같은 컬렉션에 deletedAt만 찍어 남겨두고,
+   불러오는 한 지점에서 '살아있는 것 / 버려진 것'으로 갈라 담는다.
+   그래야 화면을 그리는 코드는 하나도 안 고쳐도 지운 생각이 안 보인다. */
+const TRASH_DAYS=15;
+function splitFragments(rows){
+  const live=[],gone=[];
+  (rows||[]).forEach(f=>(f&&f.deletedAt?gone:live).push(f));
+  state.fragments=live;
+  state.trash=gone.sort((a,b)=>String(b.deletedAt||"").localeCompare(String(a.deletedAt||"")));
+}
+function allFragments(){return [...state.fragments,...(state.trash||[])]}
+function trashDaysLeft(f){
+  const d=new Date(f.deletedAt);if(isNaN(d))return TRASH_DAYS;
+  return Math.max(0,TRASH_DAYS-Math.floor((Date.now()-d.getTime())/86400000));
+}
+function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=d.sources||[];splitFragments(d.fragments||[]);state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
+function localSave(){localStorage.setItem(STORAGE_KEY,JSON.stringify({sources:state.sources,fragments:allFragments(),threads:state.threads,projects:state.projects}))}
 function normalizeFirebaseConfig(raw){
   let s=raw.trim().replace(/^const\s+firebaseConfig\s*=\s*/,"").replace(/;\s*$/,"");
   try{return JSON.parse(s)}catch{}
@@ -1135,7 +1168,7 @@ async function signOutGarden(){
   detachRealtime();
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(API_KEY_STORE);
-  state.sources=[];state.fragments=[];state.threads=[];state.projects=[];
+  state.sources=[];state.fragments=[];state.trash=[];state.threads=[];state.projects=[];
   state.firebase.user=null;state.firebase.uid=null;state.firebase.connected=false;
   setFirebaseStatus(false);renderAll();renderAccountStatus();$("settingsDialog").close();showAccountDialog("signin");
 }
@@ -1190,7 +1223,9 @@ function attachRealtime(){
   const {api,db,uid}=state.firebase;
   realtimeUnsub=["sources","fragments","threads","projects"].map(key=>
     api.onSnapshot(api.collection(db,"users",uid,key),
-      snap=>{ state[key]=snap.docs.map(d=>({id:d.id,...d.data()})); localSave(); renderAll(); },
+      snap=>{ const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+              if(key==="fragments")splitFragments(rows);else state[key]=rows;
+              localSave(); renderAll(); if(key==="fragments")autoPurgeTrash(); },
       err=>{ console.warn("실시간 동기화 오류("+key+")",err); }
     )
   );
@@ -1200,7 +1235,8 @@ async function firebaseLoad(){
   const {api,db,uid}=state.firebase;
   for(const key of ["sources","fragments","threads","projects"]){
     const snap=await api.getDocs(api.collection(db,"users",uid,key));
-    state[key]=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(key==="fragments")splitFragments(rows);else state[key]=rows;
   }
   localSave();renderAll();
 }
@@ -1212,7 +1248,8 @@ async function persist(collectionName,obj){
   localSave();
 }
 async function remove(collectionName,id){
-  state[collectionName]=state[collectionName].filter(x=>x.id!==id);
+  state[collectionName]=(state[collectionName]||[]).filter(x=>x.id!==id);
+  if(collectionName==="fragments")state.trash=(state.trash||[]).filter(x=>x.id!==id);
   if(state.firebase.connected){const {api,db,uid}=state.firebase;await api.deleteDoc(api.doc(db,"users",uid,collectionName,id))}
   localSave();
 }
@@ -1293,6 +1330,32 @@ function fragArchiveCard(f,q){
 ${st.moved?`<div class="note-tail"><span class="moved-note">✎ ${esc(st.moved)}</span></div>`:""}
   </article>`;
 }
+function renderTrash(){
+  const box=$("trashList");if(!box)return;
+  const list=state.trash||[];
+  $("trashHelp").innerHTML=list.length
+    ? `지운 생각 <b>${list.length}개</b>가 담겨 있습니다. <b>${TRASH_DAYS}일</b>이 지나면 자동으로 사라지고, 그 전에는 언제든 되돌릴 수 있어요.`
+    : `비어 있습니다. 지운 생각은 ${TRASH_DAYS}일 동안 여기 머뭅니다.`;
+  const btn=$("emptyTrashBtn");if(btn)btn.classList.toggle("hidden",!list.length);
+  box.innerHTML=list.length?list.map(f=>{
+    const left=trashDaysLeft(f);
+    const src=state.sources.find(x=>x.id===f.sourceId);
+    const text=(f.thought||f.text||f.externalText||"(내용 없음)");
+    return `<div class="trash-item">
+      <div class="trash-meta">
+        <span class="trash-left ${left<=3?"soon":""}">${left>0?`${left}일 뒤 삭제`:"곧 삭제"}</span>
+        <span>${esc(fmt((f.date||f.createdAt||"").slice(0,10)))}</span>
+        ${src?`<span>${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}
+        ${(f.attachments||[]).length?`<span>📎 ${f.attachments.length}</span>`:""}
+      </div>
+      <p class="tq">${esc(text)}</p>
+      <div class="trash-acts">
+        <button class="btn soft" data-restore-frag="${f.id}" type="button">↩︎ 되돌리기</button>
+        <button class="btn danger" data-purge-frag="${f.id}" type="button">완전삭제</button>
+      </div>
+    </div>`;
+  }).join(""):empty("🗑","휴지통이 비어 있어요.","지운 생각은 여기서 되돌릴 수 있습니다.");
+}
 function renderFragments(){
   const box=$("fragmentArchive");if(!box)return;
   const q=($("fragSearch")?.value||"").trim();
@@ -1358,7 +1421,7 @@ function renderSpark(){
   </div>`;
 }
 
-function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();renderSpark();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
+function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();if($("trashDialog")?.open)renderTrash();renderSpark();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
@@ -2170,7 +2233,53 @@ async function detachFragment(pid,slotId,fid){
 async function saveAllSlots(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p);$$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value.trim()});p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);renderStudio();openProject(pid);toast("작업대를 저장했습니다.");
 }
-async function deleteFragment(fid){if(!confirm("이 생각 조각을 삭제할까요?"))return false;const target=state.fragments.find(f=>f.id===fid);if(target)await deleteAttachments(target.attachments||[]);await remove("fragments",fid);for(const p of state.projects){p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));await persist("projects",p)}renderAll();toast("삭제했습니다.");return true}
+/* 삭제 = 휴지통으로 옮기기. 첨부와 Thread·Studio 연결은 그대로 둔다(되돌릴 수 있어야 하므로). */
+async function deleteFragment(fid){
+  const f=state.fragments.find(x=>x.id===fid);if(!f)return false;
+  if(!confirm(`이 생각을 휴지통으로 옮길까요?\n\n${TRASH_DAYS}일 안에는 휴지통에서 되돌릴 수 있고,\n그 뒤에는 자동으로 완전히 지워집니다.`))return false;
+  const moved={...f,deletedAt:new Date().toISOString()};
+  state.fragments=state.fragments.filter(x=>x.id!==fid);
+  state.trash=[moved,...(state.trash||[])];
+  await persist("fragments",moved);
+  renderAll();toast(`휴지통으로 옮겼습니다. (${TRASH_DAYS}일 보관)`);return true;
+}
+async function restoreFragment(fid){
+  const f=(state.trash||[]).find(x=>x.id===fid);if(!f)return;
+  const back={...f};delete back.deletedAt;
+  state.trash=state.trash.filter(x=>x.id!==fid);
+  state.fragments.unshift(back);
+  await persist("fragments",back);
+  renderAll();renderTrash();toast("되돌렸습니다. 🌱");
+}
+/* 완전삭제만 첨부 파일과 Studio 연결까지 정리한다 */
+async function purgeFragment(fid,{ask=true}={}){
+  const f=(state.trash||[]).find(x=>x.id===fid);if(!f)return false;
+  if(ask&&!confirm("이 생각을 완전히 삭제할까요?\n첨부한 사진·음성도 함께 지워지며 되돌릴 수 없습니다."))return false;
+  await deleteAttachments(f.attachments||[]);
+  await remove("fragments",fid);
+  for(const p of state.projects){
+    if(!(p.slots||[]).some(s=>(s.fragmentIds||[]).includes(fid)))continue;
+    p.slots=(p.slots||[]).map(s=>({...s,fragmentIds:(s.fragmentIds||[]).filter(id=>id!==fid)}));
+    await persist("projects",p);
+  }
+  return true;
+}
+async function purgeFragmentAsk(fid){if(await purgeFragment(fid)){renderAll();renderTrash();toast("완전히 삭제했습니다.")}}
+async function emptyTrash(){
+  const n=(state.trash||[]).length;if(!n)return toast("휴지통이 비어 있습니다.");
+  if(!confirm(`휴지통의 생각 ${n}개를 완전히 삭제할까요?\n첨부 파일도 함께 지워지며 되돌릴 수 없습니다.`))return;
+  for(const f of [...state.trash])await purgeFragment(f.id,{ask:false});
+  renderAll();renderTrash();toast("휴지통을 비웠습니다.");
+}
+/* 보관 기간이 지난 것은 조용히 정리한다 */
+async function autoPurgeTrash(){
+  if(state.trashPurging)return;
+  const expired=(state.trash||[]).filter(f=>trashDaysLeft(f)<=0);
+  if(!expired.length)return;
+  state.trashPurging=true;
+  try{for(const f of expired)await purgeFragment(f.id,{ask:false});renderAll();}
+  finally{state.trashPurging=false}
+}
 async function deleteEditingFragment(){
   const fid=$("editFragmentId").value;if(!fid)return;
   if(await deleteFragment(fid))$("editFragmentDialog").close();
@@ -2279,6 +2388,8 @@ document.addEventListener("click",async e=>{
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
   if(e.target.closest("[data-delete-current-frag]"))return deleteEditingFragment();
+  const trRestore=e.target.closest("[data-restore-frag]");if(trRestore)return restoreFragment(trRestore.dataset.restoreFrag);
+  const trPurge=e.target.closest("[data-purge-frag]");if(trPurge)return purgeFragmentAsk(trPurge.dataset.purgeFrag);
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
   const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom]"))return openEditFragment(ofg.dataset.openFrag);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
@@ -2387,6 +2498,8 @@ $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gard
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
 $("exportData").addEventListener("click",exportData);
 $("resetEverything").addEventListener("click",resetEverything);
+$("sheetTrash").addEventListener("click",()=>{closeMenu();renderTrash();$("trashDialog").showModal()});
+$("emptyTrashBtn").addEventListener("click",emptyTrash);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("confirmPublish").addEventListener("click",confirmPublish);
 function renderSparkSettings(){
@@ -2412,7 +2525,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   renderApiSettings();
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","trashDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
