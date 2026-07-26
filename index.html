@@ -225,6 +225,14 @@
     .pool-search{margin-bottom:9px;font-size:.85rem;padding:10px 13px}
     .pool-empty,.pool-more{font-size:.76rem;color:var(--muted);padding:9px 4px;text-align:center}
     .material{background:var(--panel2);border-radius:12px;padding:11px 12px;margin-top:8px;font-size:.8rem;line-height:1.5}
+    .material.attached{position:relative;padding-right:38px}
+    .mat-del{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:8px;border:1px solid var(--line);
+      background:var(--panel);color:var(--danger);cursor:pointer;font-size:.72rem;line-height:1}
+    .mat-del:hover{background:#fbf3f1}
+    .save-row{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:6px}
+    .save-row .btn{flex:1}
+    .save-hint{font-size:.73rem;color:var(--accent);opacity:0;transition:opacity .2s;white-space:nowrap}
+    .save-hint.show{opacity:1}
     .slot{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:15px;margin-bottom:10px;box-shadow:var(--card-shadow)}
     .slot-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
     .slot h3{font-family:var(--display);margin:0;font-size:1.02rem;font-weight:400}
@@ -1248,7 +1256,7 @@ function openProject(id){
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
     <div class="studio-layout section">
       <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div></div>
-      ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block" data-save-all-slots="${p.id}" type="button">작업대 저장</button></section>
+      ${slots.map(s=>slotHTML(p,s)).join("")}<div class="save-row"><button class="btn primary" data-save-all-slots="${p.id}" type="button">작업대 저장</button><span class="save-hint" id="saveHint"></span></div></section>
       <aside class="material-pool">
         <button class="pool-toggle" id="poolToggle" type="button"><span>🧺 재료함 <b>${pool.length}</b></span><span class="pool-caret">▾</span></button>
         <div class="pool-body hidden" id="poolBody">
@@ -1271,6 +1279,13 @@ function renderPool(){
     +(list.length>shown.length?`<div class="pool-more">그 외 ${list.length-shown.length}개 — 검색으로 찾아보세요</div>`:"");
 }
 function srcLabel(f){const s=state.sources.find(x=>x.id===f.sourceId);return s?`${sourceIcon(s.type)} ${esc(s.title)}`:`${fragIcon(f.type)} ${f.type==="moment"?"순간":f.type==="decision"?"결정":"생각"}`}
+function readSlotTextInto(p){
+  const slots=projectSlots(p);
+  $$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value});
+  return slots;
+}
+function slotsToData(slots){return slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}))}
+async function persistSlots(p,slots){p.slots=slotsToData(slots);p.updatedAt=new Date().toISOString();await persist("projects",p)}
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
   const filled=!!(s.text||attached.length);
@@ -1278,7 +1293,7 @@ function slotHTML(p,s){
     ${filled
       ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
       : `<p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}`}
-    ${attached.map(f=>`<div class="material">${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
+    ${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
     <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="${filled?"여기에 내 말로 적어보세요.":"또는 여기에 바로 적어도 됩니다."}">${esc(s.text||"")}</textarea></div>`;
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
@@ -1317,12 +1332,10 @@ async function saveCapture(){
     if(ctx){
       const p=state.projects.find(x=>x.id===ctx.projectId);
       if(p){
-        const slots=projectSlots(p);
+        const slots=readSlotTextInto(p);
         const target=slots.find(s=>s.id===ctx.slotId);
         if(target)target.fragmentIds=[...(target.fragmentIds||[]),f.id];
-        p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));
-        p.updatedAt=new Date().toISOString();
-        await persist("projects",p);
+        await persistSlots(p,slots);
         renderAll();openProject(p.id);toast("작업대에 넣고, 생각으로도 남겼어요. 🌱");return;
       }
     }
@@ -1685,7 +1698,20 @@ function renderAttachList(){
     : empty("🧺",q?"검색 결과가 없어요.":"연결할 재료가 없어요.",q?"다른 말로 찾아보세요.":"Garden에서 생각을 먼저 쌓아보세요.");
 }
 async function attachFragment(pid,slotId,fid){
-  const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p),slot=slots.find(s=>s.id===slotId);slot.fragmentIds=[...new Set([...(slot.fragmentIds||[]),fid])];p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);$("attachDialog").close();openProject(pid);toast("재료를 배치했습니다.");
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const slots=readSlotTextInto(p);            // 쓰던 글을 먼저 붙잡아 둔다
+  const slot=slots.find(s=>s.id===slotId);if(!slot)return;
+  slot.fragmentIds=[...new Set([...(slot.fragmentIds||[]),fid])];
+  await persistSlots(p,slots);
+  $("attachDialog").close();openProject(pid);toast("재료를 배치했습니다.");
+}
+async function detachFragment(pid,slotId,fid){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const slots=readSlotTextInto(p);
+  const slot=slots.find(s=>s.id===slotId);if(!slot)return;
+  slot.fragmentIds=(slot.fragmentIds||[]).filter(x=>x!==fid);
+  await persistSlots(p,slots);
+  openProject(pid);toast("재료를 뺐습니다.");
 }
 async function saveAllSlots(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;const slots=projectSlots(p);$$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value.trim()});p.slots=slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}));p.updatedAt=new Date().toISOString();await persist("projects",p);renderStudio();openProject(pid);toast("작업대를 저장했습니다.");
@@ -1813,6 +1839,7 @@ document.addEventListener("click",async e=>{
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  const dtc=e.target.closest("[data-detach]");if(dtc)return detachFragment(dtc.dataset.project,dtc.dataset.slot,dtc.dataset.detach);
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
   const ra=e.target.closest("[data-remove-attach]");
@@ -1876,9 +1903,20 @@ function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightbo
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
 $("lightbox").addEventListener("close",()=>{$("lightboxImg").src=""});
 $("lightboxClose").addEventListener("click",closeLightbox);
+let slotSaveTimer=null;
+function markSaved(txt){const h=$("saveHint");if(!h)return;h.textContent=txt;h.classList.add("show");clearTimeout(markSaved._t);markSaved._t=setTimeout(()=>h.classList.remove("show"),2200)}
 document.addEventListener("input",e=>{
   if(e.target.id==="poolSearch")renderPool();
   if(e.target.id==="attachSearch")renderAttachList();
+  if(e.target.classList&&e.target.classList.contains("slot-text")){
+    markSaved("저장 중…");
+    clearTimeout(slotSaveTimer);
+    slotSaveTimer=setTimeout(async()=>{
+      const p=state.projects.find(x=>x.id===state.openProjectId);if(!p)return;
+      try{await persistSlots(p,readSlotTextInto(p));markSaved("자동 저장됨 ✓")}
+      catch(err){console.warn(err);markSaved("저장 실패 — 저장 버튼을 눌러주세요")}
+    },800);
+  }
 });
 document.addEventListener("click",e=>{
   const pt=e.target.closest("#poolToggle");
