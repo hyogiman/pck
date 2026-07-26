@@ -183,7 +183,7 @@
 
     .input,.textarea,.select{width:100%;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:12px 14px;color:var(--text);transition:border-color .12s,box-shadow .12s}
     .input:focus,.textarea:focus,.select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(55,95,71,.1)}
-    .textarea{min-height:108px;resize:vertical;line-height:1.6}
+    .textarea{min-height:108px;resize:none;line-height:1.6;overflow-y:hidden}
     .field{margin-top:16px}
     .field label{display:block;font-size:.77rem;font-weight:700;margin-bottom:7px;color:#3a3e33}
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -1158,7 +1158,7 @@ function openEditFragment(fid){
   state.editAttachments=(f.attachments||[]).slice();
   state.editRemovedAttachments=[];
   renderEditAttachments();
-  $("editFragmentDialog").showModal();
+  $("editFragmentDialog").showModal();setTimeout(growAll,0);
 }
 function renderEditAttachments(){
   const list=state.editAttachments||[];
@@ -1272,6 +1272,7 @@ function openProject(id){
         </div>
       </aside>
     </div>`;
+  setTimeout(growAll,0);
   state.poolThread=t?threadFragments(t.id):null;
   state.poolAll=state.fragments;
   state.poolMode=t?"thread":"all";
@@ -1334,6 +1335,7 @@ function openCapture(prefill="",ctx=null){
   $("captureDate").value=today();
   if(!prefill){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
   $("captureDialog").showModal();
+  setTimeout(growAll,0);
   setTimeout(()=>$("captureText").focus(),60);
 }
 async function saveCapture(){
@@ -1950,6 +1952,10 @@ document.addEventListener("click",e=>{
   const pt=e.target.closest("#poolToggle");
   if(pt){const b=$("poolBody");const opened=b.classList.toggle("hidden")===false;pt.classList.toggle("open",opened);if(opened)setTimeout(()=>$("poolSearch")?.focus(),80)}
 });
+function autoGrow(el){if(!el)return;el.style.height="auto";el.style.height=(el.scrollHeight+2)+"px"}
+function growAll(){$$(".textarea").forEach(autoGrow)}
+document.addEventListener("input",e=>{if(e.target.classList&&e.target.classList.contains("textarea"))autoGrow(e.target)});
+
 /* ── 안드로이드 뒤로가기: 앱을 끄지 말고 한 단계씩 돌아가기 ── */
 function pushGuard(){try{history.pushState({tgGuard:1},"")}catch(e){}}
 function handleBack(){
