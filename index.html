@@ -32,6 +32,13 @@
     input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
     .serif{font-family:var(--serif)}
     .app{width:min(100%,920px);margin:0 auto;padding:20px 16px calc(150px + env(safe-area-inset-bottom))}
+    .edit-attachments{display:grid;gap:7px}
+    .ea-item{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:8px 10px}
+    .ea-item img{width:44px;height:44px;object-fit:cover;border-radius:8px;flex:0 0 auto}
+    .ea-icon{width:44px;height:44px;display:grid;place-items:center;background:var(--panel);border-radius:8px;font-size:1.1rem;flex:0 0 auto}
+    .ea-name{flex:1;min-width:0;font-size:.76rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ea-del{border:1px solid #e7c9c4;background:#fff;color:var(--danger);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:0 0 auto;font-size:.85rem}
+    .ea-del:hover{background:#fbf3f1}
     .attachment-image.zoomable{cursor:zoom-in}
     .lightbox{position:fixed;inset:0;z-index:120;background:rgba(20,22,15,.94);display:none;align-items:center;justify-content:center;padding:16px}
     .lightbox.open{display:flex}
@@ -573,6 +580,7 @@
     <div class="field"><label for="editExternal">문장 · 장면 · 누군가의 말 <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="editExternal" placeholder="책의 문장, 영화의 대사 등"></textarea></div>
     <div class="field"><label for="editLocator">위치 / 페이지 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="editLocator" placeholder="예: p.132 / 6화 / 12:31" /></div>
     <div class="field"><label for="editDate">날짜</label><input class="input" type="date" id="editDate" /></div>
+    <div class="field" id="editAttachWrap"><label>첨부된 사진 · 음성 · 영상</label><div class="edit-attachments" id="editAttachments"></div></div>
     <div class="field"><label for="editSource">연결된 책 · 영상 <span style="color:var(--muted);font-weight:500">(선택)</span></label><select class="input" id="editSource"></select></div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
   </div>
@@ -1120,7 +1128,20 @@ function openEditFragment(fid){
   $("editDate").value=(f.date||f.createdAt||"").slice(0,10)||today();
   $("editSource").innerHTML='<option value="">연결 없음</option>'+state.sources.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join("");
   $("editSource").value=f.sourceId||"";
+  state.editAttachments=(f.attachments||[]).slice();
+  state.editRemovedAttachments=[];
+  renderEditAttachments();
   $("editFragmentDialog").showModal();
+}
+function renderEditAttachments(){
+  const list=state.editAttachments||[];
+  $("editAttachWrap").classList.toggle("hidden",!list.length);
+  $("editAttachments").innerHTML=list.map((a,i)=>{
+    const thumb=a.type?.startsWith("image/")
+      ? `<img src="${esc(a.url)}" alt="">`
+      : `<span class="ea-icon">${a.type?.startsWith("audio/")?"🎙":a.type?.startsWith("video/")?"🎬":"📎"}</span>`;
+    return `<div class="ea-item">${thumb}<span class="ea-name">${esc(a.name||"첨부 파일")}</span><button class="ea-del" data-remove-attach="${i}" type="button" aria-label="삭제">✕</button></div>`;
+  }).join("");
 }
 async function saveEditFragment(){
   const f=state.fragments.find(x=>x.id===$("editFragmentId").value);if(!f)return;
@@ -1130,8 +1151,12 @@ async function saveEditFragment(){
   f.date=$("editDate").value||f.date||today();
   const sid=$("editSource").value;
   if(sid){f.sourceId=sid;if(f.type!=="source")f.type="source";}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
+  f.attachments=(state.editAttachments||[]).slice();
   f.updatedAt=new Date().toISOString();
-  await persist("fragments",f);$("editFragmentDialog").close();renderAll();toast("수정했습니다.");
+  await persist("fragments",f);
+  if((state.editRemovedAttachments||[]).length) await deleteAttachments(state.editRemovedAttachments);
+  state.editAttachments=[];state.editRemovedAttachments=[];
+  $("editFragmentDialog").close();renderAll();toast("수정했습니다.");
 }
 function fragmentCard(f,compact=false){
   const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
@@ -1747,6 +1772,12 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
   const as=e.target.closest("[data-attach-slot]");if(as)return openAttachDialog(as.dataset.project,as.dataset.attachSlot);
   const af=e.target.closest("[data-attach-fragment]");if(af)return attachFragment($("attachProjectId").value,$("attachSlotId").value,af.dataset.attachFragment);
+  const ra=e.target.closest("[data-remove-attach]");
+  if(ra){
+    const i=+ra.dataset.removeAttach,gone=(state.editAttachments||[])[i];
+    if(gone){state.editRemovedAttachments=[...(state.editRemovedAttachments||[]),gone];state.editAttachments.splice(i,1);renderEditAttachments()}
+    return;
+  }
   const zi=e.target.closest("[data-zoom]");if(zi){e.stopPropagation();return openLightbox(zi.dataset.zoom)}
   const ans=e.target.closest("[data-answer-slot]");
   if(ans){
