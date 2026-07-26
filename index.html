@@ -138,6 +138,8 @@
     .source-line{font-family:var(--serif);border-left:3px solid var(--accent);padding:2px 0 2px 13px;margin:11px 0;color:#4b4d43;line-height:1.6;white-space:pre-wrap;font-size:1.02rem}
     .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+    .actions-split{flex-wrap:nowrap}
+    .actions-split>.btn{flex:1 1 0;min-width:0;padding-left:8px;padding-right:8px;white-space:nowrap}
     .empty{text-align:center;padding:34px 18px;border:1px dashed var(--line);border-radius:20px;color:var(--muted);background:rgba(253,252,247,.5);width:100%;grid-column:1/-1}
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
@@ -495,6 +497,7 @@
     <div class="section">
       <div class="section-head">
         <div><h2>다시, 만나다</h2><p>7일 이상 지난 생각을 무작위로 다시 꺼내옵니다.</p></div>
+        <button class="btn hidden" id="resurfaceNext" data-resurface-next type="button">🔀 다른 조각</button>
       </div>
       <div id="resurfaceBox"></div>
     </div>
@@ -1376,7 +1379,8 @@ function renderHome(){
   renderResurface();
 }
 function renderResurface(reshuffle){
-  const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");return}
+  const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);
+  if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");$("resurfaceNext")?.classList.add("hidden");return}
   if(!state.resurfaceSeen)state.resurfaceSeen=[];
   let f=reshuffle?null:c.find(x=>x.id===state.resurfaceId);
   if(!f){let pool=c.filter(x=>!state.resurfaceSeen.includes(x.id));if(!pool.length){state.resurfaceSeen=[];pool=c;}f=pool[Math.floor(Math.random()*pool.length)];state.resurfaceId=f.id;state.resurfaceSeen.push(f.id);}
@@ -1384,7 +1388,8 @@ function renderResurface(reshuffle){
   $("resurfaceBox").innerHTML=`<div class="card"><div class="card-head"><span class="chip">${fragIcon(f.type)} ${daysAgo(f.date||f.createdAt)}일 전</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
     ${src?`<div class="source-sub">${sourceIcon(src.type)} ${esc(src.title)}</div>`:""}
     ${f.externalText?`<div class="source-line">${esc(f.externalText)}</div>`:""}<div class="thought">${esc(f.thought||f.text||"")}</div>
-    <div class="actions"><button class="btn soft" data-continue="${f.id}" type="button">지금 생각 덧붙이기</button><button class="btn" data-link="${f.id}" type="button">🌱 Thread 연결</button><button class="btn" data-resurface-next type="button">🔀 다른 조각</button></div></div>`;
+    <div class="actions actions-split"><button class="btn soft" data-continue="${f.id}" type="button">지금 생각 덧붙이기</button><button class="btn" data-link="${f.id}" type="button">🌱 Thread 연결</button></div></div>`;
+  $("resurfaceNext")?.classList.remove("hidden");
 }
 function renderLibrary(){
   const q=$("sourceSearch").value.trim().toLowerCase(),filter=$("sourceFilter").value;
