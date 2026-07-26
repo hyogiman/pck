@@ -1007,7 +1007,11 @@ function setView(v){
   $("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");
   closeMenu();renderAll();window.scrollTo({top:0,behavior:"smooth"});
 }
+function isTyping(){const a=document.activeElement;return !!a&&(a.tagName==="TEXTAREA"||a.tagName==="INPUT"||a.isContentEditable)}
 function refreshOpenDetail(){
+  // 입력 중에는 화면을 다시 그리지 않는다 (다시 그리면 키보드가 내려가고 커서가 사라짐)
+  if(isTyping()){state.pendingDetailRefresh=true;return}
+  state.pendingDetailRefresh=false;
   try{
     if(state.openSourceId&&state.sources.some(s=>s.id===state.openSourceId)){
       const keep={q:$("sourceExternalText")?.value||"",t:$("sourceThought")?.value||"",l:$("sourceLocator")?.value||""};
@@ -1955,6 +1959,10 @@ document.addEventListener("click",e=>{
 function autoGrow(el){if(!el)return;el.style.height="auto";el.style.height=(el.scrollHeight+2)+"px"}
 function growAll(){$$(".textarea").forEach(autoGrow)}
 document.addEventListener("input",e=>{if(e.target.classList&&e.target.classList.contains("textarea"))autoGrow(e.target)});
+
+document.addEventListener("focusout",()=>{
+  setTimeout(()=>{if(state.pendingDetailRefresh&&!isTyping())refreshOpenDetail()},150);
+});
 
 /* ── 안드로이드 뒤로가기: 앱을 끄지 말고 한 단계씩 돌아가기 ── */
 function pushGuard(){try{history.pushState({tgGuard:1},"")}catch(e){}}
