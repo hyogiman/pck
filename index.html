@@ -229,6 +229,14 @@
     .card.published .title{color:#4a5450}
     .pub-line{font-size:.75rem;color:var(--muted);margin-top:10px}
     .pub-line a{color:var(--accent);font-weight:700;text-decoration:none}
+    .moved-note{font-size:.7rem;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px dotted var(--line);opacity:.85}
+    .frag-filters{margin-bottom:16px}
+    .frag-filters .input{margin-bottom:9px}
+    .frag-selects{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
+    .frag-selects .select{font-size:.82rem;padding:10px 12px}
+    .frag-count{font-size:.74rem;color:var(--muted);margin-top:10px;padding-left:2px}
+    mark{background:#fdf0a8;color:inherit;border-radius:3px;padding:0 2px;font-style:normal}
+    .note-quote mark{background:#f3e6a0}
     .more-btn{width:100%;border:1px dashed var(--line);background:transparent;color:var(--accent);
       border-radius:13px;padding:12px;font-size:.79rem;font-weight:700;cursor:pointer;margin-top:4px;transition:.12s}
     .more-btn:hover{background:var(--accent3);border-color:#cdd8cd}
@@ -390,8 +398,8 @@
     </div>
 
     <div class="dashboard-metrics">
-      <button class="dashboard-stat" data-go="garden" type="button">
-        <span>생각 조각</span><strong id="homeFragmentCount">0</strong><small>Garden에서 보기</small>
+      <button class="dashboard-stat" data-go="fragments" type="button">
+        <span>생각 조각</span><strong id="homeFragmentCount">0</strong><small>모두 보기</small>
       </button>
       <button class="dashboard-stat" data-go="garden" type="button">
         <span>Thread</span><strong id="homeThreadCount">0</strong><small>자라는 생각</small>
@@ -435,6 +443,27 @@
     <div id="sourceDetail" class="hidden"></div>
   </section>
 
+  <section class="view" data-view="fragments">
+    <div class="topbar">
+      <div class="brand"><h1>💭 생각 조각</h1><p>지금까지 붙잡아 둔 모든 생각.</p></div>
+    </div>
+    <div class="frag-filters">
+      <input class="input" id="fragSearch" placeholder="문장·생각·책 제목 검색" autocomplete="off">
+      <div class="frag-selects">
+        <select class="select" id="fragPeriod">
+          <option value="all">전체 기간</option>
+          <option value="today">오늘</option>
+          <option value="7">최근 7일</option>
+          <option value="30">최근 30일</option>
+          <option value="year">올해</option>
+        </select>
+        <select class="select" id="fragSource"></select>
+      </div>
+      <div class="frag-count" id="fragCount"></div>
+    </div>
+    <div id="fragmentArchive"></div>
+  </section>
+
   <section class="view" data-view="garden">
     <div id="gardenIndex">
       <div class="section-head"><div><h2>🌱 Garden</h2><p>생각이 몇 개 쌓인 뒤, “이거 전에 했던 생각인데?” 싶을 때 Thread를 만듭니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
@@ -467,6 +496,7 @@
   <div class="nav-sheet-grid">
     <button class="sheet-nav active" data-view-target="capture" type="button"><span>✍️</span><b>생각</b></button>
     <button class="sheet-nav" data-view-target="home" type="button"><span>🏠</span><b>Home</b></button>
+    <button class="sheet-nav" data-view-target="fragments" type="button"><span>💭</span><b>생각</b></button>
     <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
     <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
@@ -1045,7 +1075,88 @@ function refreshOpenDetail(){
     }
   }catch(e){console.warn("상세 화면 갱신 실패",e)}
 }
-function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
+function escRe(s){return String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}
+function mark(text,q){
+  const safe=esc(text||"");
+  if(!q)return safe;
+  try{return safe.replace(new RegExp("("+escRe(esc(q))+")","gi"),'<mark>$1</mark>')}catch(e){return safe}
+}
+function stampInfo(f){
+  const iso=f.createdAt||"";
+  const d=iso?new Date(iso):null;
+  const dateStr=fmt((f.date||iso||"").slice(0,10));
+  if(!d||isNaN(d))return {main:dateStr,moved:""};
+  const pad=n=>String(n).padStart(2,"0");
+  const time=`${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const inputDay=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const sameDay=!f.date||f.date.slice(0,10)===inputDay;
+  // 그날 그 자리에서 적은 기록만 시각이 진짜다
+  return sameDay
+    ? {main:`${dateStr} · ${time}`,moved:""}
+    : {main:dateStr,moved:`${fmt(inputDay)} ${time}에 옮겨 적음`};
+}
+function fragArchiveCard(f,q){
+  const src=f.sourceId?state.sources.find(s=>s.id===f.sourceId):null;
+  const threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
+  const label=src?esc(src.title):(f.type==="moment"?"순간":f.type==="decision"?"결정":"생각");
+  const icon=src?sourceIcon(src.type):fragIcon(f.type);
+  const st=stampInfo(f);
+  return `<article class="note" data-open-frag="${f.id}">
+    ${f.externalText?`<blockquote class="note-quote">${mark(f.externalText,q)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${(f.thought||f.text)?`<p class="note-body">${mark(f.thought||f.text,q)}</p>`:""}
+    ${f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
+    ${attachmentsHTML(f.attachments||[])}
+    ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
+    <div class="note-foot"><span class="note-meta">${icon} ${label} · ${esc(st.main)}</span>
+      <span class="note-acts"><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button></span></div>
+    ${st.moved?`<div class="moved-note">✎ ${esc(st.moved)}</div>`:""}
+  </article>`;
+}
+function renderFragments(){
+  const box=$("fragmentArchive");if(!box)return;
+  const q=($("fragSearch")?.value||"").trim();
+  const ql=q.toLowerCase();
+  const period=$("fragPeriod")?.value||"all";
+  const srcSel=$("fragSource")?.value||"all";
+  if(state.fragLimit==null)state.fragLimit=5;
+
+  // 매체 선택지 (작품별)
+  const sel=$("fragSource");
+  if(sel&&sel.dataset.n!==String(state.sources.length)){
+    sel.dataset.n=String(state.sources.length);
+    const books=state.sources.filter(s=>s.type==="book"),medias=state.sources.filter(s=>s.type!=="book");
+    sel.innerHTML=`<option value="all">전체 매체</option><option value="none">연결 없음</option><option value="book">책 전체</option><option value="media">영상 전체</option>`
+      +(books.length?`<optgroup label="책">${books.map(s=>`<option value="s:${s.id}">${esc(s.title)}</option>`).join("")}</optgroup>`:"")
+      +(medias.length?`<optgroup label="영상">${medias.map(s=>`<option value="s:${s.id}">${esc(s.title)}</option>`).join("")}</optgroup>`:"");
+    sel.value=srcSel;
+  }
+
+  let list=state.fragments.slice();
+  // 기간
+  if(period!=="all"){
+    const now=new Date();
+    list=list.filter(f=>{
+      const d=(f.date||f.createdAt||"").slice(0,10);if(!d)return false;
+      if(period==="today")return d===today();
+      if(period==="year")return d.slice(0,4)===String(now.getFullYear());
+      return daysAgo(d)<=Number(period);
+    });
+  }
+  // 매체
+  if(srcSel==="none")list=list.filter(f=>!f.sourceId);
+  else if(srcSel==="book")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&s.type==="book"});
+  else if(srcSel==="media")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&s.type!=="book"});
+  else if(srcSel.startsWith("s:"))list=list.filter(f=>f.sourceId===srcSel.slice(2));
+  // 검색
+  if(ql)list=list.filter(f=>[f.thought,f.text,f.externalText,f.context,f.locator,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(ql));
+
+  $("fragCount").textContent=`${list.length}개${q?` · "${q}" 검색`:""}`;
+  const shown=list.slice(0,state.fragLimit);
+  box.innerHTML=list.length
+    ? shown.map(f=>fragArchiveCard(f,q)).join("")+(list.length>shown.length?`<button class="more-btn" data-more="archive" type="button">${list.length-shown.length}개 더 보기</button>`:"")
+    : empty("💭",q?"찾는 생각이 없어요.":"아직 생각 조각이 없어요.",q?"다른 말로 검색해보세요.":"＋ 버튼으로 한 줄만 먼저 붙잡아보세요.");
+}
+function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
@@ -1920,6 +2031,7 @@ document.addEventListener("click",async e=>{
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
+  const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom]"))return openEditFragment(ofg.dataset.openFrag);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
@@ -1945,6 +2057,7 @@ document.addEventListener("click",async e=>{
   if(mb){
     if(mb.dataset.more==="threads")state.gardenThreadLimit=(state.gardenThreadLimit||4)+6;
     else if(mb.dataset.more==="done"){state.doneLimit=(state.doneLimit||3)+10;return renderStudio()}
+    else if(mb.dataset.more==="archive"){state.fragLimit=(state.fragLimit||5)+10;return renderFragments()}
     else state.gardenFragLimit=(state.gardenFragLimit||6)+10;
     return renderGarden();
   }
@@ -1991,6 +2104,9 @@ $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.h
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=4;state.gardenFragLimit=6;renderGarden()});
+$("fragSearch").addEventListener("input",()=>{state.fragLimit=5;renderFragments()});
+$("fragPeriod").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
+$("fragSource").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
 $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;state.gardenFragLimit=6;renderGarden()});
 
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
