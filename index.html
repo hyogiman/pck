@@ -1000,7 +1000,8 @@ function renderResurface(reshuffle){
 }
 function renderLibrary(){
   const q=$("sourceSearch").value.trim().toLowerCase(),filter=$("sourceFilter").value;
-  const arr=state.sources.filter(s=>(filter==="all"||s.type===filter)&&[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q));
+  const arr=state.sources.filter(s=>(filter==="all"||s.type===filter)&&[s.title,s.creator,s.platform].filter(Boolean).join(" ").toLowerCase().includes(q))
+    .sort((a,b)=>String(lastSourceActivity(b.id)||"").localeCompare(String(lastSourceActivity(a.id)||"")));
   $("sourceList").innerHTML=arr.length?arr.map(s=>sourceCard(s)).join(""):empty("📚","등록된 작품이 없어요.","책이나 미디어는 딱 한 번만 등록합니다.");
 }
 function sourceCard(s,compact=false){
