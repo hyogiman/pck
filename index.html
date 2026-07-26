@@ -169,15 +169,14 @@
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}
     .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
 
-    .home-minimal{min-height:calc(100vh - var(--nav) - 120px);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:4vh 10px 2vh;gap:4vh}
+    .home-minimal{min-height:calc(100vh - var(--nav) - 120px);display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;padding:5vh 10px 2vh;gap:7vh}
     .home-title h1{font-family:var(--display);margin:8px 0 6px;font-size:clamp(2rem,8vw,2.9rem);font-weight:400;letter-spacing:.01em;position:relative;display:inline-block}
     .home-title h1:after{content:"";position:absolute;left:14%;right:14%;bottom:2px;height:7px;background:var(--seal);opacity:.16;border-radius:3px}
     .home-title p{margin:0;color:var(--muted);font-size:.88rem}
-    .home-meta{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:8px;flex-wrap:wrap}
-    .home-meta p{margin:0}
-    .home-meta .today-count{padding:7px 13px;font-size:.75rem;gap:8px}
-    .home-meta .today-count strong{min-width:22px;height:22px;font-size:.78rem;padding:0 6px}
-    #sparkBox{width:100%;max-width:520px;margin:0 auto}
+    .home-title .today-count{margin:14px auto 0;padding:8px 8px 8px 15px;font-size:.76rem;gap:9px;max-width:100%;white-space:nowrap}
+    .tc-div{width:1px;height:13px;background:var(--line);flex:0 0 auto}
+    .home-title .today-count strong{min-width:24px;height:24px;font-size:.79rem;padding:0 7px}
+    #sparkBox{width:100%;max-width:520px;margin:5vh auto 0}
     .spark-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 19px 17px;
       box-shadow:var(--card-shadow);text-align:left;position:relative;overflow:hidden}
     .spark-card:after{content:"🌸";position:absolute;right:-6px;bottom:-10px;font-size:3.4rem;opacity:.07;transform:rotate(-10deg)}
@@ -187,14 +186,14 @@
     .spark-q{font-size:1.14rem;line-height:1.62;margin:0 0 15px;color:#2b3134}
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
     .spark-acts .btn{flex:1;font-size:.79rem;padding:11px}
-    .home-capture{display:flex;flex-direction:column;align-items:center;margin-top:-2vh}
+    .home-capture{display:flex;flex-direction:column;align-items:center;margin:2vh 0}
     .home-question{font-family:var(--serif);font-size:1.2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 24px;color:#33372c}
     .capture-orb{width:158px;height:158px;border-radius:50%;border:1px solid #cdd9ce;background:radial-gradient(circle at 36% 30%,#fbfdfa,var(--accent2));color:var(--accent);box-shadow:0 20px 55px rgba(55,95,71,.16),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.18s}
     .capture-orb:hover{transform:translateY(-2px)}
     .capture-orb:active{transform:scale(.97)}
     .capture-plus{font-size:3.1rem;line-height:1;font-weight:300}
     .capture-caption{font-size:.76rem;font-weight:700;letter-spacing:.02em;margin-top:8px}
-    .home-hint{color:var(--muted);font-size:.79rem;line-height:1.7;margin:22px 0 0}
+    .home-hint{color:var(--muted);font-size:.79rem;line-height:1.7;margin:24px 0 0}
     .today-count{border:1px solid var(--line);background:var(--panel);color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:999px;font-size:.78rem;font-weight:600;box-shadow:var(--card-shadow);transition:.12s}
     .today-count:hover{border-color:#cdd8cd}
     .today-count strong{font-family:var(--serif);min-width:28px;height:28px;padding:0 8px;border-radius:999px;background:var(--accent2);color:var(--accent);display:grid;place-items:center;font-size:.9rem;font-weight:700}
@@ -394,13 +393,12 @@
       <div class="home-title">
         <div class="eyebrow">THOUGHT GARDEN</div>
         <h1>생각의 텃밭</h1>
-        <div class="home-meta">
-          <p id="dateLabel"></p>
-          <button class="today-count" id="openToday" type="button">
-            <span>오늘 남긴 생각</span>
-            <strong id="todayCount">0</strong>
-          </button>
-        </div>
+        <button class="today-count" id="openToday" type="button">
+          <span id="dateLabel"></span>
+          <span class="tc-div"></span>
+          <span>오늘 남긴 생각</span>
+          <strong id="todayCount">0</strong>
+        </button>
       </div>
 
     <div class="home-capture">
@@ -1227,7 +1225,8 @@ function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
 }
 function renderCapture(){
-  $("dateLabel").textContent=new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"long"}).format(new Date());
+  const _d=new Date();
+  $("dateLabel").textContent=`${_d.getMonth()+1}월 ${_d.getDate()}일 (${["일","월","화","수","목","금","토"][_d.getDay()]})`;
   $("todayCount").textContent=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today()).length;
 }
 function renderHome(){
