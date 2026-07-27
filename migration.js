@@ -1,5 +1,5 @@
 /**
- * 생각의 텃밭 — 익명 계정 → 기존 Google 계정 정식 병합  (v2)
+ * 생각의 텃밭 — 익명 계정 → 기존 Google 계정 정식 병합  (v3)
  *
  * 보안 핵심: 클라이언트가 sourceUid / targetUid 를 보내지 않는다.
  *   prepareMigration  : sourceUid = request.auth.uid  (AAA로 인증된 상태)
@@ -13,6 +13,11 @@
  *  ② 대상 파일이 이미 있을 때, '이 작업이 만든 것'이라는 근거가 있을 때만 이어감
  *  ③ 원본 첨부 파일이 사라졌으면 조용히 넘기지 않고 명시적으로 멈춤 (무한 재시도 방지)
  *  ④ 검증 범위를 이번에 옮긴 항목으로 한정 (기존 BBB 데이터 때문에 실패하지 않게)
+ *
+ * v3 변경
+ *  ⑤ lease 해제 시 현재 호출이 소유한 lease인지 트랜잭션으로 확인
+ *  ⑥ sourceUid가 아닌 Storage 경로를 조용히 건너뛰지 않고 명시적으로 중단
+ *  ⑦ 동일 Storage path가 여러 조각에서 참조돼도 한 번만 이전하도록 중복 제거
  */
 const crypto = require("crypto");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
@@ -158,8 +163,25 @@ exports.completeMigration = onCall(
 
     const save = async (extra = {}) =>
       jobRef.update({ phase, cursor, stats, updatedAt: FieldValue.serverTimestamp(), ...extra });
-    const releaseLease = () =>
-      jobRef.update({ leaseOwner: null, leaseExpiresAt: 0 }).catch((e) => log("lease 해제 실패", e.code));
+    // 오래된 호출이 뒤늦게 끝나 새 호출의 lease를 풀어버리지 않도록,
+    // 현재 job의 leaseOwner가 '내 leaseId'일 때만 해제한다.
+    const releaseLease = async () => {
+      try {
+        await db.runTransaction(async (tx) => {
+          const snap = await tx.get(jobRef);
+          if (!snap.exists) return;
+          const current = snap.data();
+          if (current.leaseOwner !== leaseId) return;
+          tx.update(jobRef, {
+            leaseOwner: null,
+            leaseExpiresAt: 0,
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        });
+      } catch (e) {
+        log("lease 해제 실패", e.code);
+      }
+    };
 
     try {
       /* ── 사전 점검: 원래 기존 텃밭에 있던 같은 번호가 있으면 멈춘다 ── */
@@ -186,9 +208,12 @@ exports.completeMigration = onCall(
       if (phase === "files") {
         // attachments는 fragments 문서에만 존재한다 (코드 전수 확인)
         const wanted = [];
+        const seenPaths = new Set();
         (await srcRoot.collection("fragments").get()).forEach((d) => {
           (d.get("attachments") || []).forEach((a) => {
-            if (a && a.path) wanted.push({ path: a.path, fragmentId: d.id, name: a.name || "" });
+            if (!a || !a.path || seenPaths.has(a.path)) return;
+            seenPaths.add(a.path);
+            wanted.push({ path: a.path, fragmentId: d.id, name: a.name || "" });
           });
         });
         // 이번 작업이 이미 옮긴 목록 — 색인이 아니라 이 매니페스트가 진행 상황의 근거다
@@ -199,7 +224,17 @@ exports.completeMigration = onCall(
         for (const w of wanted) {
           const prev = manifest.get(w.path);
           if (prev && prev.status === "done") { doneCount++; continue; }   // 이 작업이 이미 끝낸 것
-          if (!w.path.startsWith(`users/${job.sourceUid}/`)) { doneCount++; continue; } // 남의 경로는 안 건드린다
+          if (!w.path.startsWith(`users/${job.sourceUid}/`)) {
+            // 조용히 건너뛰면 문서에는 옛 UID 경로가 남고 verify에서 계속 실패한다.
+            // 데이터 손실 없이 사용자가 원인을 알 수 있도록 명시적으로 멈춘다.
+            await save({
+              status: "failed",
+              error: { code: "source-path-owner-mismatch", fragmentId: w.fragmentId, name: w.name },
+            });
+            log("source-path-owner-mismatch", jobId, w.fragmentId);
+            throw new HttpsError("failed-precondition",
+              "첨부 파일 경로가 현재 임시 계정과 맞지 않아 병합을 완료하지 않았습니다. 원본 데이터는 그대로입니다.");
+          }
           if (copied >= FILE_BATCH || overBudget()) break;
 
           const newPath = `users/${job.targetUid}/` + w.path.slice(`users/${job.sourceUid}/`.length);
