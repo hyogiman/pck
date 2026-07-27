@@ -147,6 +147,8 @@
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
 
     .note{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px 20px;box-shadow:var(--card-shadow);margin-bottom:12px;transition:box-shadow .14s ease,transform .14s ease}
+    .cont-line{display:inline-flex;align-items:center;gap:5px;border:0;background:var(--accent3,#eef4ef);color:var(--accent);
+      border-radius:999px;padding:4px 11px;font-size:.68rem;font-weight:700;cursor:pointer;margin-bottom:9px}
     .note-quote{-webkit-user-select:text;user-select:text;font-family:var(--serif);font-style:italic;margin:0 0 14px;padding:3px 0 3px 15px;border-left:2px solid #b9cbbe;color:#6c7a70;font-size:1.02rem;line-height:1.62;white-space:pre-wrap;overflow-wrap:anywhere}
     .note-quote cite{display:block;margin-top:6px;font-style:normal;font-size:.7rem;color:var(--muted);letter-spacing:.02em}
     .note-body{-webkit-user-select:text;user-select:text;font-family:var(--serif);margin:0;color:#1d2419;font-weight:700;font-size:1.1rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -293,8 +295,11 @@
     .moved-note{font-size:.7rem;color:var(--muted);opacity:.85}
     .frag-filters{margin-bottom:16px}
     .frag-filters .input{margin-bottom:9px}
-    .frag-selects{display:grid;grid-template-columns:1fr 1.2fr;gap:8px}
     .frag-selects .select{font-size:.82rem;padding:10px 12px}
+    .frag-selects{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+    .frag-selects .select{flex:1 1 110px;min-width:0}
+    .star-filter{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 13px;font-size:.78rem;font-weight:700;cursor:pointer;color:#8b8570;flex:0 0 auto}
+    .star-filter.on{color:#a87c0a;background:#fdf6e4;border-color:#ecdcae}
     .frag-count{font-size:.74rem;color:var(--muted);margin-top:10px;padding-left:2px}
     .trash-item{border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--panel);margin-bottom:9px}
     .trash-item .tq{font-family:var(--serif);font-size:.95rem;line-height:1.6;color:#2b3134;
@@ -361,10 +366,28 @@
     .modal{padding:24px;overflow:auto;max-height:90vh}
     .modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
     .modal-head h2{font-family:var(--display);margin:0;font-size:1.24rem;font-weight:400}
+    .star-toggle{border:0;background:none;font-size:1.35rem;line-height:1;cursor:pointer;color:#c9c3b2;padding:6px;border-radius:50%}
+    .star-toggle.on{color:#d9a514}
+    .note-star{color:#d9a514;font-size:.85rem;margin-right:2px}
     .close-btn{border:1px solid var(--line);background:var(--panel2);border-radius:50%;width:38px;height:38px;cursor:pointer;transition:.12s}
     .close-btn:hover{background:#e2dfd3}
     .capture-mode{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
     .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+    .lens-row{display:flex;gap:7px;flex-wrap:wrap}
+    .lens-chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;font-size:.78rem;font-weight:700;cursor:pointer;color:#4a4f44;transition:.12s}
+    .lens-chip.on{background:var(--accent2);border-color:#bcd3c1;color:var(--accent)}
+    .lens-badge{font-size:.66rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:2px 8px;font-weight:700;flex:0 0 auto}
+    .mirror-card{padding:8px 6px}
+    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:11px 12px;border-radius:12px}
+    .mirror-row:hover{background:#fbfcf9}
+    .mirror-row+.mirror-row{border-top:1px dashed var(--line)}
+    .mirror-row small{display:block;font-size:.66rem;font-weight:800;letter-spacing:.07em;color:var(--seal);margin-bottom:5px;text-transform:uppercase}
+    .mirror-row .serif{font-size:.98rem;line-height:1.55;color:#2b3134}
+    .related-box{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
+    .related-box .rt-label{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:var(--seal);text-transform:uppercase}
+    .related-item{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
+    .related-item small{display:block;color:var(--muted);font-size:.66rem;margin-bottom:3px}
+    .related-item .rt-text{font-family:var(--serif);font-size:.88rem;line-height:1.55;color:#2b3134;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .modal-danger{margin-top:15px;padding-top:13px;border-top:1px dashed var(--line);display:flex;justify-content:center}
     .modal-danger .text-btn{font-size:.78rem;padding:7px 14px}
 
@@ -511,6 +534,13 @@
       <div id="homeRecentSummary"></div>
     </div>
 
+    <div class="section hidden" id="weeklyMirrorSection">
+      <div class="section-head">
+        <div><h2>🌿 이번 주 텃밭</h2><p>이번 주의 나를 비추는 거울. 성적표가 아닙니다.</p></div>
+      </div>
+      <div id="weeklyMirror"></div>
+    </div>
+
     <div class="section">
       <div class="section-head">
         <div><h2>다시, 만나다</h2><p>7일 이상 지난 생각을 무작위로 다시 꺼내옵니다.</p></div>
@@ -557,6 +587,14 @@
           <option value="youtube">▶️ 유튜브</option>
           <option value="none">연결 없음</option>
         </select>
+        <select class="select" id="fragLens">
+          <option value="all">전체 표시</option>
+          <option value="question">❓ 질문</option>
+          <option value="decision">⚖️ 결정</option>
+          <option value="desire">🧭 욕망</option>
+          <option value="seed">✨ 씨앗</option>
+        </select>
+        <button class="star-filter" id="fragStarOnly" type="button" aria-pressed="false">★ 중요만</button>
       </div>
       <div class="frag-count" id="fragCount"></div>
       <div class="frag-tip">카드를 누르면 수정할 수 있어요.</div>
@@ -594,9 +632,9 @@
 <div class="nav-sheet" id="navSheet" aria-hidden="true">
   <div class="nav-sheet-handle"></div>
   <div class="nav-sheet-grid">
-    <button class="sheet-nav active" data-view-target="capture" type="button"><span>✍️</span><b>생각</b></button>
+    <button class="sheet-nav active" data-view-target="capture" type="button"><span>✍️</span><b>기록</b></button>
     <button class="sheet-nav" data-view-target="home" type="button"><span>🏠</span><b>Home</b></button>
-    <button class="sheet-nav" data-view-target="fragments" type="button"><span>💭</span><b>생각</b></button>
+    <button class="sheet-nav" data-view-target="fragments" type="button"><span>💭</span><b>생각 조각</b></button>
     <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
     <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
@@ -738,6 +776,23 @@
   </div>
 </dialog>
 
+<dialog id="mergeGuardDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow">GOOGLE</div><h2>🌱 기존 Google 텃밭이 있습니다</h2></div><button class="close-btn" data-close="mergeGuardDialog" type="button">✕</button></div>
+    <div class="body" style="font-size:.92rem">
+      이 기기에는 아직 Google 계정으로 옮기지 않은 <b id="mergeGuardCounts"></b>가 있습니다.<br><br>
+      지금 기존 계정으로 전환하면 이 데이터는 <b>자동으로 합쳐지지 않습니다.</b><br>
+      먼저 백업 파일을 받아두면, 로그인한 뒤 <b>설정 &gt; 백업 가져오기</b>로 합칠 수 있어요.
+    </div>
+    <div class="helper" style="margin-top:10px">사진·음성·영상 파일은 백업에 온전히 담기지 않을 수 있습니다. 중요한 첨부는 따로 보관해 주세요.</div>
+    <div class="modal-actions" style="flex-wrap:wrap">
+      <button class="btn" data-close="mergeGuardDialog" type="button">취소</button>
+      <button class="btn soft" id="mergeGuardBackup" type="button">💾 백업 파일 받기</button>
+      <button class="btn primary" id="mergeGuardProceed" type="button">기존 계정으로 로그인</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="trashDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">TRASH</div><h2>휴지통</h2></div><button class="close-btn" data-close="trashDialog" type="button">✕</button></div>
@@ -749,7 +804,11 @@
 
 <dialog id="editFragmentDialog">
   <div class="modal">
-    <div class="modal-head"><div><div class="eyebrow">EDIT</div><h2>생각 수정</h2></div><button class="close-btn" data-close="editFragmentDialog" type="button">✕</button></div>
+    <div class="modal-head"><div><div class="eyebrow">EDIT</div><h2>생각 수정</h2></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="star-toggle" id="editStarToggle" type="button" aria-label="중요 표시">☆</button>
+        <button class="close-btn" data-close="editFragmentDialog" type="button">✕</button>
+      </div></div>
     <input id="editFragmentId" type="hidden" />
     <div class="field"><label for="editThought">내 생각</label><textarea class="textarea" id="editThought" placeholder="나의 생각·해석"></textarea></div>
     <div class="field"><label for="editExternal">문장 · 장면 · 누군가의 말 <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="editExternal" placeholder="책의 문장, 영화의 대사 등"></textarea></div>
@@ -762,6 +821,10 @@
         <button class="btn" id="editSourceClear" type="button">해제</button>
       </div>
     </div>
+    <div class="field"><label>이 생각을 조금 더 표시해둘까요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span></label>
+      <div class="lens-row" id="editLensRow"></div>
+    </div>
+    <div id="relatedThoughts"></div>
     <div class="modal-actions"><button class="btn" data-close="editFragmentDialog" type="button">취소</button><button class="btn primary" id="saveEditFragment" type="button">저장</button></div>
     <div class="modal-danger"><button class="text-btn danger-text" data-delete-current-frag type="button">🗑 휴지통으로 보내기</button></div>
   </div>
@@ -982,7 +1045,15 @@ function validateMediaFile(file){
   if(file.size>max)return `${file.name} 파일이 너무 큽니다.`;
   return "";
 }
+/* 저장에 쓰이지 못한 미리 업로드 파일을 Storage에서 지운다 (fire-and-forget) */
+function discardPendingUploads(kind){
+  const ups=(state.pendingUploads&&state.pendingUploads[kind])||[];
+  if(!ups.length)return;
+  state.pendingUploads[kind]=[];
+  ups.forEach(u=>{(u.promise||Promise.resolve(u.result)).then(r=>{if(r&&r.path)deleteAttachments([r])}).catch(()=>{})});
+}
 function setPendingFiles(kind,fileList){
+  discardPendingUploads(kind); // 파일을 다시 고르면 이전 미리 업로드는 버려진다
   const files=[...(fileList||[])],accepted=[];
   for(const f of files){const err=validateMediaFile(f);if(err){toast(err);continue}accepted.push(f)}
   state.pendingFiles[kind]=accepted;
@@ -1039,6 +1110,7 @@ async function uploadFiles(files,fragmentId,kind){
   if(!files?.length)return [];
   // 파일을 고른 순간 이미 올리기 시작했으므로, 대개 여기서 기다릴 게 없다
   const ups=(state.pendingUploads&&kind&&state.pendingUploads[kind])||null;
+  if(kind&&state.pendingUploads)state.pendingUploads[kind]=[]; // 소비됨 — 취소 정리 대상 아님
   if(ups&&ups.length===files.length){
     const settled=await Promise.all(ups.map(u=>u.promise));
     const out=[];
@@ -1050,21 +1122,6 @@ async function uploadFiles(files,fragmentId,kind){
   }
   const out=[];
   for(const file of files)out.push(await uploadOne(file,fragmentId));
-  return out;
-}
-async function _uploadFilesLegacy(files,fragmentId){
-  if(!files?.length)return [];
-  if(!state.firebase.connected||!state.firebase.storage)throw new Error("Firebase Storage가 연결되지 않았습니다.");
-  const {api,storage,uid}=state.firebase;const out=[];
-  for(const file of files){
-    const up=await compressImage(file);
-    const safe=(up.name||file.name).replace(/[^\w.\-가-힣]/g,"_");
-    const path=`users/${uid}/fragments/${fragmentId}/${Date.now()}-${uid.slice(0,6)}-${safe}`;
-    const ref=api.ref(storage,path);
-    await api.uploadBytes(ref,up,{contentType:up.type});
-    const url=await api.getDownloadURL(ref);
-    out.push({name:file.name,type:up.type,size:up.size,url,path});
-  }
   return out;
 }
 async function deleteAttachments(attachments=[]){
@@ -1149,7 +1206,15 @@ async function beginGoogleAuth(){
         if(err.code==="auth/credential-already-in-use"||err.code==="auth/account-exists-with-different-credential"){
           const cred=api.GoogleAuthProvider.credentialFromError(err);
           if(!cred)throw err;
-          result=await api.signInWithCredential(auth,cred); // 이미 이 Google 계정으로 만든 텃밭으로 로그인(다른 기기)
+          const localCount=allFragments().length+state.sources.length+state.threads.length+state.projects.length;
+          if(localCount>0){
+            // 이 기기의 텃밭이 비어있지 않다 — 자동 전환하면 이 데이터가 화면에서 사라진다.
+            // 정식 계정 병합이 생기기 전까지는, 먼저 백업하도록 안내한다.
+            state.pendingGoogleCred=cred;
+            openMergeGuard();
+            return;
+          }
+          result=await api.signInWithCredential(auth,cred); // 이 기기가 비어 있으면 그냥 기존 텃밭으로
         }else throw err;
       }
     }else{
@@ -1162,6 +1227,22 @@ async function beginGoogleAuth(){
     if(e.code!=="auth/popup-closed-by-user"&&e.code!=="auth/cancelled-popup-request")
       toast("Google 로그인 실패: "+(e.code||e.message||""));
   }
+}
+function openMergeGuard(){
+  const n={f:allFragments().length,s:state.sources.length,t:state.threads.length,p:state.projects.length};
+  const parts=[n.f&&`생각 ${n.f}개`,n.s&&`Library ${n.s}개`,n.t&&`Thread ${n.t}개`,n.p&&`Studio ${n.p}개`].filter(Boolean).join(", ");
+  $("mergeGuardCounts").textContent=parts||"기록";
+  $("mergeGuardDialog").showModal();
+}
+async function continueGoogleSignIn(){
+  const cred=state.pendingGoogleCred;if(!cred)return;
+  state.pendingGoogleCred=null;$("mergeGuardDialog").close();
+  const {api,auth}=state.firebase;
+  try{
+    const result=await api.signInWithCredential(auth,cred);
+    await activateFirebaseUser(result.user,{pushLocalKeys:false});
+    toast("기존 Google 텃밭으로 들어왔습니다. 백업 파일은 설정 > 가져오기로 합칠 수 있어요.");
+  }catch(e){console.error(e);toast("로그인 실패: "+(e.code||e.message||""))}
 }
 async function signOutGarden(){
   if(!state.firebase.auth)return;
@@ -1268,6 +1349,7 @@ function toggleMenu(){
    smooth로 하면 다시 그리는 도중 애니메이션이 끊겨 어중간한 위치에 멈춘다. */
 function resetScroll(){requestAnimationFrame(()=>window.scrollTo(0,0))}
 function setView(v){
+  flushSlotSave();
   state.view=v;state.openSourceId=null;state.openThreadId=null;state.openProjectId=null;
   $$(".view").forEach(x=>x.classList.toggle("active",x.dataset.view===v));
   $$(".sheet-nav[data-view-target]").forEach(x=>x.classList.toggle("active",x.dataset.viewTarget===v));
@@ -1316,6 +1398,12 @@ function stampInfo(f){
     ? {main:`${dateStr} · ${time}`,moved:""}
     : {main:dateStr,moved:`${fmt(inputDay)} ${time}에 옮겨 적음`};
 }
+function continuedFromLine(f){
+  const ids=f.continuedFrom||[];if(!ids.length)return "";
+  const prev=allFragments().find(x=>x.id===ids[0]);if(!prev)return "";
+  const d=fmt((prev.date||prev.createdAt||"").slice(0,10));
+  return `<button class="cont-line" data-open-prev="${prev.id}" type="button">↰ ${esc(d)}의 생각에서 이어짐</button>`;
+}
 function fragArchiveCard(f,q){
   const src=f.sourceId?state.sources.find(s=>s.id===f.sourceId):null;
   const threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
@@ -1323,12 +1411,13 @@ function fragArchiveCard(f,q){
   const icon=src?sourceIcon(src.type):fragIcon(f.type);
   const st=stampInfo(f);
   return `<article class="note" data-open-frag="${f.id}">
+    ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${mark(f.externalText,q)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
     ${(f.thought||f.text)?`<p class="note-body">${mark(f.thought||f.text,q)}</p>`:""}
     ${f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
-    <div class="note-foot"><span class="note-meta"><span class="nm-src">${icon} ${label}</span><span class="nm-date">${esc(st.main)}</span></span></div>
+    <div class="note-foot"><span class="note-meta">${f.starred?'<span class="note-star">★</span>':""}<span class="nm-src">${icon} ${label}</span>${lensBadge(f)}<span class="nm-date">${esc(st.main)}</span></span></div>
 ${st.moved?`<div class="note-tail"><span class="moved-note">✎ ${esc(st.moved)}</span></div>`:""}
   </article>`;
 }
@@ -1380,6 +1469,10 @@ function renderFragments(){
   // 매체
   if(srcSel==="none")list=list.filter(f=>!f.sourceId);
   else if(srcSel!=="all")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&srcType(s)===srcSel});
+  // 렌즈 · 중요
+  const lensSel=$("fragLens")?.value||"all";
+  if(lensSel!=="all")list=list.filter(f=>effectiveLens(f)===lensSel);
+  if(state.fragStarOnly)list=list.filter(f=>f.starred);
   // 검색
   if(ql)list=list.filter(f=>[f.thought,f.text,f.externalText,f.context,f.locator,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(ql));
 
@@ -1452,13 +1545,44 @@ function renderHome(){
     ? working.slice(0,3).map(projectCard).join("")
     : empty("🏭",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
   renderResurface();
+  renderWeeklyMirror();
+}
+/* 주간 정원 거울 — 숫자 없이, 이번 주의 나를 세 줄로 비춘다.
+   보여줄 것이 하나도 없으면 섹션째 숨긴다(과제처럼 느껴지지 않게). */
+function weekSeed(){const d=new Date();const y=d.getFullYear();const start=new Date(y,0,1);const w=Math.floor((d-start)/604800000);return y*100+w}
+function renderWeeklyMirror(){
+  const sec=$("weeklyMirrorSection"),box=$("weeklyMirror");if(!sec||!box)return;
+  const rows=[];
+  // ① 계속 자란 생각 — 최근 7일 조각이 가장 많이 붙은 Thread (2개 이상일 때만)
+  let best=null,bestN=0;
+  for(const t of state.threads){
+    const n=state.fragments.filter(f=>(f.threadIds||[]).includes(t.id)&&daysAgo(f.date||f.createdAt)<=6).length;
+    if(n>bestN){best=t;bestN=n}
+  }
+  if(best&&bestN>=2)rows.push(`<button class="mirror-row" data-open-thread="${best.id}" type="button"><small>계속 자란 생각</small><span class="serif">${esc(best.title)}</span></button>`);
+  // ② 아직 남아 있는 질문 — 질문 렌즈인데, 어떤 생각도 그로부터 이어지지 않은 것 중 가장 최근
+  const answered=new Set();state.fragments.forEach(f=>(f.continuedFrom||[]).forEach(id=>answered.add(id)));
+  const openQ=state.fragments.filter(f=>effectiveLens(f)==="question"&&!answered.has(f.id))
+    .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")))[0];
+  if(openQ)rows.push(`<button class="mirror-row" data-open-frag-mirror="${openQ.id}" type="button"><small>아직 남아 있는 질문</small><span class="serif">“${esc((openQ.thought||openQ.text||"").slice(0,80))}”</span></button>`);
+  // ③ 이번 주 다시 만날 문장 — 7일 이상 지난 생각 중, 이번 주 동안은 같은 문장
+  const past=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7&&(f.thought||f.text));
+  if(past.length){
+    const pick=past[weekSeed()%past.length];
+    rows.push(`<button class="mirror-row" data-open-frag-mirror="${pick.id}" type="button"><small>이번 주 다시 만날 문장</small><span class="serif">“${esc((pick.thought||pick.text||"").slice(0,90))}”</span></button>`);
+  }
+  if(!rows.length){sec.classList.add("hidden");box.innerHTML="";return}
+  sec.classList.remove("hidden");
+  box.innerHTML=`<div class="card mirror-card">${rows.join("")}</div>`;
 }
 function renderResurface(reshuffle){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);
   if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");$("resurfaceNext")?.classList.add("hidden");return}
   if(!state.resurfaceSeen)state.resurfaceSeen=[];
   let f=reshuffle?null:c.find(x=>x.id===state.resurfaceId);
-  if(!f){let pool=c.filter(x=>!state.resurfaceSeen.includes(x.id));if(!pool.length){state.resurfaceSeen=[];pool=c;}f=pool[Math.floor(Math.random()*pool.length)];state.resurfaceId=f.id;state.resurfaceSeen.push(f.id);}
+  if(!f){let pool=c.filter(x=>!state.resurfaceSeen.includes(x.id));if(!pool.length){state.resurfaceSeen=[];pool=c;}
+    const weighted=pool.flatMap(x=>x.starred?[x,x]:[x]);   // ★ 조각은 조금 더 자주 돌아온다
+    f=weighted[Math.floor(Math.random()*weighted.length)];state.resurfaceId=f.id;state.resurfaceSeen.push(f.id);}
   const src=state.sources.find(s=>s.id===f.sourceId);
   $("resurfaceBox").innerHTML=`<div class="card"><div class="card-head"><span class="chip">${fragIcon(f.type)} ${daysAgo(f.date||f.createdAt)}일 전</span><span class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></div>
     ${src?`<div class="source-sub">${sourceIcon(src.type)} ${esc(src.title)}</div>`:""}
@@ -1566,6 +1690,24 @@ function runSearch(){
   if(prjs.length)html+=searchGroup(`🏭 Studio ${prjs.length}`,prjs.map(p=>`<button class="search-item" data-search-project="${p.id}" type="button"><b>${esc(p.title)}</b></button>`).join(""));
   box.innerHTML=html;
 }
+const LENSES=[
+  {id:"question",e:"❓",label:"질문"},
+  {id:"decision",e:"⚖️",label:"결정"},
+  {id:"desire",e:"🧭",label:"욕망"},
+  {id:"seed",e:"✨",label:"씨앗"}
+];
+/* 저장된 lenses가 없으면, 옛 type이 decision인 조각은 결정 렌즈로 '보이게'만 한다.
+   (기존 데이터는 한 글자도 다시 쓰지 않는다 — 수정해서 저장할 때 비로소 lenses 필드가 생긴다) */
+function effectiveLens(f){
+  if(Array.isArray(f.lenses)&&f.lenses.length)return f.lenses[0];
+  if(f.type==="decision")return "decision";
+  return null;
+}
+function lensBadge(f){
+  const id=effectiveLens(f);if(!id)return "";
+  const L=LENSES.find(x=>x.id===id);if(!L)return "";
+  return `<span class="lens-badge">${L.e} ${L.label}</span>`;
+}
 function openEditFragment(fid){
   const f=state.fragments.find(x=>x.id===fid);if(!f)return;
   $("editFragmentId").value=f.id;
@@ -1578,6 +1720,13 @@ function openEditFragment(fid){
   state.editAttachments=(f.attachments||[]).slice();
   state.editRemovedAttachments=[];
   renderEditAttachments();
+  // ★ 중요 표시 (즉시 저장 방식)
+  const st=$("editStarToggle");
+  st.classList.toggle("on",!!f.starred);st.textContent=f.starred?"★":"☆";
+  // 렌즈 칩 (저장 버튼과 함께 확정)
+  state.editLens=effectiveLens(f);
+  renderEditLens();
+  renderRelatedThoughts(f);
   $("editFragmentDialog").showModal();setTimeout(growAll,0);
 }
 function openFragmentList(title,list){
@@ -1613,6 +1762,45 @@ function renderEditAttachments(){
     return `<div class="ea-item">${thumb}<span class="ea-name">${esc(a.name||"첨부 파일")}</span><button class="ea-del" data-remove-attach="${i}" type="button" aria-label="삭제">✕</button></div>`;
   }).join("");
 }
+/* 한국어를 위해 2글자 단위(bigram)로 겹침을 잰다. AI 없음 — 내가 실제로 썼던 생각만 다시 찾아준다 */
+function bigrams(t){
+  const txt=(t||"").replace(/\s+/g,"");const set=new Set();
+  for(let i=0;i<txt.length-1;i++)set.add(txt.slice(i,i+2));
+  return set;
+}
+function relatedThoughts(f,max=3){
+  const base=bigrams((f.thought||f.text||"")+(f.externalText||""));
+  if(base.size<4)return [];                       // 너무 짧은 생각은 비교하지 않는다
+  const myThreads=new Set(f.threadIds||[]);
+  const scored=[];
+  for(const o of state.fragments){
+    if(o.id===f.id)continue;
+    if((f.continuedFrom||[]).includes(o.id))continue;   // 이미 계보로 이어진 것은 제외
+    const ob=bigrams((o.thought||o.text||"")+(o.externalText||""));
+    if(ob.size<4)continue;
+    let inter=0;for(const g of base)if(ob.has(g))inter++;
+    let score=inter/Math.min(base.size,ob.size);        // 짧은 쪽 기준 겹침 비율
+    if(f.sourceId&&f.sourceId===o.sourceId)score+=0.12; // 같은 작품
+    if((o.threadIds||[]).some(t=>myThreads.has(t)))score+=0.08; // 같은 Thread
+    if(score>=0.22)scored.push({f:o,score});
+  }
+  return scored.sort((a,b)=>b.score-a.score).slice(0,max);
+}
+function renderRelatedThoughts(f){
+  const box=$("relatedThoughts");if(!box)return;
+  const rel=relatedThoughts(f);
+  if(!rel.length){box.innerHTML="";return}       // 없으면 아무 말도 하지 않는다 — 조용해야 한다
+  box.innerHTML=`<div class="related-box"><span class="rt-label">이 생각과 닮은 예전 생각</span>
+    ${rel.map(({f:o})=>{
+      const ago=daysAgo(o.date||o.createdAt);
+      const when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;
+      return `<button class="related-item" data-open-related="${o.id}" type="button"><small>${when}</small><span class="rt-text">${esc(o.thought||o.text||o.externalText||"")}</span></button>`;
+    }).join("")}</div>`;
+}
+function renderEditLens(){
+  const box=$("editLensRow");if(!box)return;
+  box.innerHTML=LENSES.map(L=>`<button class="lens-chip ${state.editLens===L.id?"on":""}" data-lens-pick="${L.id}" type="button">${L.e} ${L.label}</button>`).join("");
+}
 async function saveEditFragment(){
   const f=state.fragments.find(x=>x.id===$("editFragmentId").value);if(!f)return;
   f.thought=$("editThought").value.trim();delete f.text;
@@ -1620,8 +1808,9 @@ async function saveEditFragment(){
   f.locator=$("editLocator").value.trim();
   f.date=$("editDate").value||f.date||today();
   const sid=state.editSourceId||"";
-  if(sid){f.sourceId=sid;if(f.type!=="source")f.type="source";}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
+  if(sid){f.sourceId=sid;}else{delete f.sourceId;if(f.type==="source")f.type="thought";}
   f.attachments=(state.editAttachments||[]).slice();
+  if(state.editLens)f.lenses=[state.editLens];else delete f.lenses;
   f.updatedAt=new Date().toISOString();
   await persist("fragments",f);
   if((state.editRemovedAttachments||[]).length) await deleteAttachments(state.editRemovedAttachments);
@@ -1633,13 +1822,14 @@ function fragmentCard(f,compact=false){
   const label=src?esc(src.title):(f.type==="moment"?"순간":f.type==="decision"?"결정":"생각");
   const icon=src?sourceIcon(src.type):fragIcon(f.type);
   return `<article class="note">
+    ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
     ${f.thought||f.text?`<p class="note-body">${esc(f.thought||f.text||"")}</p>`:""}
     ${f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
-    <div class="note-foot"><span class="note-meta"><span class="nm-src">${icon} ${label}</span><span class="nm-date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></span></div>
+    <div class="note-foot"><span class="note-meta">${f.starred?'<span class="note-star">★</span>':""}<span class="nm-src">${icon} ${label}</span>${lensBadge(f)}<span class="nm-date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></span></div>
     <div class="note-tail"><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
   </article>`;
 }
@@ -1736,6 +1926,7 @@ function exportProject(pid){
 }
 function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
+  const _draft=loadStudioDraft();
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
   const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
   const next=slots.find(s=>!(s.text||(s.fragmentIds||[]).length));
@@ -1760,15 +1951,31 @@ function openProject(id){
   state.poolAll=state.fragments;
   state.poolMode=t?"thread":"all";
   renderPool();
+  /* 저장 못 하고 닫혔던 초안이 이 작업대의 것이고, 마지막 저장보다 새것이면 되살린다 */
+  if(_draft&&_draft.pid===id&&_draft.at>new Date(p.updatedAt||0).getTime()){
+    let restored=false;
+    $$(".slot-text").forEach(t=>{
+      const v=_draft.texts?.[t.dataset.slotText];
+      if(typeof v==="string"&&v!==t.value){t.value=v;restored=true;}
+    });
+    if(restored){growAll();markSaved("저장되지 않았던 글을 복원했어요");
+      clearTimeout(slotSaveTimer);
+      slotSaveTimer=setTimeout(()=>{slotSaveTimer=null;const pp=state.projects.find(x=>x.id===id);if(pp)persistSlots(pp,readSlotTextInto(pp)).then(()=>{clearStudioDraft();markSaved("자동 저장됨 ✓")}).catch(e=>console.warn(e))},600);
+    } else clearStudioDraft();
+  }
 }
 function poolTabs(){
   if(!state.poolThread)return "";
   return `<div class="pool-tabs">
     <button class="pool-tab ${state.poolMode==="thread"?"on":""}" data-pool-mode="thread" type="button">이 Thread ${state.poolThread.length}</button>
     <button class="pool-tab ${state.poolMode==="all"?"on":""}" data-pool-mode="all" type="button">전체 ${state.poolAll.length}</button>
+    <button class="pool-tab ${state.poolMode==="seed"?"on":""}" data-pool-mode="seed" type="button">✨ 씨앗 ${state.fragments.filter(f=>effectiveLens(f)==="seed").length}</button>
   </div>`;
 }
-function currentPool(){return (state.poolMode==="thread"&&state.poolThread)?state.poolThread:state.poolAll}
+function currentPool(){
+  if(state.poolMode==="seed")return state.fragments.filter(f=>effectiveLens(f)==="seed");
+  return (state.poolMode==="thread"&&state.poolThread)?state.poolThread:state.poolAll;
+}
 function renderPool(){
   const box=$("poolList");if(!box)return;
   const tabs=$("poolTabs");if(tabs)tabs.innerHTML=poolTabs();
@@ -1807,7 +2014,7 @@ function loadCaptureDraft(){try{return JSON.parse(localStorage.getItem(CAPTURE_D
 function openCapture(prefill="",ctx=null){
   state.pendingSlot=ctx||null;
   const qb=$("captureQuestion");
-  if(ctx){qb.innerHTML=`<span class="cq-label">이 질문에 답하는 중</span><p class="serif">${esc(ctx.prompt)}</p>`;qb.classList.remove("hidden")}
+  if(ctx){qb.innerHTML=`<span class="cq-label">${ctx.kind==="continue"?"이 생각에서 이어쓰는 중":"이 질문에 답하는 중"}</span><p class="serif">${ctx.kind==="continue"?"“":""}${esc(ctx.prompt)}${ctx.kind==="continue"?"”":""}</p>`;qb.classList.remove("hidden")}
   else qb.classList.add("hidden");
   $("captureText").value=prefill;
   $("captureExternal").value="";
@@ -1827,6 +2034,7 @@ async function saveCapture(){
   const f={
     id:uid(),type:"thought",thought,externalText,locator:$("captureLocator").value.trim(),
     context:(state.pendingSlot&&state.pendingSlot.kind==="spark")?("Q. "+state.pendingSlot.prompt):"",
+    ...(state.pendingSlot&&state.pendingSlot.kind==="continue"?{continuedFrom:[state.pendingSlot.fromId]}:{}),
     threadIds:[],attachments:[],date:$("captureDate").value||today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()
   };
   try{
@@ -2204,11 +2412,14 @@ function openAttachDialog(pid,slotId){
 }
 function renderAttachList(){
   const tabs=$("attachTabs");
-  if(tabs)tabs.innerHTML=state.attachThread?`<div class="pool-tabs">
-    <button class="pool-tab ${state.attachMode==="thread"?"on":""}" data-attach-mode="thread" type="button">이 Thread ${state.attachThread.length}</button>
-    <button class="pool-tab ${state.attachMode==="all"?"on":""}" data-attach-mode="all" type="button">전체 ${state.attachAll.length}</button></div>`:"";
+  const seedCount=state.fragments.filter(f=>effectiveLens(f)==="seed").length;
+  if(tabs)tabs.innerHTML=`<div class="pool-tabs">
+    ${state.attachThread?`<button class="pool-tab ${state.attachMode==="thread"?"on":""}" data-attach-mode="thread" type="button">이 Thread ${state.attachThread.length}</button>`:""}
+    <button class="pool-tab ${state.attachMode==="all"?"on":""}" data-attach-mode="all" type="button">전체 ${state.attachAll.length}</button>
+    ${seedCount?`<button class="pool-tab ${state.attachMode==="seed"?"on":""}" data-attach-mode="seed" type="button">✨ 씨앗 ${seedCount}</button>`:""}</div>`;
   const q=($("attachSearch")?.value||"").trim().toLowerCase();
-  let pool=(state.attachMode==="thread"&&state.attachThread)?state.attachThread:state.attachAll;
+  let pool=state.attachMode==="seed"?state.fragments.filter(f=>effectiveLens(f)==="seed")
+    :(state.attachMode==="thread"&&state.attachThread)?state.attachThread:state.attachAll;
   if(q)pool=pool.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
   const shown=pool.slice(0,20);
   $("attachFragmentList").innerHTML=shown.length
@@ -2373,8 +2584,24 @@ async function migrateV01(){
   let d;try{d=JSON.parse(localStorage.getItem("thoughtGarden_v01")||"null")}catch{}if(!d?.fragments?.length)return toast("이 브라우저에서 V0.1 기록을 찾지 못했습니다.");
   let n=0;for(const old of d.fragments){const f={id:old.id||uid(),type:["moment","decision"].includes(old.type)?old.type:"thought",thought:old.myThought||old.content||old.quote||old.title||"",context:old.people||old.sourceTitle||"",choice:old.decisionOptions||"",externalText:old.quote||"",locator:old.page?`p.${old.page}`:"",threadIds:[],date:old.date||today(),createdAt:old.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};state.fragments.push(f);await persist("fragments",f);n++}renderAll();toast(`V0.1 기록 ${n}개를 가져왔습니다.`)
 }
-function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:state.fragments,threads:state.threads,projects:state.projects},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
-async function importData(file){try{const d=JSON.parse(await file.text());for(const k of ["sources","fragments","threads","projects"]){if(Array.isArray(d[k])){const m=new Map(state[k].map(x=>[x.id,x]));d[k].forEach(x=>m.set(x.id||uid(),x));state[k]=[...m.values()]}}if(state.firebase.connected){for(const k of ["sources","fragments","threads","projects"])for(const x of state[k])await persist(k,x)}else localSave();renderAll();toast("백업을 가져왔습니다.")}catch(e){console.error(e);toast("백업 파일을 읽지 못했습니다.")}}
+function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:allFragments(),threads:state.threads,projects:state.projects},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
+async function importData(file){try{
+  const d=JSON.parse(await file.text());
+  const merged={};
+  for(const k of ["sources","fragments","threads","projects"]){
+    const base=k==="fragments"?allFragments():state[k];
+    const m=new Map(base.map(x=>[x.id,x]));
+    if(Array.isArray(d[k]))d[k].forEach(x=>m.set(x.id||uid(),x));
+    merged[k]=[...m.values()];
+  }
+  splitFragments(merged.fragments);                       // deletedAt이 있으면 휴지통으로
+  state.sources=merged.sources;state.threads=merged.threads;state.projects=merged.projects;
+  if(state.firebase.connected){
+    for(const x of merged.fragments)await persist("fragments",x);
+    for(const k of ["sources","threads","projects"])for(const x of merged[k])await persist(k,x);
+  }else localSave();
+  renderAll();toast("백업을 가져왔습니다.");
+}catch(e){console.error(e);toast("백업 파일을 읽지 못했습니다.")}}
 
 document.addEventListener("close",()=>{if(state.view==="capture")resetScroll()},true);
 document.addEventListener("click",async e=>{
@@ -2389,18 +2616,30 @@ document.addEventListener("click",async e=>{
   const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
+  const rl=e.target.closest("[data-open-related]");if(rl)return openEditFragment(rl.dataset.openRelated);
+  const lp=e.target.closest("[data-lens-pick]");
+  if(lp){state.editLens=(state.editLens===lp.dataset.lensPick)?null:lp.dataset.lensPick;renderEditLens();return}
+  if(e.target.closest("#editStarToggle")){
+    const f=state.fragments.find(x=>x.id===$("editFragmentId").value);if(!f)return;
+    f.starred=!f.starred;if(!f.starred)delete f.starred;
+    f.updatedAt=new Date().toISOString();persist("fragments",f);
+    const st=$("editStarToggle");st.classList.toggle("on",!!f.starred);st.textContent=f.starred?"★":"☆";
+    toast(f.starred?"중요한 생각으로 표시했어요. ★":"중요 표시를 해제했어요.");return;
+  }
   if(e.target.closest("[data-delete-current-frag]"))return deleteEditingFragment();
   const trRestore=e.target.closest("[data-restore-frag]");if(trRestore)return restoreFragment(trRestore.dataset.restoreFrag);
   const trPurge=e.target.closest("[data-purge-frag]");if(trPurge)return purgeFragmentAsk(trPurge.dataset.purgeFrag);
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
-  const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom]"))return openEditFragment(ofg.dataset.openFrag);
+  const prevBtn=e.target.closest("[data-open-prev]");if(prevBtn){const pid2=prevBtn.dataset.openPrev;if((state.trash||[]).some(x=>x.id===pid2)){toast("이어진 생각이 휴지통에 있어요.");return}return openEditFragment(pid2)}
+  const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom],[data-open-prev]"))return openEditFragment(ofg.dataset.openFrag);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
   const rn=e.target.closest("[data-resurface-next]");if(rn)return renderResurface(true);
   const ep=e.target.closest("[data-export-project]");if(ep)return exportProject(ep.dataset.exportProject);
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
-  const ot=e.target.closest("[data-open-thread]");if(ot)return openThread(ot.dataset.openThread);
+  const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
+  const mf=e.target.closest("[data-open-frag-mirror]");if(mf)return openEditFragment(mf.dataset.openFragMirror);
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
   const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
   const dt=e.target.closest("[data-delete-thread]");if(dt)return deleteThread(dt.dataset.deleteThread);
@@ -2408,11 +2647,11 @@ document.addEventListener("click",async e=>{
   const li=e.target.closest("[data-link]");if(li)return openLinkDialog(li.dataset.link);
   const lt=e.target.closest("[data-link-to-thread]");if(lt)return linkFragment($("linkFragmentId").value,lt.dataset.linkToThread);
   const ls=e.target.closest("[data-link-to-source]");if(ls)return linkFragmentToSource($("sourceLinkFragmentId").value,ls.dataset.linkToSource);
-  const ct=e.target.closest("[data-continue]");if(ct){const f=state.fragments.find(x=>x.id===ct.dataset.continue);return openCapture(`예전의 나는 이렇게 생각했다.\n“${f?.thought||f?.text||""}”\n\n지금은 `)}
+  const ct=e.target.closest("[data-continue]");if(ct){const f=allFragments().find(x=>x.id===ct.dataset.continue);if(!f)return;return openCapture("",{kind:"continue",fromId:f.id,prompt:(f.thought||f.text||f.externalText||"").slice(0,120)})}
   const df=e.target.closest("[data-delete-fragment]");if(df)return deleteFragment(df.dataset.deleteFragment);
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
-  if(e.target.closest("[data-back-studio]")){state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  if(e.target.closest("[data-back-studio]")){flushSlotSave();state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
   const pubB=e.target.closest("[data-publish]");if(pubB)return openPublishDialog(pubB.dataset.publish);
   const unpubB=e.target.closest("[data-unpublish]");if(unpubB)return unpublishProject(unpubB.dataset.unpublish);
   const mb=e.target.closest("[data-more]");
@@ -2495,6 +2734,8 @@ $("linkThreadSearch").addEventListener("input",renderLinkThreadList);
 $("fragSearch").addEventListener("input",()=>{state.fragLimit=5;renderFragments()});
 $("fragPeriod").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
 $("fragSource").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
+$("fragLens").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
+$("fragStarOnly").addEventListener("click",()=>{state.fragStarOnly=!state.fragStarOnly;const b=$("fragStarOnly");b.classList.toggle("on",state.fragStarOnly);b.setAttribute("aria-pressed",String(state.fragStarOnly));state.fragLimit=5;renderFragments()});
 $("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;state.gardenFragLimit=6;renderGarden()});
 
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
@@ -2502,6 +2743,8 @@ $("exportData").addEventListener("click",exportData);
 $("resetEverything").addEventListener("click",resetEverything);
 $("sheetTrash").addEventListener("click",()=>{closeMenu();renderTrash();$("trashDialog").showModal()});
 $("emptyTrashBtn").addEventListener("click",emptyTrash);
+$("mergeGuardBackup").addEventListener("click",()=>{exportData();toast("백업 파일을 내려받았어요.")});
+$("mergeGuardProceed").addEventListener("click",continueGoogleSignIn);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("confirmPublish").addEventListener("click",confirmPublish);
 function renderSparkSettings(){
@@ -2527,24 +2770,43 @@ $("saveApiKeys").addEventListener("click",async()=>{
   renderApiSettings();
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","trashDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+[["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
 $("lightbox").addEventListener("close",()=>{$("lightboxImg").src=""});
 $("lightboxClose").addEventListener("click",closeLightbox);
 let slotSaveTimer=null;
+const STUDIO_DRAFT_KEY="thoughtGarden_studioDraft";
+function saveStudioDraft(){
+  const pid=state.openProjectId;if(!pid)return;
+  const texts={};$$(".slot-text").forEach(t=>{if(t.dataset.slotText)texts[t.dataset.slotText]=t.value});
+  try{localStorage.setItem(STUDIO_DRAFT_KEY,JSON.stringify({pid,at:Date.now(),texts}))}catch(_){}
+}
+function clearStudioDraft(){try{localStorage.removeItem(STUDIO_DRAFT_KEY)}catch(_){}}
+function loadStudioDraft(){try{return JSON.parse(localStorage.getItem(STUDIO_DRAFT_KEY)||"null")}catch(_){return null}}
+/* 화면을 떠나기 전, 기다리고 있던 자동저장을 즉시 실행한다 */
+async function flushSlotSave(){
+  if(!slotSaveTimer)return;
+  clearTimeout(slotSaveTimer);slotSaveTimer=null;
+  const p=state.projects.find(x=>x.id===state.openProjectId);if(!p)return;
+  try{await persistSlots(p,readSlotTextInto(p));clearStudioDraft();markSaved("자동 저장됨 ✓")}
+  catch(err){console.warn("flush 저장 실패",err)}  // 로컬 draft가 남아 있어 유실은 없다
+}
 function markSaved(txt){const h=$("saveHint");if(!h)return;h.textContent=txt;h.classList.add("show");clearTimeout(markSaved._t);markSaved._t=setTimeout(()=>h.classList.remove("show"),2200)}
 document.addEventListener("input",e=>{
   if(e.target.id==="poolSearch")renderPool();
   if(e.target.id==="attachSearch")renderAttachList();
   if(e.target.classList&&e.target.classList.contains("slot-text")){
+    saveStudioDraft();                                   // ① 즉시: 이 기기 로컬에
     markSaved("저장 중…");
     clearTimeout(slotSaveTimer);
-    slotSaveTimer=setTimeout(async()=>{
+    slotSaveTimer=setTimeout(async()=>{                  // ② 0.8초 뒤: 클라우드에
+      slotSaveTimer=null;
       const p=state.projects.find(x=>x.id===state.openProjectId);if(!p)return;
-      try{await persistSlots(p,readSlotTextInto(p));markSaved("자동 저장됨 ✓")}
-      catch(err){console.warn(err);markSaved("저장 실패 — 저장 버튼을 눌러주세요")}
+      try{await persistSlots(p,readSlotTextInto(p));clearStudioDraft();markSaved("자동 저장됨 ✓")}
+      catch(err){console.warn(err);markSaved("저장 실패 — 로컬에는 남아 있어요")}
     },800);
   }
 });
@@ -2610,7 +2872,8 @@ function syncViewportHeight(){
 syncViewportHeight();
 ["resize","orientationchange","pageshow","load"].forEach(ev=>window.addEventListener(ev,()=>setTimeout(syncViewportHeight,0)));
 window.visualViewport&&window.visualViewport.addEventListener("resize",syncViewportHeight);
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncViewportHeight()});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncViewportHeight();else flushSlotSave()});
+window.addEventListener("pagehide",()=>{saveStudioDraft();flushSlotSave()});
 [60,150,300,600,1200,2500,4000].forEach(ms=>setTimeout(syncViewportHeight,ms)); // 콜드 스타트에서 늦게 확정되는 경우 대비
 
 if("serviceWorker" in navigator){
