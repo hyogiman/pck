@@ -16,7 +16,8 @@
  *
  * v3 변경
  *  ⑤ lease 해제 시 현재 호출이 소유한 lease인지 트랜잭션으로 확인
- *  ⑥ sourceUid가 아닌 Storage 경로를 조용히 건너뛰지 않고 명시적으로 중단
+ *  ⑥ 옮길 수 없는 Storage 경로를 조용히 건너뛰지 않고 명시적으로 중단
+ *     (단, 이미 '받는 계정' 자리에 있는 경로는 정상으로 보고 그대로 둔다)
  *  ⑦ 동일 Storage path가 여러 조각에서 참조돼도 한 번만 이전하도록 중복 제거
  */
 const crypto = require("crypto");
@@ -224,6 +225,11 @@ exports.completeMigration = onCall(
         for (const w of wanted) {
           const prev = manifest.get(w.path);
           if (prev && prev.status === "done") { doneCount++; continue; }   // 이 작업이 이미 끝낸 것
+          if (w.path.startsWith(`users/${job.targetUid}/`)) {
+            // 이미 '받는 계정' 자리에 있는 파일 (예: 이 임시 계정이 예전에 그 계정의 백업을 가져온 경우).
+            // 옮길 필요가 없고, 문서의 경로도 그대로 두면 검증을 통과한다.
+            doneCount++; continue;
+          }
           if (!w.path.startsWith(`users/${job.sourceUid}/`)) {
             // 조용히 건너뛰면 문서에는 옛 UID 경로가 남고 verify에서 계속 실패한다.
             // 데이터 손실 없이 사용자가 원인을 알 수 있도록 명시적으로 멈춘다.
