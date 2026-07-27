@@ -343,6 +343,10 @@
     .ai-setting-row>div{min-width:0}
     .ai-setting-row b{display:block;font-size:.84rem}
     .ai-progress{margin-top:9px;font-size:.72rem;line-height:1.5;color:var(--muted)}
+    .ai-usage-panel{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:#fffdf7}
+    .ai-usage-grid{display:grid;grid-template-columns:1fr auto;gap:7px 14px;font-size:.78rem;align-items:center}
+    .ai-usage-grid .value{font-weight:800;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+    .ai-usage-note{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:.68rem;line-height:1.55;color:var(--muted)}
     .completion{display:flex;align-items:center;gap:11px}
     .completion strong{font-family:var(--serif);font-size:1.35rem;font-weight:700}
     .mini-bar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
@@ -974,6 +978,21 @@
       </div>
       <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
       <div class="actions" style="margin-top:12px">
+        <button class="btn" id="studioUsageToggle" type="button">오늘 사용량 보기</button>
+      </div>
+      <div class="ai-usage-panel hidden" id="studioUsagePanel">
+        <div class="ai-usage-grid" id="studioUsageGrid">
+          <span>오늘 질문 사용</span><span class="value">—</span>
+          <span>남은 질문</span><span class="value">—</span>
+          <span>입력 토큰</span><span class="value">—</span>
+          <span>출력 토큰</span><span class="value">—</span>
+          <span>추정 사용비용</span><span class="value">—</span>
+        </div>
+        <div class="ai-usage-note" id="studioUsageNote">
+          실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px">
         <button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button>
       </div>
       <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
@@ -1101,8 +1120,38 @@ function renderAiSettings(){
   hint.innerHTML=!ready
     ?"Studio 정원사는 Google 로그인 상태에서만 사용할 수 있습니다."
     : enabled
-      ?"켜져 있습니다. 작업대를 열면 첫 빈 칸부터 질문을 준비하고, 한 칸을 쓰면 다음 빈 칸의 질문을 만듭니다. <b>서버에서 하루 20회로 제한</b>되어 있습니다."
+      ?"켜져 있습니다. 작업대를 열면 첫 빈 칸부터 질문을 준비하고, 한 칸을 쓰면 다음 빈 칸의 질문을 만듭니다. <b>서버에서 하루 30회로 제한</b>되어 있습니다."
       :"꺼져 있습니다. GPT 호출이 발생하지 않습니다.";
+}
+function formatUsdEstimate(value){
+  const n=Number(value||0);
+  if(n<=0)return "$0.0000";
+  if(n<0.01)return "$"+n.toFixed(4);
+  return "$"+n.toFixed(3);
+}
+function renderStudioUsage(data){
+  const grid=$("studioUsageGrid"),note=$("studioUsageNote");
+  if(!grid||!note)return;
+  const used=Number(data?.used||0),limit=Number(data?.limit||30),remaining=Number(data?.remaining??Math.max(0,limit-used));
+  const input=Number(data?.inputTokens||0),cached=Number(data?.cachedInputTokens||0),output=Number(data?.outputTokens||0);
+  grid.innerHTML=`
+    <span>오늘 질문 사용</span><span class="value">${used} / ${limit}회</span>
+    <span>남은 질문</span><span class="value">${remaining}회</span>
+    <span>입력 토큰</span><span class="value">${input.toLocaleString("ko-KR")}</span>
+    <span>출력 토큰</span><span class="value">${output.toLocaleString("ko-KR")}</span>
+    <span>추정 사용비용</span><span class="value">약 ${formatUsdEstimate(data?.estimatedCostUsd)}</span>`;
+  note.innerHTML=`오늘(KST) 생성된 새 질문만 집계합니다. 같은 질문을 캐시에서 다시 보는 것은 차감되지 않습니다.${cached?`<br>입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+}
+async function refreshStudioUsage(){
+  const grid=$("studioUsageGrid");
+  if(grid)grid.innerHTML='<span>사용량</span><span class="value">불러오는 중…</span>';
+  try{
+    const data=await callFn("studioGardenerUsage",{});
+    renderStudioUsage(data);
+  }catch(e){
+    console.warn("Studio usage load failed",e);
+    if(grid)grid.innerHTML='<span>사용량</span><span class="value">불러오지 못함</span>';
+  }
 }
 function renderApiSettings(){
   const k=getApiKeys();
@@ -3015,7 +3064,12 @@ $("menuTrigger").addEventListener("click",toggleMenu);
 $("googleAccountBtn").addEventListener("click",beginGoogleAuth);
 $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
 $("signOutBtn").addEventListener("click",signOutGarden);
-$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();$("settingsDialog").showModal()});
+$("sheetSettings").addEventListener("click",()=>{
+  closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();
+  $("studioUsagePanel")?.classList.add("hidden");
+  if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 사용량 보기";
+  $("settingsDialog").showModal();
+});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
@@ -3083,6 +3137,14 @@ $("sparkToggle").addEventListener("click",()=>{
   const off=localStorage.getItem("tg_spark_off")==="1";
   localStorage.setItem("tg_spark_off",off?"0":"1");
   renderSparkSettings();renderSpark();
+});
+$("studioUsageToggle").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 확인할 수 있습니다.");
+  const panel=$("studioUsagePanel"),btn=$("studioUsageToggle");
+  const opening=panel.classList.contains("hidden");
+  panel.classList.toggle("hidden",!opening);
+  btn.textContent=opening?"오늘 사용량 접기":"오늘 사용량 보기";
+  if(opening)await refreshStudioUsage();
 });
 $("studioGardenerToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
