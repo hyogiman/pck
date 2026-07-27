@@ -406,6 +406,30 @@
     .modal-danger .text-btn{font-size:.78rem;padding:7px 14px}
 
     .settings-card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:11px;background:var(--panel)}
+    .setting-section{border:1px solid var(--line);border-radius:15px;background:var(--panel);margin-top:9px;overflow:hidden}
+    .setting-section>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:15px 16px;cursor:pointer;font-weight:800;font-size:.9rem}
+    .setting-section>summary::-webkit-details-marker{display:none}
+    .setting-section>summary:after{content:"⌄";color:var(--muted);font-size:.9rem;margin-left:2px;transition:transform .16s}
+    .setting-section[open]>summary:after{transform:rotate(180deg)}
+    .setting-section[open]>summary{border-bottom:1px solid var(--line);background:#fffefb}
+    .setting-body{padding:14px 16px 16px}
+    .setting-state{margin-left:auto;font-size:.68rem;font-weight:700;color:var(--muted)}
+    .setting-danger{margin-top:16px;padding-top:13px;border-top:1px dashed #dec9c4}
+    .thread-index-item{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;padding:15px 4px;text-align:left;cursor:pointer}
+    .thread-index-item:last-child{border-bottom:0}
+    .thread-index-item:hover .thread-index-title{color:var(--accent)}
+    .thread-index-main{min-width:0;flex:1}
+    .thread-index-title{display:block;font-family:var(--serif);font-size:1rem;font-weight:750;letter-spacing:-.025em;color:var(--ink)}
+    .thread-index-sub{display:block;font-size:.68rem;color:var(--muted);margin-top:4px}
+    .thread-index-count{min-width:40px;text-align:right;font-family:var(--serif);font-size:1.08rem;font-weight:800;color:var(--accent)}
+    .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px dashed var(--line);background:transparent;border-radius:12px;padding:11px 13px;margin-top:13px;color:var(--muted);cursor:pointer;font-size:.76rem}
+    .thread-unlinked-summary b{color:var(--ink)}
+    .thread-suggest-section{margin-top:22px}
+    .related-preview-card{padding:2px 0 4px}
+    .related-preview-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .related-preview-quote{font-family:var(--serif);font-size:.92rem;line-height:1.65;padding:12px 14px;background:var(--soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;margin:0 0 12px}
+    .related-preview-thought{font-family:var(--serif);font-size:1.05rem;line-height:1.75;white-space:pre-wrap;color:var(--ink)}
+    .related-preview-context{margin-top:12px;font-size:.8rem;line-height:1.6;color:var(--muted)}
     .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
     .status-dot.ok{background:#4e8060}.status-dot.warn{background:#b28338}
     code.inline{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:.8rem;font-family:ui-monospace,Menlo,monospace}
@@ -618,11 +642,11 @@
 
   <section class="view" data-view="garden">
     <div id="gardenIndex">
-      <div class="section-head"><div><h2>🌱 Garden</h2><p>생각이 몇 개 쌓인 뒤, “이거 전에 했던 생각인데?” 싶을 때 Thread를 만듭니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="section-head"><div><h2>🌱 Garden</h2><p>반복해서 돌아오는 생각의 흐름만 모아봅니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
       <div class="meta" id="gardenSummary"></div>
-      <div class="search-row"><input class="input" id="gardenSearch" placeholder="Thread, 생각, 사람, 문장 검색" /><button class="btn" id="showUnlinked" type="button">미연결 조각</button></div>
+      <div class="search-row"><input class="input" id="gardenSearch" placeholder="Thread 검색" /></div>
       <div id="threadList"></div>
-      <div class="section"><div class="section-head"><div><h2>💭 최근 생각 조각</h2><p>어디에 연결할지 아직 정하지 않아도 됩니다.</p></div></div><div id="recentFragments"></div></div>
+      <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button"><span>아직 어느 Thread에도 연결되지 않은 생각</span><b id="gardenUnlinkedCount">0개</b></button>
     </div>
     <div id="threadDetail" class="hidden"></div>
   </section>
@@ -857,6 +881,18 @@
   </div>
 </dialog>
 
+
+<dialog id="relatedPreviewDialog">
+  <div class="modal">
+    <div class="modal-head"><div><div class="eyebrow" id="relatedPreviewEyebrow">RELATED THOUGHT</div><h2 id="relatedPreviewTitle">연관된 생각</h2></div><button class="close-btn" data-close="relatedPreviewDialog" type="button">✕</button></div>
+    <div class="related-preview-card" id="relatedPreviewBody"></div>
+    <div class="modal-actions">
+      <button class="btn" data-close="relatedPreviewDialog" type="button">닫기</button>
+      <button class="btn primary" id="connectRelatedPreview" type="button">이 생각과 연결</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="threadDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">THREAD</div><h2>생각의 줄기 만들기</h2></div><button class="close-btn" data-close="threadDialog" type="button">✕</button></div>
@@ -951,68 +987,68 @@
 
 <dialog id="settingsDialog">
   <div class="modal">
-    <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>저장과 데이터</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
-    <div class="settings-card">
-      <strong>👤 계정과 기기 동기화</strong>
-      <div class="helper" id="accountText">계정 상태를 확인 중입니다.</div>
-      <div class="actions">
-        <button class="btn primary" id="googleAccountBtn" type="button">Google 계정 연결</button>
-        <button class="btn" id="signOutBtn" type="button">로그아웃</button>
+    <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>설정</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
+
+    <details class="setting-section">
+      <summary><span>👤 계정 및 동기화</span><span class="setting-state" id="accountSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="helper" id="accountText">계정 상태를 확인 중입니다.</div>
+        <div class="actions"><button class="btn primary" id="googleAccountBtn" type="button">Google 계정 연결</button><button class="btn" id="signOutBtn" type="button">로그아웃</button></div>
+        <div style="margin-top:14px"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
       </div>
-    </div>
-    <div class="settings-card"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
-    <div class="settings-card">
-      <strong>🔎 콘텐츠 검색 API</strong>
-      <div class="helper">책 검색(알라딘)은 이미 연결되어 있습니다. 아래는 영상 검색용 키입니다.</div>
-      <div class="field"><label for="tmdbKeyInput">TMDB API Read Token 또는 v3 API Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
-      <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
-      <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
-      <div class="api-status" id="apiStatus"></div>
-    </div>
-    <div class="settings-card">
-      <strong>🌿 AI 정원사</strong>
-      <div class="helper">새 생각은 OpenAI Embedding으로 의미 좌표를 만들어 관련된 과거 생각을 더 잘 찾습니다. Studio 정원사는 선택 기능이며 기본은 꺼짐입니다.</div>
-      <div class="ai-setting-row">
-        <div><b>Studio 정원사</b><div class="helper">제목·Thread 재료·앞서 쓴 내용을 보고, 다음 빈 칸을 시작할 질문 하나를 미리 건넵니다.</div></div>
-        <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
-      </div>
-      <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
-      <div class="actions" style="margin-top:12px">
-        <button class="btn" id="studioUsageToggle" type="button">오늘 사용량 보기</button>
-      </div>
-      <div class="ai-usage-panel hidden" id="studioUsagePanel">
-        <div class="ai-usage-grid" id="studioUsageGrid">
-          <span>오늘 질문 사용</span><span class="value">—</span>
-          <span>남은 질문</span><span class="value">—</span>
-          <span>입력 토큰</span><span class="value">—</span>
-          <span>출력 토큰</span><span class="value">—</span>
-          <span>추정 사용비용</span><span class="value">—</span>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>🌿 AI 정원사</span><span class="setting-state" id="aiSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="ai-setting-row" style="margin-top:0;padding-top:0;border-top:0">
+          <div><b>Studio 정원사</b><div class="helper">다음 빈 칸을 시작할 질문 하나를 건넵니다.</div></div>
+          <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
         </div>
-        <div class="ai-usage-note" id="studioUsageNote">
-          실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.
+        <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
+        <div class="actions" style="margin-top:12px"><button class="btn" id="studioUsageToggle" type="button">오늘 사용량 보기</button></div>
+        <div class="ai-usage-panel hidden" id="studioUsagePanel">
+          <div class="ai-usage-grid" id="studioUsageGrid">
+            <span>오늘 질문 사용</span><span class="value">—</span>
+            <span>남은 질문</span><span class="value">—</span>
+            <span>입력 토큰</span><span class="value">—</span>
+            <span>출력 토큰</span><span class="value">—</span>
+            <span>추정 사용비용</span><span class="value">—</span>
+          </div>
+          <div class="ai-usage-note" id="studioUsageNote">실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.</div>
         </div>
+        <div class="actions" style="margin-top:12px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
+        <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
       </div>
-      <div class="actions" style="margin-top:12px">
-        <button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>💾 데이터 및 백업</span></summary>
+      <div class="setting-body">
+        <div class="actions"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div>
+        <div class="setting-danger"><div class="helper">완전 초기화는 모든 생각·Library·Thread·Studio 데이터를 지웁니다.</div><button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button></div>
       </div>
-      <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
-    </div>
-    <div class="settings-card">
-      <strong>🧹 데이터 정리</strong>
-      <div class="helper">개별 삭제는 각 화면에서 할 수 있습니다.</div>
-      <button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button>
-      <div class="helper">완전 초기화는 확인창에 <b>전체삭제</b>를 직접 입력해야 실행됩니다.</div>
-    </div>
-    <div class="settings-card">
-      <strong>🌸 Blooming Question</strong>
-      <div class="helper">첫 화면 아래에 매일 질문 하나가 피어납니다. 답하면 그대로 생각 조각이 됩니다. (질문 365개)<br>카드 오른쪽 ＋/− 를 누르면 접어둘 수 있습니다. 접어둔 상태는 그날 하루만 유지되고, 다음 날 새 질문과 함께 다시 열립니다.</div>
-      <div class="row2" style="margin-top:10px">
-        <div><label class="field-lbl" for="sparkTime">받고 싶은 시각</label><input class="input" type="time" id="sparkTime"></div>
-        <div style="display:flex;align-items:flex-end"><button class="btn" id="sparkToggle" type="button" style="width:100%">끄기</button></div>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>🔎 외부 검색 서비스</span><span class="setting-state" id="apiSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="helper">알라딘은 연결되어 있습니다. 영상 검색에 필요한 키만 관리합니다.</div>
+        <div class="field"><label for="tmdbKeyInput">TMDB API Token / Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
+        <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
+        <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
+        <div class="api-status" id="apiStatus"></div>
       </div>
-      <div class="helper" id="sparkHint" style="margin-top:9px"></div>
-    </div>
-    <div class="settings-card"><strong>💾 백업</strong><div class="actions"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div></div>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>🌸 Blooming Question</span><span class="setting-state" id="sparkSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="helper">첫 화면에 하루 한 번 질문을 띄웁니다.</div>
+        <div class="row2" style="margin-top:10px"><div><label class="field-lbl" for="sparkTime">받고 싶은 시각</label><input class="input" type="time" id="sparkTime"></div><div style="display:flex;align-items:flex-end"><button class="btn" id="sparkToggle" type="button" style="width:100%">끄기</button></div></div>
+        <div class="helper" id="sparkHint" style="margin-top:9px"></div>
+      </div>
+    </details>
   </div>
 </dialog>
 
@@ -1034,7 +1070,8 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
-  aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{}};
+  aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
+  relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1059,13 +1096,17 @@ function renderAccountStatus(){
   const u=state.firebase.user;
   const text=$("accountText"),btn=$("googleAccountBtn"),out=$("signOutBtn");
   if(!text||!btn||!out)return;
+  const summary=$("accountSettingState");
   if(!u){
+    if(summary)summary.textContent="연결 안 됨";
     text.innerHTML="아직 Google 계정에 연결되지 않았습니다. 이 기기에서만 임시로 사용할 수 있습니다.";
     btn.textContent="Google로 로그인";btn.classList.remove("hidden");out.classList.add("hidden");
   }else if(u.isAnonymous){
+    if(summary)summary.textContent="익명";
     text.innerHTML="현재는 <b>익명 계정</b>입니다. 지금 Google 계정을 연결하면 기존 생각을 그대로 유지하면서 멀티기기 계정으로 바뀝니다.";
     btn.textContent="기존 데이터에 Google 계정 연결";btn.classList.remove("hidden");out.classList.add("hidden");
   }else{
+    if(summary)summary.textContent="Google 연결됨";
     const name=esc(u.displayName||u.email||"Google 사용자");
     text.innerHTML=`동기화 계정 <span class="account-name">✓ ${name}</span><br>다른 기기에서도 같은 Google 계정으로 로그인하면 같은 데이터를 불러옵니다.`;
     btn.textContent="Google 계정 연결됨";btn.classList.add("hidden");out.classList.remove("hidden");
@@ -1117,6 +1158,7 @@ function renderAiSettings(){
   const ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous);
   btn.textContent=enabled?"끄기":"켜기";
   btn.disabled=!ready;
+  const summary=$("aiSettingState");if(summary)summary.textContent=enabled?"켜짐":"꺼짐";
   hint.innerHTML=!ready
     ?"Studio 정원사는 Google 로그인 상태에서만 사용할 수 있습니다."
     : enabled
@@ -1155,6 +1197,7 @@ async function refreshStudioUsage(){
 }
 function renderApiSettings(){
   const k=getApiKeys();
+  const summary=$("apiSettingState");if(summary)summary.textContent=(k.tmdb||k.youtube)?"일부 설정됨":"기본 연결";
   $("tmdbKeyInput").value=k.tmdb||"";
   $("youtubeKeyInput").value=k.youtube||"";
   $("apiStatus").innerHTML=`<span class="api-badge ok">알라딘 · Firebase Function</span><span class="api-badge ${k.youtube?"ok":""}">Google Books ${k.youtube?"키 설정됨":"Google API Key 필요"}</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
@@ -1864,41 +1907,35 @@ function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>(f.date||f.createdAt||"").slice(0,10)).filter(Boolean).sort().reverse()[0]||(state.sources.find(s=>s.id===id)?.updatedAt||"")}
 function threadActivity(t){const fs=threadFragments(t.id);return fs.length?(fs.map(f=>(f.date||f.createdAt||"").slice(0,10)).sort().reverse()[0]):((t.createdAt||"").slice(0,10))}
 function renderGarden(){
-  $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span><span class="status">💭 생각 ${state.fragments.length}</span>`;
+  $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
-  if(state.gardenThreadLimit==null)state.gardenThreadLimit=4;
-  if(state.gardenFragLimit==null)state.gardenFragLimit=6;
+  if(state.gardenThreadLimit==null)state.gardenThreadLimit=8;
 
   const ts=state.threads
-    .filter(t=>[t.title,t.question,...threadFragments(t.id).flatMap(f=>[f.thought,f.externalText,f.context])].filter(Boolean).join(" ").toLowerCase().includes(q))
+    .filter(t=>[t.title,t.question].filter(Boolean).join(" ").toLowerCase().includes(q))
     .sort((a,b)=>String(threadActivity(b)||"").localeCompare(String(threadActivity(a)||"")));
   const tShown=ts.slice(0,state.gardenThreadLimit);
   $("threadList").innerHTML=ts.length
-    ? tShown.map(t=>threadCard(t)).join("")+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
-    : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 말로 검색해보세요.":"같은 질문을 향하는 생각 조각들을 한 줄기로 묶어보세요.");
+    ? `<div class="card" style="padding:2px 14px">${tShown.map(t=>threadCard(t,true)).join("")}</div>`+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
+    : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 이름으로 검색해보세요.":"같은 질문을 향하는 생각 조각들이 보일 때 하나의 흐름으로 묶어보세요.");
 
-  const all=state.fragments
-    .filter(f=>!state.gardenUnlinked || !(f.threadIds||[]).length)
-    .filter(f=>[f.thought,f.externalText,f.context,f.choice].filter(Boolean).join(" ").toLowerCase().includes(q));
-  const frags=all.slice(0,state.gardenFragLimit);
-  $("showUnlinked").textContent=state.gardenUnlinked?"전체 조각":"미연결 조각";
-  $("showUnlinked").classList.toggle("soft",state.gardenUnlinked);
-  $("recentFragments").innerHTML=all.length
-    ? frags.map(f=>fragmentCard(f)).join("")+(all.length>frags.length?`<button class="more-btn" data-more="frags" type="button">생각 ${all.length-frags.length}개 더 보기</button>`:"")
-    : empty("💭",state.gardenUnlinked?"미연결 조각이 없어요.":"생각 조각이 없습니다.",state.gardenUnlinked?"모든 조각이 적어도 하나의 Thread에 연결되어 있습니다.":"+ 버튼으로 한 줄만 먼저 붙잡아보세요.");
+  const unlinked=state.fragments.filter(f=>!(f.threadIds||[]).length);
+  $("gardenUnlinkedCount").textContent=`${unlinked.length}개`;
+  $("gardenUnlinkedSummary").classList.toggle("hidden",!state.fragments.length);
 }
 function threadFragments(id){return state.fragments.filter(f=>(f.threadIds||[]).includes(id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
 function threadCard(t,compact=false){
-  const fs=threadFragments(t.id),last=fs.at(-1);
-  return `<article class="card click-card thread-card" data-open-thread="${t.id}"><div class="card-head"><span class="chip">🌱 THREAD</span><span class="thread-count">${fs.length}</span></div><div class="title">${esc(t.title)}</div>
-    ${t.question?`<div class="source-sub" style="margin-top:5px">지금의 질문 · ${esc(t.question)}</div>`:""}${last?`<div class="thought" style="margin-top:11px">${esc(last.thought||last.text||"")}</div>`:""}
-    <div class="meta"><span class="status">생각 ${fs.length}개</span><span class="status">Studio ${state.projects.filter(p=>p.threadId===t.id).length}개</span></div></article>`;
+  const fs=threadFragments(t.id),activity=threadActivity(t);
+  return `<button class="thread-index-item" data-open-thread="${t.id}" type="button">
+    <span class="thread-index-main"><span class="thread-index-title">${esc(t.title)}</span><span class="thread-index-sub">${activity?`${fmt(activity)}에 최근 이어짐`:"아직 연결된 생각 없음"}</span></span>
+    <span class="thread-index-count">${fs.length}</span>
+  </button>`;
 }
 function openThread(id){
   state.pendingFiles.thread=[];state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
   $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
   $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button><button class="text-btn danger-text" data-delete-thread="${t.id}" type="button">Thread 삭제</button></div></div>
-    <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
+    <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="meta"><span class="status">생각 ${fs.length}개</span></div><div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
     <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div>
       <div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div>
       <div class="attachment-tools"><label class="btn file-pick">📎 사진·음성·영상<input id="threadFiles" type="file" accept="image/*,audio/*,video/*" multiple></label></div>
@@ -1906,8 +1943,25 @@ function openThread(id){
       <div style="text-align:right;margin-top:8px"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div>
     </div>
     <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>정답보다, 내가 어떻게 달라졌는지를 봅니다.</p></div></div>
-    <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","Garden의 다른 조각을 이 Thread에 연결해보세요.")}</div></div>`;
-  setTimeout(()=>{$("threadFiles")?.addEventListener("change",e=>setPendingFiles("thread",e.target.files));renderPendingFiles("thread")},0);
+    <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","다른 생각에서 이 흐름과 닿는 조각을 연결해보세요.")}</div></div>
+    <div class="thread-suggest-section hidden" id="threadSuggestSection"><div class="section-head"><div><h2>🌱 이 흐름과 닮은 미연결 생각</h2><p>AI가 연결을 결정하지 않고, 살펴볼 후보만 건넵니다.</p></div></div><div id="threadSuggestions"></div></div>`;
+  setTimeout(()=>{$("threadFiles")?.addEventListener("change",e=>setPendingFiles("thread",e.target.files));renderPendingFiles("thread");loadThreadSuggestions(t.id)},0);
+}
+async function loadThreadSuggestions(tid){
+  const sec=$("threadSuggestSection"),box=$("threadSuggestions");if(!sec||!box)return;
+  sec.classList.add("hidden");box.innerHTML="";
+  if(!state.firebase.connected||!state.firebase.user)return;
+  try{
+    const res=await callFn("findThreadCandidates",{threadId:tid});
+    const items=(res?.items||[]).map(x=>state.fragments.find(f=>f.id===x.id)).filter(Boolean);
+    if(!items.length)return;
+    box.innerHTML=items.map(f=>{
+      const ago=daysAgo(f.date||f.createdAt);
+      const when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;
+      return `<button class="related-item" data-preview-thread-candidate="${f.id}" data-thread-id="${tid}" type="button"><small>${when}</small><span class="rt-text">${esc(f.thought||f.text||f.externalText||"")}</span></button>`;
+    }).join("");
+    sec.classList.remove("hidden");
+  }catch(e){console.warn("Thread candidate search skipped",e?.code||e?.message||e)}
 }
 function searchGroup(title,items){return `<div class="search-group"><div class="search-group-title">${esc(title)}</div>${items}</div>`}
 function openSearch(){$("searchInput").value="";$("searchResults").innerHTML=`<div class="helper" style="padding:10px 2px;color:var(--muted)">생각·문장·책·영상·Thread·프로젝트를 한 번에 찾습니다.</div>`;$("searchDialog").showModal();setTimeout(()=>$("searchInput").focus(),60)}
@@ -2061,6 +2115,58 @@ function renderRelatedThoughts(f){
   const rel=aiRel||relatedThoughts(f); // AI가 없거나 실패하면 기존 bigram 추천을 그대로 쓴다
   box.innerHTML=relatedThoughtsHTML(rel);
   requestAiRelatedThoughts(f);
+}
+function openRelatedPreview(targetId,{mode="fragment",currentId=null,threadId=null}={}){
+  const f=state.fragments.find(x=>x.id===targetId);if(!f)return;
+  state.relatedPreview={mode,currentId,targetId,threadId};
+  const src=f.sourceId?state.sources.find(s=>s.id===f.sourceId):null;
+  const threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
+  const st=stampInfo(f);
+  $("relatedPreviewEyebrow").textContent=mode==="thread"?"THREAD CANDIDATE":"RELATED THOUGHT";
+  $("relatedPreviewTitle").textContent=mode==="thread"?"이 흐름과 닮은 생각":"연관된 생각";
+  $("relatedPreviewBody").innerHTML=`
+    <div class="related-preview-meta">
+      <span class="chip">${fragIcon(f.type)} ${esc(st.main)}</span>${lensBadge(f)}${f.starred?'<span class="chip">★ 중요</span>':""}
+      ${src?`<span class="chip">${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}
+    </div>
+    ${f.externalText?`<blockquote class="related-preview-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${(f.thought||f.text)?`<div class="related-preview-thought">${esc(f.thought||f.text)}</div>`:""}
+    ${f.context?`<div class="related-preview-context">${esc(f.context)}</div>`:""}
+    ${attachmentsHTML(f.attachments||[])}
+    ${threads.length?`<div class="note-chips" style="margin-top:13px">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}`;
+  const btn=$("connectRelatedPreview");
+  if(mode==="thread"){
+    const already=(f.threadIds||[]).includes(threadId);
+    btn.textContent=already?"이미 연결됨":"이 Thread에 연결";btn.disabled=already;
+  }else{
+    const current=state.fragments.find(x=>x.id===currentId);
+    const already=!!current&&(current.continuedFrom||[]).includes(targetId);
+    btn.textContent=already?"이미 연결됨":"이 생각과 이어두기";btn.disabled=already||!current;
+  }
+  $("relatedPreviewDialog").showModal();
+  setTimeout(()=>{$("relatedPreviewDialog")?.querySelector(".modal")?.scrollTo?.(0,0)},0);
+}
+async function connectRelatedPreview(){
+  const p=state.relatedPreview||{};
+  const target=state.fragments.find(x=>x.id===p.targetId);if(!target)return;
+  const btn=$("connectRelatedPreview");btn.disabled=true;
+  try{
+    if(p.mode==="thread"){
+      const t=state.threads.find(x=>x.id===p.threadId);if(!t)return;
+      target.threadIds=[...new Set([...(target.threadIds||[]),t.id])];
+      target.updatedAt=new Date().toISOString();
+      await persist("fragments",target);
+      $("relatedPreviewDialog").close();
+      renderAll();openThread(t.id);toast("이 생각을 Thread에 연결했습니다. 🌱");
+    }else{
+      const current=state.fragments.find(x=>x.id===p.currentId);if(!current)return;
+      current.continuedFrom=[...new Set([...(current.continuedFrom||[]),target.id])];
+      current.updatedAt=new Date().toISOString();
+      await persist("fragments",current);
+      $("relatedPreviewDialog").close();
+      renderRelatedThoughts(current);toast("두 생각을 이어두었습니다. 🌱");
+    }
+  }catch(e){console.warn(e);btn.disabled=false;toast("연결하지 못했습니다.")}
 }
 function renderEditLens(){
   const box=$("editLensRow");if(!box)return;
@@ -2974,7 +3080,8 @@ document.addEventListener("click",async e=>{
   const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
-  const rl=e.target.closest("[data-open-related]");if(rl)return openEditFragment(rl.dataset.openRelated);
+  const rl=e.target.closest("[data-open-related]");if(rl)return openRelatedPreview(rl.dataset.openRelated,{mode:"fragment",currentId:$("editFragmentId").value});
+  const tc=e.target.closest("[data-preview-thread-candidate]");if(tc)return openRelatedPreview(tc.dataset.previewThreadCandidate,{mode:"thread",threadId:tc.dataset.threadId});
   const lp=e.target.closest("[data-lens-pick]");
   if(lp){state.editLens=(state.editLens===lp.dataset.lensPick)?null:lp.dataset.lensPick;renderEditLens();return}
   if(e.target.closest("#editStarToggle")){
@@ -2997,6 +3104,7 @@ document.addEventListener("click",async e=>{
   const ep=e.target.closest("[data-export-project]");if(ep)return exportProject(ep.dataset.exportProject);
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
+  if(e.target.closest("#gardenUnlinkedSummary"))return openFragmentList("연결되지 않은 생각",state.fragments.filter(f=>!(f.threadIds||[]).length));
   const mf=e.target.closest("[data-open-frag-mirror]");if(mf)return openEditFragment(mf.dataset.openFragMirror);
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
   const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
@@ -3068,6 +3176,7 @@ $("sheetSettings").addEventListener("click",()=>{
   closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();
   $("studioUsagePanel")?.classList.add("hidden");
   if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 사용량 보기";
+  $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
 });
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
@@ -3104,14 +3213,13 @@ $("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentI
 $("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
-$("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=4;state.gardenFragLimit=6;renderGarden()});
+$("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=8;renderGarden()});
 $("linkThreadSearch").addEventListener("input",renderLinkThreadList);
 $("fragSearch").addEventListener("input",()=>{state.fragLimit=5;renderFragments()});
 $("fragPeriod").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
 $("fragSource").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
 $("fragLens").addEventListener("change",()=>{state.fragLimit=5;renderFragments()});
 $("fragStarOnly").addEventListener("click",()=>{state.fragStarOnly=!state.fragStarOnly;const b=$("fragStarOnly");b.classList.toggle("on",state.fragStarOnly);b.setAttribute("aria-pressed",String(state.fragStarOnly));state.fragLimit=5;renderFragments()});
-$("showUnlinked").addEventListener("click",()=>{state.gardenUnlinked=!state.gardenUnlinked;state.gardenFragLimit=6;renderGarden()});
 
 $("linkNewThread").addEventListener("click",()=>{$("linkDialog").dataset.handoff="1";$("linkDialog").close();openThreadDialog()});
 $("exportData").addEventListener("click",exportData);
@@ -3128,6 +3236,7 @@ function renderSparkSettings(){
   const off=localStorage.getItem("tg_spark_off")==="1";
   $("sparkTime").value=localStorage.getItem("tg_spark_time")||"21:00";
   $("sparkToggle").textContent=off?"켜기":"끄기";
+  const summary=$("sparkSettingState");if(summary)summary.textContent=off?"꺼짐":"켜짐";
   $("sparkHint").innerHTML=off
     ? "지금은 꺼져 있어 질문이 뜨지 않습니다."
     : `설정한 시각에 알림을 받으려면, 휴대폰 캘린더에 그 시각으로 반복 일정을 만들고 메모에 이 앱 주소를 넣어두세요. (앱 자체 푸시 알림은 아직 없습니다.)`;
@@ -3138,6 +3247,7 @@ $("sparkToggle").addEventListener("click",()=>{
   localStorage.setItem("tg_spark_off",off?"0":"1");
   renderSparkSettings();renderSpark();
 });
+$("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
 $("studioUsageToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 확인할 수 있습니다.");
   const panel=$("studioUsagePanel"),btn=$("studioUsageToggle");
@@ -3197,7 +3307,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
