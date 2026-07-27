@@ -422,6 +422,13 @@
     .thread-index-title{display:block;font-family:var(--serif);font-size:1rem;font-weight:750;letter-spacing:-.025em;color:var(--ink)}
     .thread-index-sub{display:block;font-size:.68rem;color:var(--muted);margin-top:4px}
     .thread-index-count{min-width:40px;text-align:right;font-family:var(--serif);font-size:1.08rem;font-weight:800;color:var(--accent)}
+    .thread-index-list{display:grid;gap:10px;margin-top:12px}
+    .thread-index-item{border:1.5px solid transparent;border-radius:17px;padding:14px 16px;background:linear-gradient(var(--panel),var(--panel)) padding-box,linear-gradient(135deg,#b8d8c0 0%,#4f8a65 48%,#d9eadc 100%) border-box;box-shadow:0 5px 16px rgba(43,86,60,.055);transition:transform .14s,box-shadow .14s}
+    .thread-index-item:last-child{border-bottom:1.5px solid transparent}
+    .thread-index-item:active{transform:scale(.992)}
+    .thread-index-title{color:#285f3f;font-weight:850}
+    .thread-index-sub{color:#748279}
+    .thread-index-count{display:grid;place-items:center;min-width:38px;height:38px;padding:0 8px;border-radius:999px;background:linear-gradient(145deg,#eff7f0,#dcecdf);color:#2f6b48;border:1px solid #c9dfce;font-size:.95rem}
     .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px dashed var(--line);background:transparent;border-radius:12px;padding:11px 13px;margin-top:13px;color:var(--muted);cursor:pointer;font-size:.76rem}
     .thread-unlinked-summary b{color:var(--ink)}
     .thread-suggest-section{margin-top:22px}
@@ -430,6 +437,12 @@
     .related-preview-quote{font-family:var(--serif);font-size:.92rem;line-height:1.65;padding:12px 14px;background:var(--soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;margin:0 0 12px}
     .related-preview-thought{font-family:var(--serif);font-size:1.05rem;line-height:1.75;white-space:pre-wrap;color:var(--ink)}
     .related-preview-context{margin-top:12px;font-size:.8rem;line-height:1.6;color:var(--muted)}
+    .ai-recommend-wait{display:flex;align-items:center;gap:9px;margin-top:10px;padding:11px 13px;border:1px dashed #c7d9cc;border-radius:12px;background:rgba(238,246,239,.65);color:#66806e;font-size:.72rem;line-height:1.45}
+    .ai-recommend-wait .ai-dot{width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(54,108,77,.18);animation:aiPulse 1.25s ease-out infinite;flex:0 0 auto}
+    @keyframes aiPulse{0%{box-shadow:0 0 0 0 rgba(54,108,77,.22)}70%{box-shadow:0 0 0 7px rgba(54,108,77,0)}100%{box-shadow:0 0 0 0 rgba(54,108,77,0)}}
+    .date-only{padding:9px 14px!important;gap:8px!important}
+    .date-only .date-arrow{font-size:1.15rem;line-height:1;color:var(--accent);transform:translateY(-1px)}
+    .today-dialog-count{display:inline-block;margin-left:6px;font-family:var(--sans);font-size:.68rem;font-weight:800;color:var(--accent);background:var(--accent3);border-radius:999px;padding:4px 8px;vertical-align:middle;letter-spacing:0}
     .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
     .status-dot.ok{background:#4e8060}.status-dot.warn{background:#b28338}
     code.inline{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:.8rem;font-family:ui-monospace,Menlo,monospace}
@@ -520,11 +533,9 @@
       <div class="home-title">
         <div class="eyebrow">THOUGHT GARDEN</div>
         <h1>생각의 텃밭</h1>
-        <button class="today-count" id="openToday" type="button">
+        <button class="today-count date-only" id="openToday" type="button" aria-label="오늘 남긴 생각 보기">
           <span id="dateLabel"></span>
-          <span class="tc-div"></span>
-          <span>오늘 남긴 생각</span>
-          <strong id="todayCount">0</strong>
+          <span class="date-arrow">›</span>
         </button>
       </div>
 
@@ -763,7 +774,7 @@
 <dialog id="todayDialog">
   <div class="modal">
     <div class="modal-head">
-      <div><div class="eyebrow">TODAY</div><h2>오늘 남긴 생각</h2></div>
+      <div><div class="eyebrow">TODAY</div><h2>오늘 남긴 생각 <span class="today-dialog-count" id="todayDialogCount">0개</span></h2></div>
       <button class="close-btn" data-close="todayDialog" type="button">✕</button>
     </div>
     <div id="todayFragmentList"></div>
@@ -1803,7 +1814,6 @@ function refreshSelects(){
 function renderCapture(){
   const _d=new Date();
   $("dateLabel").textContent=`${_d.getMonth()+1}월 ${_d.getDate()}일 (${["일","월","화","수","목","금","토"][_d.getDay()]})`;
-  $("todayCount").textContent=state.fragments.filter(f=>(f.date||f.createdAt||"").slice(0,10)===today()).length;
 }
 function renderHome(){
   $("homeFragmentCount").textContent=state.fragments.length;
@@ -1916,7 +1926,7 @@ function renderGarden(){
     .sort((a,b)=>String(threadActivity(b)||"").localeCompare(String(threadActivity(a)||"")));
   const tShown=ts.slice(0,state.gardenThreadLimit);
   $("threadList").innerHTML=ts.length
-    ? `<div class="card" style="padding:2px 14px">${tShown.map(t=>threadCard(t,true)).join("")}</div>`+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
+    ? `<div class="thread-index-list">${tShown.map(t=>threadCard(t,true)).join("")}</div>`+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
     : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 이름으로 검색해보세요.":"같은 질문을 향하는 생각 조각들이 보일 때 하나의 흐름으로 묶어보세요.");
 
   const unlinked=state.fragments.filter(f=>!(f.threadIds||[]).length);
@@ -1951,17 +1961,22 @@ async function loadThreadSuggestions(tid){
   const sec=$("threadSuggestSection"),box=$("threadSuggestions");if(!sec||!box)return;
   sec.classList.add("hidden");box.innerHTML="";
   if(!state.firebase.connected||!state.firebase.user)return;
+  sec.classList.remove("hidden");
+  box.innerHTML=aiRecommendWaitHTML();
   try{
     const res=await callFn("findThreadCandidates",{threadId:tid});
     const items=(res?.items||[]).map(x=>state.fragments.find(f=>f.id===x.id)).filter(Boolean);
-    if(!items.length)return;
+    if(!items.length){sec.classList.add("hidden");box.innerHTML="";return}
     box.innerHTML=items.map(f=>{
       const ago=daysAgo(f.date||f.createdAt);
       const when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;
       return `<button class="related-item" data-preview-thread-candidate="${f.id}" data-thread-id="${tid}" type="button"><small>${when}</small><span class="rt-text">${esc(f.thought||f.text||f.externalText||"")}</span></button>`;
     }).join("");
     sec.classList.remove("hidden");
-  }catch(e){console.warn("Thread candidate search skipped",e?.code||e?.message||e)}
+  }catch(e){
+    console.warn("Thread candidate search skipped",e?.code||e?.message||e);
+    sec.classList.add("hidden");box.innerHTML="";
+  }
 }
 function searchGroup(title,items){return `<div class="search-group"><div class="search-group-title">${esc(title)}</div>${items}</div>`}
 function openSearch(){$("searchInput").value="";$("searchResults").innerHTML=`<div class="helper" style="padding:10px 2px;color:var(--muted)">생각·문장·책·영상·Thread·프로젝트를 한 번에 찾습니다.</div>`;$("searchDialog").showModal();setTimeout(()=>$("searchInput").focus(),60)}
@@ -2108,13 +2123,26 @@ async function requestAiRelatedThoughts(f){
     if($("editFragmentDialog")?.open&&$("editFragmentId")?.value===f.id)renderRelatedThoughts(f);
   }
 }
+function aiRecommendWaitHTML(){
+  return `<div class="ai-recommend-wait"><span class="ai-dot"></span><span>잠시 후 AI 추천카드가 나타납니다.</span></div>`;
+}
 function renderRelatedThoughts(f){
   const box=$("relatedThoughts");if(!box)return;
+  const hash=f.embeddingTextHash||"";
   const cache=state.aiRelatedCache[f.id];
-  const aiRel=(cache&&cache.hash===(f.embeddingTextHash||"")&&cache.items?.length)?cache.items:null;
-  const rel=aiRel||relatedThoughts(f); // AI가 없거나 실패하면 기존 bigram 추천을 그대로 쓴다
-  box.innerHTML=relatedThoughtsHTML(rel);
-  requestAiRelatedThoughts(f);
+  const eligible=!!(f?.id&&f.embeddingModel&&state.firebase.connected&&state.firebase.user);
+
+  if(cache&&cache.hash===hash&&cache.loaded){
+    const rel=cache.items?.length?cache.items:relatedThoughts(f);
+    box.innerHTML=relatedThoughtsHTML(rel);
+    return;
+  }
+  if(eligible){
+    box.innerHTML=aiRecommendWaitHTML();
+    requestAiRelatedThoughts(f);
+    return;
+  }
+  box.innerHTML=relatedThoughtsHTML(relatedThoughts(f));
 }
 function openRelatedPreview(targetId,{mode="fragment",currentId=null,threadId=null}={}){
   const f=state.fragments.find(x=>x.id===targetId);if(!f)return;
@@ -2511,6 +2539,7 @@ function renderTodayDialog(){
   const t=today();
   const isToday=f=>(f.date||f.createdAt||"").slice(0,10)===t;
   const list=state.fragments.filter(isToday);
+  if($("todayDialogCount"))$("todayDialogCount").textContent=`${list.length}개`;
   const moved=state.fragments.filter(f=>!isToday(f)&&(f.createdAt||"").slice(0,10)===t)
     .sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   let html=list.length?list.map(f=>fragmentCard(f)).join(""):empty("💭","오늘은 아직 비어 있어요.","첫 생각을 한 줄 남겨보세요.");
