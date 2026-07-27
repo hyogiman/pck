@@ -1285,6 +1285,17 @@ function callFn(name,payload){
   const {api,functions}=state.firebase;
   return api.httpsCallable(functions,name)(payload).then(r=>r.data);
 }
+/* 생각 저장 자체는 절대 기다리지 않는다.
+   Firebase에 저장이 끝난 뒤 embedFragment를 조용히 호출하고,
+   AI 쪽 오류가 나도 사용자의 기록 흐름에는 영향을 주지 않는다. */
+function requestFragmentEmbedding(fragmentId){
+  if(!fragmentId||!state.firebase.connected||!state.firebase.functions||!state.firebase.user)return;
+  setTimeout(()=>{
+    callFn("embedFragment",{fragmentId}).catch(e=>{
+      console.warn("fragment embedding skipped",e?.code||e?.message||e);
+    });
+  },0);
+}
 async function startAccountMerge(){
   const cred=state.pendingGoogleCred;
   if(!cred)return toast("연결 정보가 만료되었습니다. 다시 시도해 주세요.");
@@ -1936,6 +1947,7 @@ async function saveEditFragment(){
   if(state.editLens)f.lenses=[state.editLens];else delete f.lenses;
   f.updatedAt=new Date().toISOString();
   await persist("fragments",f);
+  requestFragmentEmbedding(f.id);
   if((state.editRemovedAttachments||[]).length) await deleteAttachments(state.editRemovedAttachments);
   state.editAttachments=[];state.editRemovedAttachments=[];
   $("editFragmentDialog").close();renderAll();toast("수정했습니다.");
@@ -2162,7 +2174,7 @@ async function saveCapture(){
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id,"capture");
-    state.fragments.unshift(f);await persist("fragments",f);clearCaptureDraft();$("captureDialog").close();
+    state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);clearCaptureDraft();$("captureDialog").close();
     const ctx=state.pendingSlot;state.pendingSlot=null;
     if(ctx){
       const p=state.projects.find(x=>x.id===ctx.projectId);
@@ -2492,7 +2504,7 @@ async function saveSourceFragment(sourceId){
   const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
   try{
     if(state.pendingFiles.source.length)f.attachments=await uploadFiles(state.pendingFiles.source,f.id,"source");
-    state.fragments.unshift(f);await persist("fragments",f);state.pendingFiles.source=[];openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
+    state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);state.pendingFiles.source=[];openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function openThreadDialog(t=null){$("threadId").value=t?.id||"";$("threadTitleInput").value=t?.title||"";$("threadQuestion").value=t?.question||"";$("threadDialog").showModal()}
@@ -2526,7 +2538,7 @@ async function addThreadThought(tid){
   const f={id:uid(),type:"thought",thought:text,threadIds:[tid],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
   try{
     if(state.pendingFiles.thread.length)f.attachments=await uploadFiles(state.pendingFiles.thread,f.id,"thread");
-    state.fragments.unshift(f);await persist("fragments",f);state.pendingFiles.thread=[];openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
+    state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);state.pendingFiles.thread=[];openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function openProjectDialog(threadId=""){
