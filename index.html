@@ -388,6 +388,9 @@
     .related-item{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
     .related-item small{display:block;color:var(--muted);font-size:.66rem;margin-bottom:3px}
     .related-item .rt-text{font-family:var(--serif);font-size:.88rem;line-height:1.55;color:#2b3134;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .migrate-bar{height:6px;border-radius:99px;background:var(--accent2);overflow:hidden;margin-top:16px}
+    .migrate-bar span{display:block;height:100%;width:38%;border-radius:99px;background:var(--accent);animation:mig 1.15s ease-in-out infinite}
+    @keyframes mig{0%{transform:translateX(-100%)}100%{transform:translateX(320%)}}
     .modal-danger{margin-top:15px;padding-top:13px;border-top:1px dashed var(--line);display:flex;justify-content:center}
     .modal-danger .text-btn{font-size:.78rem;padding:7px 14px}
 
@@ -780,15 +783,28 @@
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">GOOGLE</div><h2>🌱 기존 Google 텃밭이 있습니다</h2></div><button class="close-btn" data-close="mergeGuardDialog" type="button">✕</button></div>
     <div class="body" style="font-size:.92rem">
-      이 기기에는 아직 Google 계정으로 옮기지 않은 <b id="mergeGuardCounts"></b>가 있습니다.<br><br>
-      지금 기존 계정으로 전환하면 이 데이터는 <b>자동으로 합쳐지지 않습니다.</b><br>
-      먼저 백업 파일을 받아두면, 로그인한 뒤 <b>설정 &gt; 백업 가져오기</b>로 합칠 수 있어요.
+      현재 이 기기에 <b id="mergeGuardCounts"></b>가 있습니다.<br><br>
+      기존 Google 텃밭과 <b>안전하게 합칠 수 있습니다.</b> 사진·음성도 함께 옮겨집니다.<br>
+      합치는 동안 이 기기의 기록은 <b>지워지지 않습니다.</b>
     </div>
-    <div class="helper" style="margin-top:10px">사진·음성·영상 파일은 백업에 온전히 담기지 않을 수 있습니다. 중요한 첨부는 따로 보관해 주세요.</div>
+    <div class="helper" style="margin-top:10px">시간이 걸릴 수 있고, 도중에 앱을 닫아도 다음에 이어서 진행됩니다.</div>
     <div class="modal-actions" style="flex-wrap:wrap">
       <button class="btn" data-close="mergeGuardDialog" type="button">취소</button>
       <button class="btn soft" id="mergeGuardBackup" type="button">💾 백업 파일 받기</button>
-      <button class="btn primary" id="mergeGuardProceed" type="button">기존 계정으로 로그인</button>
+      <button class="btn primary" id="mergeGuardMerge" type="button">🌱 기존 텃밭과 합치기</button>
+    </div>
+    <div class="modal-danger"><button class="text-btn" id="mergeGuardProceed" type="button">합치지 않고 기존 계정으로만 로그인</button></div>
+  </div>
+</dialog>
+
+<dialog id="migrateDialog">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><div><div class="eyebrow">MERGE</div><h2 id="migrateMsg">텃밭을 옮기고 있어요…</h2></div></div>
+    <div class="helper" id="migrateSub" style="margin-top:4px"></div>
+    <div class="migrate-bar"><span></span></div>
+    <div class="modal-actions">
+      <button class="btn primary hidden" id="migrateRetry" type="button">다시 시도</button>
+      <button class="btn hidden" id="migrateClose" data-close="migrateDialog" type="button">닫기</button>
     </div>
   </div>
 </dialog>
@@ -1211,6 +1227,7 @@ async function beginGoogleAuth(){
             // 이 기기의 텃밭이 비어있지 않다 — 자동 전환하면 이 데이터가 화면에서 사라진다.
             // 정식 계정 병합이 생기기 전까지는, 먼저 백업하도록 안내한다.
             state.pendingGoogleCred=cred;
+            state.pendingGoogleEmail=(err.customData&&err.customData.email)||"";
             openMergeGuard();
             return;
           }
@@ -1244,6 +1261,96 @@ async function continueGoogleSignIn(){
     toast("기존 Google 텃밭으로 들어왔습니다. 백업 파일은 설정 > 가져오기로 합칠 수 있어요.");
   }catch(e){console.error(e);toast("로그인 실패: "+(e.code||e.message||""))}
 }
+/* ══════════ 계정 병합 ══════════
+   AAA(익명)로 인증된 상태에서 준비 → BBB(Google)로 로그인 → 인수 후 이어서 진행.
+   서버가 양쪽 인증을 각각 확인하므로, 클라이언트는 UID를 만들어 보내지 않는다. */
+const MIGRATION_JOB_KEY="thoughtGarden_migrationJob";
+function saveMigrationJob(j){try{localStorage.setItem(MIGRATION_JOB_KEY,JSON.stringify(j))}catch(_){}}
+function loadMigrationJob(){try{return JSON.parse(localStorage.getItem(MIGRATION_JOB_KEY)||"null")}catch(_){return null}}
+function clearMigrationJob(){try{localStorage.removeItem(MIGRATION_JOB_KEY)}catch(_){}}
+function migrationProgress(msg,sub){
+  $("migrateRetry").classList.add("hidden");$("migrateClose").classList.add("hidden");
+  $("migrateMsg").textContent=msg;
+  $("migrateSub").innerHTML=sub||"";
+  if(!$("migrateDialog").open)$("migrateDialog").showModal();
+}
+function callFn(name,payload){
+  const {api,functions}=state.firebase;
+  return api.httpsCallable(functions,name)(payload).then(r=>r.data);
+}
+async function startAccountMerge(){
+  const cred=state.pendingGoogleCred;
+  if(!cred)return toast("연결 정보가 만료되었습니다. 다시 시도해 주세요.");
+  const {api,auth}=state.firebase;
+  $("mergeGuardDialog").close();
+  state.migrating=true;
+  try{
+    migrationProgress("옮길 준비를 하고 있어요…");
+    const prep=await callFn("prepareMigration",{targetEmail:state.pendingGoogleEmail||""});
+    const job={jobId:prep.jobId,ticket:prep.ticket,at:Date.now()};
+    saveMigrationJob(job);                       // 여기서 앱이 죽어도 다음에 이어받을 수 있다
+
+    migrationProgress("기존 텃밭으로 들어가는 중…");
+    detachRealtime();
+    const result=await api.signInWithCredential(auth,cred);
+    state.pendingGoogleCred=null;
+    state.firebase.user=result.user;state.firebase.uid=result.user.uid;
+
+    await runMigrationLoop(job);
+    await finishAccountMerge();
+  }catch(e){
+    console.error(e);
+    state.migrating=false;
+    migrationFailed(e);
+  }
+}
+async function runMigrationLoop(job){
+  let guard=0;
+  while(guard++<400){
+    const r=await callFn("completeMigration",{jobId:job.jobId,ticket:job.ticket});
+    if(r.done)return r;
+    const p=r.progress||{};
+    const detail=p.total?`사진·음성 ${p.done}/${p.total}`:(p.col?`${p.col} 옮기는 중`:"");
+    migrationProgress("텃밭을 옮기고 있어요…",
+      `${detail?esc(detail)+"<br>":""}앱을 닫아도 다시 이어서 진행할 수 있습니다.`);
+  }
+  throw new Error("이전이 예상보다 오래 걸립니다. 다시 시도해 주세요.");
+}
+async function finishAccountMerge(){
+  clearMigrationJob();
+  state.migrating=false;
+  const u=state.firebase.user;
+  await activateFirebaseUser(u,{pushLocalKeys:false});   // 리스너 재부착 + 새 계정 기준 로드
+  await firebaseLoad();
+  renderAll();
+  $("migrateDialog").close();
+  toast("두 텃밭을 하나로 합쳤어요. 🌱");
+}
+function migrationFailed(e){
+  const msg=(e&&(e.message||e.code))||"";
+  migrationProgress("병합이 중간에 멈췄습니다.",
+    `기존 데이터는 <b>삭제되지 않았습니다.</b> 다시 시도하면 이어서 진행합니다.${msg?`<br><span style="opacity:.7">${esc(msg)}</span>`:""}`);
+  $("migrateRetry").classList.remove("hidden");
+  $("migrateClose").classList.remove("hidden");
+}
+/* 앱을 다시 열었을 때 끝나지 않은 이전이 있으면 이어받는다 */
+async function resumeMigrationIfAny(){
+  const job=loadMigrationJob();
+  if(!job||!job.jobId)return;
+  const u=state.firebase.user;
+  if(!u||u.isAnonymous)return;                 // 아직 BBB로 로그인되지 않았으면 대기
+  if(!confirm("옮기다 만 텃밭이 있습니다.\n이어서 진행할까요?\n\n(원본은 그대로 남아 있습니다)"))return;
+  state.migrating=true;
+  try{ migrationProgress("이어서 옮기고 있어요…"); await runMigrationLoop(job); await finishAccountMerge(); }
+  catch(e){ console.error(e); state.migrating=false; migrationFailed(e); }
+}
+async function retryMigration(){
+  const job=loadMigrationJob();if(!job)return $("migrateDialog").close();
+  $("migrateRetry").classList.add("hidden");
+  state.migrating=true;
+  try{ migrationProgress("다시 이어서 옮기는 중…"); await runMigrationLoop(job); await finishAccountMerge(); }
+  catch(e){ console.error(e); state.migrating=false; migrationFailed(e); }
+}
 async function signOutGarden(){
   if(!state.firebase.auth)return;
   if(!confirm("이 기기에서 Google 계정을 로그아웃할까요?\n클라우드 데이터는 삭제되지 않습니다."))return;
@@ -1259,17 +1366,18 @@ async function connectFirebase(){
   try{
     const raw=localStorage.getItem(FIREBASE_KEY);
     const config=raw?normalizeFirebaseConfig(raw):DEFAULT_FIREBASE_CONFIG;
-    const [appApi,authApi,fireApi,storageApi]=await Promise.all([
+    const [appApi,authApi,fireApi,storageApi,fnApi]=await Promise.all([
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js"),
-      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js")]);
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js"),
+      import("https://www.gstatic.com/firebasejs/12.16.0/firebase-functions.js")]);
     const app=appApi.getApps().find(a=>a.name==="garden")||appApi.initializeApp(config,"garden"),
           auth=authApi.getAuth(app),storage=storageApi.getStorage(app);
     let db;
     try{ db=fireApi.initializeFirestore(app,{localCache:fireApi.persistentLocalCache({tabManager:fireApi.persistentMultipleTabManager()})}); }
     catch(e){ console.warn("오프라인 캐시 활성화 실패, 기본 모드로 진행",e); db=fireApi.getFirestore(app); }
-    state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi},user:null,ready:true};
+    state.firebase={app,auth,db,storage,uid:null,connected:false,api:{...appApi,...authApi,...fireApi,...storageApi,...fnApi},functions:fnApi.getFunctions(app,"us-central1"),user:null,ready:true};
 
     let redirectResult=null;
     try{redirectResult=await authApi.getRedirectResult(auth)}catch(e){console.warn("redirect result",e)}
@@ -1281,6 +1389,7 @@ async function connectFirebase(){
       await activateFirebaseUser(user,{pushLocalKeys:pending==="link"});
       if(user.isAnonymous)showAccountDialog("anonymous");
       else if(redirectResult)toast("Google 계정 동기화가 연결되었습니다. ☁️");
+      setTimeout(resumeMigrationIfAny,600);   // 옮기다 만 텃밭이 있으면 이어받는다
     }else{
       state.firebase.user=null;state.firebase.connected=false;setFirebaseStatus(false);
       localLoad();renderAccountStatus();showAccountDialog("signin");
@@ -2745,6 +2854,8 @@ $("sheetTrash").addEventListener("click",()=>{closeMenu();renderTrash();$("trash
 $("emptyTrashBtn").addEventListener("click",emptyTrash);
 $("mergeGuardBackup").addEventListener("click",()=>{exportData();toast("백업 파일을 내려받았어요.")});
 $("mergeGuardProceed").addEventListener("click",continueGoogleSignIn);
+$("mergeGuardMerge").addEventListener("click",startAccountMerge);
+$("migrateRetry").addEventListener("click",retryMigration);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("confirmPublish").addEventListener("click",confirmPublish);
 function renderSparkSettings(){
@@ -2829,6 +2940,8 @@ document.addEventListener("focusout",()=>{
 /* ── 안드로이드 뒤로가기: 앱을 끄지 말고 한 단계씩 돌아가기 ── */
 function pushGuard(){try{history.pushState({tgGuard:1},"")}catch(e){}}
 function handleBack(){
+  // 0) 텃밭을 옮기는 중에는 아무 데도 가지 않는다
+  if(state.migrating)return true;
   // 1) 확대한 사진
   if($("lightbox")?.open){closeLightbox();return true}
   // 2) 열려 있는 팝업 (가장 마지막에 열린 것부터)
