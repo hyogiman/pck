@@ -336,6 +336,13 @@
     .slot-prompt{color:var(--muted);font-size:.75rem;margin:6px 0 11px;line-height:1.5}
     .slot.done{border-color:#bcd0c0;background:#fbfefb}
     .slot .textarea{min-height:80px}
+    .gardener-box{margin-top:10px;padding:12px 14px;border:1px solid #d3e2d5;background:var(--accent3);border-radius:13px;text-align:left}
+    .gardener-box .g-label{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--accent)}
+    .gardener-box p{font-family:var(--serif);margin:6px 0 0;font-size:.94rem;line-height:1.58;color:#2c4a38}
+    .ai-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+    .ai-setting-row>div{min-width:0}
+    .ai-setting-row b{display:block;font-size:.84rem}
+    .ai-progress{margin-top:9px;font-size:.72rem;line-height:1.5;color:var(--muted)}
     .completion{display:flex;align-items:center;gap:11px}
     .completion strong{font-family:var(--serif);font-size:1.35rem;font-weight:700}
     .mini-bar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
@@ -959,6 +966,19 @@
       <div class="api-status" id="apiStatus"></div>
     </div>
     <div class="settings-card">
+      <strong>🌿 AI 정원사</strong>
+      <div class="helper">새 생각은 OpenAI Embedding으로 의미 좌표를 만들어 관련된 과거 생각을 더 잘 찾습니다. Studio 정원사는 선택 기능이며 기본은 꺼짐입니다.</div>
+      <div class="ai-setting-row">
+        <div><b>Studio 정원사</b><div class="helper">Studio에서 쓴 내용을 바탕으로 답 대신 꼬리질문 하나만 건넵니다.</div></div>
+        <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
+      </div>
+      <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
+      <div class="actions" style="margin-top:12px">
+        <button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button>
+      </div>
+      <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
+    </div>
+    <div class="settings-card">
       <strong>🧹 데이터 정리</strong>
       <div class="helper">개별 삭제는 각 화면에서 할 수 있습니다.</div>
       <button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button>
@@ -981,6 +1001,7 @@
 
 <script>
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
+const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener";
 const BOOK_SEARCH_PROXY="https://us-central1-idea-pocket-56063.cloudfunctions.net/bookSearch";
 const DEFAULT_FIREBASE_CONFIG={
   apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
@@ -993,7 +1014,8 @@ const DEFAULT_FIREBASE_CONFIG={
 const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
-  pendingFiles:{capture:[],source:[],thread:[]},apiResults:[]};
+  pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
+  aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1050,6 +1072,37 @@ async function loadCloudApiKeys({pushLocal=false}={}){
   }else if(Object.values(local).some(Boolean)){
     await saveCloudApiKeys(local);
   }
+}
+function studioGardenerEnabled(){return localStorage.getItem(STUDIO_GARDENER_KEY)==="1"}
+async function loadCloudAiSettings(){
+  if(!state.firebase.connected||!state.firebase.uid)return;
+  const {api,db,uid}=state.firebase;
+  const snap=await api.getDoc(api.doc(db,"users",uid,"settings","private"));
+  const enabled=snap.exists()&&snap.data()?.studioGardenerEnabled===true;
+  localStorage.setItem(STUDIO_GARDENER_KEY,enabled?"1":"0");
+}
+async function saveStudioGardenerSetting(enabled){
+  localStorage.setItem(STUDIO_GARDENER_KEY,enabled?"1":"0");
+  if(state.firebase.connected&&state.firebase.uid&&!state.firebase.user?.isAnonymous){
+    const {api,db,uid}=state.firebase;
+    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{
+      studioGardenerEnabled:enabled,
+      updatedAtServer:api.serverTimestamp()
+    },{merge:true});
+  }
+}
+function renderAiSettings(){
+  const enabled=studioGardenerEnabled();
+  const btn=$("studioGardenerToggle"),hint=$("studioGardenerHint");
+  if(!btn||!hint)return;
+  const ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous);
+  btn.textContent=enabled?"끄기":"켜기";
+  btn.disabled=!ready;
+  hint.innerHTML=!ready
+    ?"Studio 정원사는 Google 로그인 상태에서만 사용할 수 있습니다."
+    : enabled
+      ?"켜져 있습니다. 글을 쓰고 다른 곳을 눌렀을 때 내용이 충분하면 질문을 만듭니다. <b>서버에서 하루 20회로 제한</b>되어 있습니다."
+      :"꺼져 있습니다. GPT 호출이 발생하지 않습니다.";
 }
 function renderApiSettings(){
   const k=getApiKeys();
@@ -1207,7 +1260,8 @@ async function activateFirebaseUser(user,{pushLocalKeys=false}={}){
   setFirebaseStatus(true);
   attachRealtime();
   await loadCloudApiKeys({pushLocal:pushLocalKeys});
-  renderApiSettings();renderAccountStatus();
+  await loadCloudAiSettings();
+  renderApiSettings();renderAccountStatus();renderAiSettings();
   if($("accountDialog")?.open)$("accountDialog").close();
 }
 async function beginGoogleAuth(){
@@ -1920,16 +1974,44 @@ function relatedThoughts(f,max=3){
   }
   return scored.sort((a,b)=>b.score-a.score).slice(0,max);
 }
-function renderRelatedThoughts(f){
-  const box=$("relatedThoughts");if(!box)return;
-  const rel=relatedThoughts(f);
-  if(!rel.length){box.innerHTML="";return}       // 없으면 아무 말도 하지 않는다 — 조용해야 한다
-  box.innerHTML=`<div class="related-box"><span class="rt-label">이 생각과 닮은 예전 생각</span>
+function relatedThoughtsHTML(rel){
+  if(!rel.length)return "";
+  return `<div class="related-box"><span class="rt-label">이 생각과 닮은 예전 생각</span>
     ${rel.map(({f:o})=>{
       const ago=daysAgo(o.date||o.createdAt);
       const when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;
       return `<button class="related-item" data-open-related="${o.id}" type="button"><small>${when}</small><span class="rt-text">${esc(o.thought||o.text||o.externalText||"")}</span></button>`;
     }).join("")}</div>`;
+}
+async function requestAiRelatedThoughts(f){
+  if(!f?.id||!f.embeddingModel||!state.firebase.connected||!state.firebase.user)return;
+  const key=f.id,hash=f.embeddingTextHash||"";
+  const cached=state.aiRelatedCache[key];
+  if(cached&&cached.hash===hash)return;
+  if(state.aiRelatedLoading[key])return;
+  state.aiRelatedLoading[key]=true;
+  try{
+    const res=await callFn("findRelatedFragments",{fragmentId:f.id});
+    const items=(res?.items||[]).map(x=>{
+      const o=state.fragments.find(v=>v.id===x.id);
+      return o?{f:o,score:Number(x.score||0),distance:Number(x.distance||0)}:null;
+    }).filter(Boolean);
+    state.aiRelatedCache[key]={hash,loaded:true,items};
+  }catch(e){
+    console.warn("AI related thoughts fallback",e?.code||e?.message||e);
+    state.aiRelatedCache[key]={hash,loaded:true,items:[],failed:true};
+  }finally{
+    state.aiRelatedLoading[key]=false;
+    if($("editFragmentDialog")?.open&&$("editFragmentId")?.value===f.id)renderRelatedThoughts(f);
+  }
+}
+function renderRelatedThoughts(f){
+  const box=$("relatedThoughts");if(!box)return;
+  const cache=state.aiRelatedCache[f.id];
+  const aiRel=(cache&&cache.hash===(f.embeddingTextHash||"")&&cache.items?.length)?cache.items:null;
+  const rel=aiRel||relatedThoughts(f); // AI가 없거나 실패하면 기존 bigram 추천을 그대로 쓴다
+  box.innerHTML=relatedThoughtsHTML(rel);
+  requestAiRelatedThoughts(f);
 }
 function renderEditLens(){
   const box=$("editLensRow");if(!box)return;
@@ -2098,6 +2180,7 @@ function openProject(id){
       slotSaveTimer=setTimeout(()=>{slotSaveTimer=null;const pp=state.projects.find(x=>x.id===id);if(pp)persistSlots(pp,readSlotTextInto(pp)).then(()=>{clearStudioDraft();markSaved("자동 저장됨 ✓")}).catch(e=>console.warn(e))},600);
     } else clearStudioDraft();
   }
+  setTimeout(()=>loadStudioGardenerQuestions(p),0);
 }
 function poolTabs(){
   if(!state.poolThread)return "";
@@ -2133,12 +2216,58 @@ async function persistSlots(p,slots){p.slots=slotsToData(slots);p.updatedAt=new 
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
   const filled=!!(s.text||attached.length);
-  return `<div class="slot ${filled?"done":"empty-slot"}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
+  return `<div class="slot ${filled?"done":"empty-slot"}" data-slot-card="${s.id}" data-project-card="${p.id}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
     ${filled
       ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
       : `<p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}`}
     ${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
-    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="${filled?"여기에 내 말로 적어보세요.":"또는 여기에 바로 적어도 됩니다."}">${esc(s.text||"")}</textarea></div>`;
+    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="${filled?"여기에 내 말로 적어보세요.":"또는 여기에 바로 적어도 됩니다."}">${esc(s.text||"")}</textarea>
+    <div class="gardener-box hidden" data-gardener-slot="${s.id}" data-gardener-project="${p.id}"></div></div>`;
+}
+function studioQuestionKey(pid,slotId){return `${pid}:${slotId}`}
+function renderStudioGardenerBox(pid,slotId){
+  const box=document.querySelector(`[data-gardener-project="${CSS.escape(pid)}"][data-gardener-slot="${CSS.escape(slotId)}"]`);
+  if(!box)return;
+  if(!studioGardenerEnabled()){box.classList.add("hidden");box.innerHTML="";return}
+  const item=state.studioQuestionCache[studioQuestionKey(pid,slotId)];
+  if(!item?.question){box.classList.add("hidden");box.innerHTML="";return}
+  box.innerHTML=`<span class="g-label">🌿 정원사의 질문</span><p>${esc(item.question)}</p>`;
+  box.classList.remove("hidden");
+}
+async function requestStudioGardenerQuestion(pid,slotId,generate=false){
+  if(!studioGardenerEnabled()||!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return;
+  const key=studioQuestionKey(pid,slotId);
+  if(state.studioQuestionLoading[key])return;
+  state.studioQuestionLoading[key]=true;
+  try{
+    const res=await callFn("studioGardenerQuestion",{projectId:pid,slotId,generate});
+    if(res?.enabled===false)return;
+    if(res?.question&&!res?.stale){
+      state.studioQuestionCache[key]={question:res.question,type:res.type||"",model:res.model||""};
+      renderStudioGardenerBox(pid,slotId);
+    }else if(res?.stale){
+      // 글이 바뀐 직후 60초 안에는 예전 질문을 억지로 보여주지 않는다.
+      delete state.studioQuestionCache[key];
+      renderStudioGardenerBox(pid,slotId);
+    }else if(!generate){
+      delete state.studioQuestionCache[key];
+      renderStudioGardenerBox(pid,slotId);
+    }
+  }catch(e){
+    const code=String(e?.code||"");
+    if(code.includes("resource-exhausted")){
+      state.studioQuestionCache[key]={question:"오늘은 정원사가 충분히 질문했어요. 내일 다시 만나요."};
+      renderStudioGardenerBox(pid,slotId);
+    }else{
+      console.warn("Studio gardener skipped",e?.code||e?.message||e);
+    }
+  }finally{state.studioQuestionLoading[key]=false}
+}
+function loadStudioGardenerQuestions(p){
+  if(!studioGardenerEnabled()||!p)return;
+  projectSlots(p).forEach(s=>{
+    if((s.text||"").trim().length>=40)requestStudioGardenerQuestion(p.id,s.id,false);
+  });
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
@@ -2853,7 +2982,7 @@ $("menuTrigger").addEventListener("click",toggleMenu);
 $("googleAccountBtn").addEventListener("click",beginGoogleAuth);
 $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
 $("signOutBtn").addEventListener("click",signOutGarden);
-$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();$("settingsDialog").showModal()});
+$("sheetSettings").addEventListener("click",()=>{closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();$("settingsDialog").showModal()});
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
@@ -2922,6 +3051,41 @@ $("sparkToggle").addEventListener("click",()=>{
   localStorage.setItem("tg_spark_off",off?"0":"1");
   renderSparkSettings();renderSpark();
 });
+$("studioGardenerToggle").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
+  const next=!studioGardenerEnabled();
+  try{
+    await saveStudioGardenerSetting(next);
+    state.studioQuestionCache={};
+    renderAiSettings();
+    toast(next?"Studio 정원사를 켰습니다. 🌿":"Studio 정원사를 껐습니다.");
+  }catch(e){console.warn(e);toast("AI 정원사 설정을 저장하지 못했습니다.")}
+});
+$("backfillEmbeddings").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user)return toast("Google 로그인 후 사용할 수 있습니다.");
+  if(!confirm("기존 생각 중 아직 의미 색인이 없는 조각을 AI로 변환할까요?\n이미 최신 색인이 있는 생각은 다시 과금되지 않습니다."))return;
+  const btn=$("backfillEmbeddings"),status=$("embeddingBackfillStatus");
+  btn.disabled=true;
+  let totalProcessed=0,rounds=0;
+  try{
+    while(rounds<200){
+      rounds++;
+      const res=await callFn("backfillEmbeddings",{limit:25});
+      totalProcessed+=Number(res?.processed||0);
+      const remaining=Number(res?.remaining||0);
+      status.textContent=`기존 생각 의미 색인 중… ${totalProcessed}개 완료${remaining?` · ${remaining}개 남음`:""}`;
+      if(!remaining)break;
+    }
+    status.textContent=`의미 색인 완료 · 이번에 ${totalProcessed}개를 새로 처리했습니다.`;
+    state.aiRelatedCache={};
+    await firebaseLoad();
+    toast("기존 생각 의미 색인을 마쳤습니다. 🌱");
+  }catch(e){
+    console.warn(e);
+    status.textContent="의미 색인 중 오류가 있었습니다. 다시 누르면 완료된 것은 건너뛰고 이어서 처리합니다.";
+    toast("일부 색인을 완료하지 못했습니다.");
+  }finally{btn.disabled=false}
+});
 $("saveApiKeys").addEventListener("click",async()=>{
   const old=getApiKeys();
   const keys={...old,tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
@@ -2970,6 +3134,18 @@ document.addEventListener("input",e=>{
       catch(err){console.warn(err);markSaved("저장 실패 — 로컬에는 남아 있어요")}
     },800);
   }
+});
+document.addEventListener("focusout",e=>{
+  if(!(e.target.classList&&e.target.classList.contains("slot-text")))return;
+  if(!studioGardenerEnabled())return;
+  const pid=state.openProjectId,slotId=e.target.dataset.slotText;
+  if(!pid||!slotId||e.target.value.trim().length<40)return;
+  (async()=>{
+    try{
+      await flushSlotSave(); // 서버가 방금 쓴 최신 문장을 읽도록 먼저 저장
+      await requestStudioGardenerQuestion(pid,slotId,true);
+    }catch(err){console.warn("Studio gardener blur",err)}
+  })();
 });
 document.addEventListener("click",e=>{
   const pm=e.target.closest("[data-pool-mode]");
