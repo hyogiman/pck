@@ -891,7 +891,10 @@
 <dialog id="editSourcePicker">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">LIBRARY</div><h2>어떤 작품과 연결할까요?</h2></div><button class="close-btn" data-close="editSourcePicker" type="button">✕</button></div>
-    <div class="link-top"><input class="input" id="editSourceSearch" placeholder="책 · 영화 · 유튜브 검색" autocomplete="off"></div>
+    <div class="link-top">
+      <input class="input" id="editSourceSearch" placeholder="책 · 영화 · 유튜브 검색" autocomplete="off">
+      <button class="btn soft" id="editSourceNew" type="button">+ 새 작품</button>
+    </div>
     <div id="editSourceList" style="margin-top:12px"></div>
   </div>
 </dialog>
@@ -1870,7 +1873,7 @@ function renderEditSourceList(){
   $("editSourceList").innerHTML=arr.length
     ? shown.map(s=>`<button class="card click-card" data-pick-source="${s.id}" type="button" style="display:block;width:100%;text-align:left;margin-bottom:7px"><div class="source-sub">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</div><div class="title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div></button>`).join("")
       +(arr.length>shown.length?`<div class="pool-more">그 외 ${arr.length-shown.length}개 — 검색으로 좁혀보세요</div>`:"")
-    : empty("📚",q?"찾는 작품이 없어요.":"등록된 작품이 없어요.",q?"다른 말로 검색해보세요.":"Library에서 먼저 등록해주세요.");
+    : empty("📚",q?"찾는 작품이 없어요.":"등록된 작품이 없어요.","위 '+ 새 작품'으로 바로 추가할 수 있어요.");
 }
 function renderEditAttachments(){
   const list=state.editAttachments||[];
@@ -2448,7 +2451,12 @@ async function saveSource(){
     const duplicate=existingSourceByIsbn(isbn13);
     if(duplicate){
       const dupFid=state.pendingSourceLinkFragmentId;state.pendingSourceLinkFragmentId=null;
+      const dupToEdit=state.pendingEditSourcePick;state.pendingEditSourcePick=false;
       $("sourceDialog").close();
+      if(dupToEdit){   // 생각 수정 중이었다면 화면을 옮기지 않고 그 책에 연결만 한다
+        state.editSourceId=duplicate.id;renderEditSource();
+        toast("이미 등록된 책이라 그 책에 연결했어요.");return;
+      }
       if(dupFid) await linkFragmentToSource(dupFid,duplicate.id);
       setView("library");openSource(duplicate.id);toast("같은 ISBN의 책이 이미 등록되어 있어 기존 책을 열었습니다.");return;
     }
@@ -2462,9 +2470,16 @@ async function saveSource(){
     createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
   };
   const pendingFid=(!old && state.pendingSourceLinkFragmentId)?state.pendingSourceLinkFragmentId:null;
+  const backToEdit=(!old && state.pendingEditSourcePick);   // 생각 수정 중에 새로 만든 작품인가
   state.pendingSourceLinkFragmentId=null;              // 대기 상태는 여기서 반드시 끝낸다
+  state.pendingEditSourcePick=false;
   state.sources=old?state.sources.map(x=>x.id===s.id?s:x):[s,...state.sources];
   await persist("sources",s);$("sourceDialog").close();
+  if(backToEdit){
+    state.editSourceId=s.id;renderEditSource();renderAll();
+    toast("작품을 추가하고 연결했어요. 저장을 눌러 마무리해 주세요.");
+    return;
+  }
   if(pendingFid){
     await linkFragmentToSource(pendingFid,s.id);
   }else{
@@ -2843,6 +2858,18 @@ $("sheetSearch").addEventListener("click",openSearch);$("searchInput").addEventL
 $("editSourceBtn").addEventListener("click",()=>{$("editSourceSearch").value="";renderEditSourceList();$("editSourcePicker").showModal()});
 $("editSourceClear").addEventListener("click",()=>{state.editSourceId="";renderEditSource()});
 $("editSourceSearch").addEventListener("input",renderEditSourceList);
+$("editSourceNew").addEventListener("click",()=>{
+  // 작품 추가 창으로 넘어갔다가, 저장되면 이 조각에 바로 연결되어 돌아온다
+  state.pendingEditSourcePick=true;
+  $("editSourcePicker").dataset.handoff="1";
+  $("editSourcePicker").close();
+  openSourceDialog();
+});
+$("sourceDialog").addEventListener("close",()=>{state.pendingEditSourcePick=false});
+$("editSourcePicker").addEventListener("close",()=>{
+  if($("editSourcePicker").dataset.handoff==="1"){$("editSourcePicker").dataset.handoff="";return}
+  state.pendingEditSourcePick=false;
+});
 $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
 $("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentId=null});
