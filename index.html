@@ -1214,6 +1214,7 @@ async function beginGoogleAuth(){
   provider.setCustomParameters({prompt:"select_account"});
   const current=auth.currentUser;
   const wasAnonymous=!!current?.isAnonymous;
+  let joinedExisting=false;   // 새 계정을 이 익명 UID에 붙인 게 아니라, 이미 있던 계정으로 들어간 경우
   try{
     let result;
     if(wasAnonymous){
@@ -1231,13 +1232,16 @@ async function beginGoogleAuth(){
             openMergeGuard();
             return;
           }
+          joinedExisting=true;                              // 기존 계정 설정이 우선이다
           result=await api.signInWithCredential(auth,cred); // 이 기기가 비어 있으면 그냥 기존 텃밭으로
         }else throw err;
       }
     }else{
       result=await api.signInWithPopup(auth,provider);
     }
-    await activateFirebaseUser(result.user,{pushLocalKeys:wasAnonymous});
+    // 로컬 API 키를 클라우드에 올리는 건 '이 익명 계정에 새 Google 계정을 연결한' 경우뿐.
+    // 이미 존재하던 계정으로 들어간 경우엔 그쪽 설정을 덮어써선 안 된다.
+    await activateFirebaseUser(result.user,{pushLocalKeys:wasAnonymous&&!joinedExisting});
     toast(wasAnonymous?"Google 계정에 연결했습니다. ☁️":"Google 계정으로 동기화를 시작했습니다. ☁️");
   }catch(e){
     console.error(e);
@@ -1305,10 +1309,17 @@ async function startAccountMerge(){
   }
 }
 async function runMigrationLoop(job){
-  let guard=0;
+  let guard=0,busyTries=0;
   while(guard++<400){
     const r=await callFn("completeMigration",{jobId:job.jobId,ticket:job.ticket});
     if(r.done)return r;
+    if(r.busy){                                   // 다른 창/기기가 같은 이전을 붙잡고 있다
+      if(++busyTries>20)throw new Error("다른 곳에서 같은 이전이 진행 중입니다. 잠시 후 다시 시도해 주세요.");
+      migrationProgress("다른 곳에서 옮기는 중이에요…","같은 이전이 끝나기를 기다리고 있습니다.");
+      await new Promise(r2=>setTimeout(r2,4000));
+      continue;
+    }
+    busyTries=0;
     const p=r.progress||{};
     const detail=p.total?`사진·음성 ${p.done}/${p.total}`:(p.col?`${p.col} 옮기는 중`:"");
     migrationProgress("텃밭을 옮기고 있어요…",
