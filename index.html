@@ -443,6 +443,19 @@
     .date-only{padding:9px 14px!important;gap:8px!important}
     .date-only .date-arrow{font-size:1.15rem;line-height:1;color:var(--accent);transform:translateY(-1px)}
     .today-dialog-count{display:inline-block;margin-left:6px;font-family:var(--sans);font-size:.68rem;font-weight:800;color:var(--accent);background:var(--accent3);border-radius:999px;padding:4px 8px;vertical-align:middle;letter-spacing:0}
+    .link-thread-recommend{margin-top:13px;padding:12px;border:1px solid #c9dece;border-radius:15px;background:linear-gradient(145deg,#f7fbf7,#edf6ef)}
+    .link-recommend-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:9px}
+    .link-recommend-head strong{font-size:.76rem;color:#2d6847;letter-spacing:.01em}
+    .link-recommend-head small{font-size:.62rem;color:var(--muted)}
+    .link-recommend-card{display:flex;align-items:center;gap:10px;width:100%;border:1px solid #d6e5d9;background:rgba(255,255,255,.82);border-radius:12px;padding:11px 12px;text-align:left;cursor:pointer;margin-top:7px}
+    .link-recommend-card:first-of-type{margin-top:0}
+    .link-recommend-card:active{transform:scale(.993)}
+    .link-recommend-rank{display:grid;place-items:center;min-width:25px;height:25px;border-radius:999px;background:#dcecdf;color:#2e6847;font-size:.68rem;font-weight:900}
+    .link-recommend-main{min-width:0;flex:1}
+    .link-recommend-title{font-family:var(--serif);font-weight:800;color:#285f3f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .link-recommend-sub{font-size:.64rem;color:var(--muted);margin-top:3px}
+    .link-thread-all-label{margin:14px 2px 2px;font-size:.63rem;font-weight:850;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
+    .link-recommend-loading{display:flex;align-items:center;gap:9px;color:#66806e;font-size:.7rem;padding:2px 1px}
     .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
     .status-dot.ok{background:#4e8060}.status-dot.warn{background:#b28338}
     code.inline{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:.8rem;font-family:ui-monospace,Menlo,monospace}
@@ -922,7 +935,9 @@
       <input class="input" id="linkThreadSearch" placeholder="Thread 검색" autocomplete="off" />
       <button class="btn soft" id="linkNewThread" type="button">+ 새 Thread</button>
     </div>
-    <div id="linkThreadList" style="margin-top:12px"></div>
+    <div id="linkThreadRecommend" class="link-thread-recommend hidden"></div>
+    <div class="link-thread-all-label" id="linkThreadAllLabel">전체 Thread</div>
+    <div id="linkThreadList" style="margin-top:8px"></div>
   </div>
 </dialog>
 
@@ -1082,7 +1097,8 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
   aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
-  relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null}};
+  relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
+  threadMatchCache:{},threadMatchLoading:{}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2870,13 +2886,95 @@ function renderLinkThreadList(){
   const q=($("linkThreadSearch")?.value||"").trim().toLowerCase();
   let ts=state.threads.slice().sort((a,b)=>String(threadActivity(b)||"").localeCompare(String(threadActivity(a)||"")));
   if(q)ts=ts.filter(t=>[t.title,t.question].filter(Boolean).join(" ").toLowerCase().includes(q));
+
+  // 사용자가 직접 검색하기 시작하면 AI 추천 영역은 잠시 숨긴다.
+  const rec=$("linkThreadRecommend"),label=$("linkThreadAllLabel");
+  if(rec)rec.classList.toggle("hidden",!!q);
+  if(label)label.textContent=q?"검색 결과":"전체 Thread";
+
   $("linkThreadList").innerHTML=ts.length
     ? ts.map(t=>`<button class="card click-card" data-link-to-thread="${t.id}" type="button" style="width:100%;text-align:left;margin-bottom:7px"><div class="title">${esc(t.title)}</div><div class="source-sub">생각 ${threadFragments(t.id).length}개</div></button>`).join("")
     : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 말로 검색해보세요.":"위 '+ 새 Thread'로 먼저 만들어보세요.");
 }
-function openLinkDialog(fid){state.pendingLinkFragmentId=fid;$("linkFragmentId").value=fid;$("linkThreadSearch").value="";renderLinkThreadList();$("linkDialog").showModal()}
+function renderThreadMatchRecommendations(fid){
+  const box=$("linkThreadRecommend");if(!box)return;
+  const cache=state.threadMatchCache[fid];
+
+  if(!cache){
+    box.innerHTML=`<div class="link-recommend-loading"><span class="ai-dot"></span><span>이 생각과 잘 맞는 Thread를 찾고 있어요…</span></div>`;
+    box.classList.remove("hidden");
+    return;
+  }
+
+  const items=(cache.items||[]).map((x,i)=>{
+    const t=state.threads.find(v=>v.id===x.threadId);
+    if(!t)return "";
+    const count=threadFragments(t.id).length;
+    return `<button class="link-recommend-card" data-link-to-thread="${t.id}" type="button">
+      <span class="link-recommend-rank">${i+1}</span>
+      <span class="link-recommend-main">
+        <span class="link-recommend-title">${esc(t.title)}</span>
+        <span class="link-recommend-sub">이 생각과 닮은 흐름 · 생각 ${count}개</span>
+      </span>
+    </button>`;
+  }).filter(Boolean);
+
+  if(!items.length){
+    box.classList.add("hidden");
+    box.innerHTML="";
+    return;
+  }
+
+  box.innerHTML=`<div class="link-recommend-head"><strong>✨ AI 추천 Thread</strong><small>저장된 생각들의 의미를 비교했어요</small></div>${items.join("")}`;
+  box.classList.remove("hidden");
+}
+async function loadThreadMatchRecommendations(fid,attempt=0){
+  if(!fid||!state.firebase.connected||!state.firebase.user||!state.threads.length)return;
+  const box=$("linkThreadRecommend");
+  if(state.threadMatchCache[fid]){renderThreadMatchRecommendations(fid);return}
+  if(state.threadMatchLoading[fid])return;
+
+  state.threadMatchLoading[fid]=true;
+  if(box){
+    box.innerHTML=`<div class="link-recommend-loading"><span class="ai-dot"></span><span>이 생각과 잘 맞는 Thread를 찾고 있어요…</span></div>`;
+    box.classList.remove("hidden");
+  }
+
+  try{
+    const res=await callFn("findThreadMatchesForFragment",{fragmentId:fid});
+    if(res?.reason==="no-embedding"&&attempt<3){
+      state.threadMatchLoading[fid]=false;
+      // 막 저장한 생각은 embedding이 백그라운드에서 만들어지는 중일 수 있다.
+      setTimeout(()=>loadThreadMatchRecommendations(fid,attempt+1),700+attempt*350);
+      return;
+    }
+    state.threadMatchCache[fid]={items:res?.items||[],loaded:true};
+    renderThreadMatchRecommendations(fid);
+  }catch(e){
+    console.warn("Thread match recommendation skipped",e?.code||e?.message||e);
+    state.threadMatchCache[fid]={items:[],loaded:true,failed:true};
+    renderThreadMatchRecommendations(fid);
+  }finally{
+    state.threadMatchLoading[fid]=false;
+  }
+}
+function openLinkDialog(fid){
+  state.pendingLinkFragmentId=fid;
+  $("linkFragmentId").value=fid;
+  $("linkThreadSearch").value="";
+  delete state.threadMatchCache[fid]; // 열 때마다 현재 Thread 구성을 기준으로 다시 계산
+  renderLinkThreadList();
+  renderThreadMatchRecommendations(fid);
+  $("linkDialog").showModal();
+  loadThreadMatchRecommendations(fid);
+}
 async function linkFragment(fid,tid){
-  const f=state.fragments.find(x=>x.id===fid);if(!f)return;f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
+  const f=state.fragments.find(x=>x.id===fid);if(!f)return;
+  f.threadIds=[...new Set([...(f.threadIds||[]),tid])];
+  f.updatedAt=new Date().toISOString();
+  await persist("fragments",f);
+  delete state.threadMatchCache[fid];
+  $("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
 }
 async function addThreadThought(tid){
   const el=$("threadThoughtInput"),text=el?.value.trim();
