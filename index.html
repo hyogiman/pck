@@ -192,9 +192,9 @@
          그래야 화면이 짧거나 글자 배율이 커서 내용이 넘쳐도, 끝까지 내렸을 때 카드가 알약을 피한다. */
       --menu-zone:110px;
       min-height:calc(100vh - 20px);
-      /* 콜드 스타트 직후 100dvh가 잠깐 실제보다 크게 잡히는 기기가 있어,
-         실제로 잰 높이(--vh)와 둘 중 작은 값을 쓴다. 값이 확정되면 자동으로 다시 맞춰진다. */
-      min-height:calc(min(var(--vh,100dvh),100dvh) - 20px - env(safe-area-inset-top));
+      /* 콜드 스타트 직후엔 100dvh가 실제보다 '작게' 잡혀 카드가 붕 뜬다.
+         그래서 실제로 잰 높이(--vh)를 그대로 쓰고, 값이 확정되면 스스로 다시 맞춘다. */
+      min-height:calc(var(--vh,100dvh) - 20px - env(safe-area-inset-top));
       display:flex;flex-direction:column;align-items:center;justify-content:space-between;
       text-align:center;padding:10px 10px calc(var(--menu-zone) + env(safe-area-inset-bottom));gap:10px}
     @media (max-height:640px){.home-minimal{--menu-zone:92px;gap:6px}}
@@ -2602,7 +2602,7 @@ function syncViewportHeight(){
   const el=document.activeElement;
   if(el&&/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))return;   // 키보드가 올라온 상태는 건너뛴다
   const h=Math.round(window.innerHeight||0);
-  if(!h)return;
+  if(h<320)return;                                              // 말이 안 되는 값은 무시
   const cur=Math.round(parseFloat(document.documentElement.style.getPropertyValue("--vh"))||0);
   if(Math.abs(cur-h)<1)return;
   document.documentElement.style.setProperty("--vh",h+"px");
@@ -2611,7 +2611,7 @@ syncViewportHeight();
 ["resize","orientationchange","pageshow","load"].forEach(ev=>window.addEventListener(ev,()=>setTimeout(syncViewportHeight,0)));
 window.visualViewport&&window.visualViewport.addEventListener("resize",syncViewportHeight);
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)syncViewportHeight()});
-[80,250,600,1500].forEach(ms=>setTimeout(syncViewportHeight,ms));   // 콜드 스타트에서 늦게 확정되는 경우 대비
+[60,150,300,600,1200,2500,4000].forEach(ms=>setTimeout(syncViewportHeight,ms)); // 콜드 스타트에서 늦게 확정되는 경우 대비
 
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(e=>console.warn("SW 등록 실패",e))});
