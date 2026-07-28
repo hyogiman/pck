@@ -292,6 +292,42 @@
     .card.published .title{color:#4a5450}
     .pub-line{font-size:.75rem;color:var(--muted);margin-top:10px}
     .pub-line a{color:var(--accent);font-weight:700;text-decoration:none}
+    .writing-room-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:11px}
+    .writing-room-head .shelf-done-head{margin-bottom:0}
+    .writing-room-total{font-size:.68rem;color:var(--muted);font-variant-numeric:tabular-nums}
+    .archive-card{background:linear-gradient(145deg,#fffefa,#f8faf6)!important;border-color:#d5e2d8!important}
+    .archive-card .title{font-size:1.04rem;color:#314b39!important}
+    .archive-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px;font-size:.68rem;color:var(--muted)}
+    .archive-meta b{color:#42654d}
+    .archive-view{max-width:760px;margin:0 auto}
+    .archive-paper{margin-top:13px;padding:24px 22px;border:1px solid #dddcd2;border-radius:17px;background:#fffefa;box-shadow:0 8px 26px rgba(44,55,45,.055)}
+    .archive-paper h1{font-family:var(--serif);font-size:1.65rem;line-height:1.3;letter-spacing:-.045em;margin:0 0 9px;color:var(--ink)}
+    .archive-paper-meta{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:16px;margin-bottom:18px;border-bottom:1px solid #ebe8dd;font-size:.68rem;color:var(--muted)}
+    .archive-body{font-family:var(--serif);font-size:1rem;line-height:1.9;color:#282d2a;white-space:pre-wrap;overflow-wrap:anywhere}
+    .archive-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}
+    .archive-process{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+    .archive-process>summary{list-style:none;cursor:pointer;padding:14px 15px;font-size:.77rem;font-weight:850;color:#52665a}
+    .archive-process>summary::-webkit-details-marker{display:none}
+    .archive-process>summary:after{content:"⌄";float:right;color:var(--muted);transition:transform .15s}
+    .archive-process[open]>summary:after{transform:rotate(180deg)}
+    .archive-process-body{padding:0 14px 15px;border-top:1px solid var(--line)}
+    .archive-step{padding:14px 1px;border-bottom:1px dashed #dfdfd7}
+    .archive-step:last-child{border-bottom:0}
+    .archive-step h4{font-family:var(--display);font-size:.95rem;font-weight:500;margin:0 0 9px}
+    .archive-step-q{font-size:.7rem;line-height:1.55;color:var(--muted);margin-top:6px}
+    .archive-step-q.gardener{padding:8px 10px;border-radius:9px;background:#eef6ef;color:#476451}
+    .archive-step-answer{font-family:var(--serif);font-size:.88rem;line-height:1.7;white-space:pre-wrap;margin-top:9px;color:var(--ink)}
+    .archive-preview-note{margin-top:8px;padding:9px 11px;border-radius:10px;background:#f7f7f2;color:var(--muted);font-size:.68rem;line-height:1.5}
+    .slot-material-full{font-size:.78rem;line-height:1.65}
+    .slot-material-source{font-size:.65rem;font-weight:800;color:#65776c;margin-bottom:8px}
+    .slot-material-part{margin-top:9px}
+    .slot-material-part:first-of-type{margin-top:0}
+    .slot-material-part-label{display:block;margin-bottom:4px;font-size:.58rem;font-weight:900;letter-spacing:.08em;color:#8a897d}
+    .slot-material-quote{margin:0;padding:10px 11px;border-left:3px solid #a7c4ae;border-radius:0 9px 9px 0;background:#f5f8f3;font-family:var(--serif);font-size:.82rem;line-height:1.65;white-space:pre-wrap;color:#4d584f}
+    .slot-material-thought{font-family:var(--serif);font-size:.84rem;line-height:1.7;white-space:pre-wrap;color:var(--ink)}
+    .slot-material-locator{display:block;margin-top:5px;font-size:.62rem;color:var(--muted)}
+    .slot-insight-label{display:block;margin:12px 2px 6px;font-size:.61rem;font-weight:900;letter-spacing:.09em;color:#64746a}
+    .finish-writing-btn{margin-top:15px;padding:14px!important;font-size:.9rem!important}
     .moved-note{font-size:.7rem;color:var(--muted);opacity:.85}
     .frag-filters{margin-bottom:16px}
     .frag-filters .input{margin-bottom:9px}
@@ -743,7 +779,7 @@
 
   <section class="view" data-view="studio">
     <div id="studioIndex">
-      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각을 대신 써주는 곳이 아니라, 내 재료를 이야기 구조에 배치하는 작업대.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
+      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각과 재료를 한 편의 글로 완성하고, 끝낸 글은 나만의 글방에 쌓아둡니다.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
       <div id="projectList"></div>
     </div>
     <div id="projectDetail" class="hidden"></div>
@@ -1051,12 +1087,12 @@
 
 <dialog id="publishDialog">
   <div class="modal">
-    <div class="modal-head"><div><div class="eyebrow">DONE</div><h2>내보낸 글로 표시</h2></div><button class="close-btn" data-close="publishDialog" type="button">✕</button></div>
+    <div class="modal-head"><div><div class="eyebrow">FINISH</div><h2>한 편의 글로 완성하기</h2></div><button class="close-btn" data-close="publishDialog" type="button">✕</button></div>
     <input id="publishProjectId" type="hidden" />
-    <p class="helper" style="margin:0 0 4px">한 편을 끝냈다는 표시예요. 작업대와 글은 그대로 남습니다.</p>
-    <div class="field"><label for="publishUrl">올린 곳 주소 <span style="color:var(--muted);font-weight:500">(선택)</span></label><input class="input" id="publishUrl" placeholder="https://blog.naver.com/..." /></div>
-    <div class="field"><label for="publishDate">내보낸 날</label><input class="input" type="date" id="publishDate" /></div>
-    <div class="modal-actions"><button class="btn" data-close="publishDialog" type="button">취소</button><button class="btn primary" id="confirmPublish" type="button">내보냄으로 표시</button></div>
+    <p class="helper" style="margin:0 0 12px">작업대의 문항별 답변을 순서대로 하나의 글로 합쳐 <b>나의 글방</b>에 보관합니다. 문장은 AI가 고치지 않습니다.</p>
+    <div class="field"><label for="publishTitle">완성된 글의 제목</label><input class="input" id="publishTitle" placeholder="이 글의 제목을 적어주세요" autocomplete="off" /></div>
+    <div class="archive-preview-note" id="publishPreviewNote"></div>
+    <div class="modal-actions"><button class="btn" data-close="publishDialog" type="button">계속 쓰기</button><button class="btn primary" id="confirmPublish" type="button">📚 글방에 보관하기</button></div>
   </div>
 </dialog>
 
@@ -2543,19 +2579,33 @@ function fragmentCard(f,compact=false){
     <div class="note-tail"><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
   </article>`;
 }
+function archiveBodyForProject(p){
+  if((p.archiveBody||"").trim())return String(p.archiveBody).trim();
+  return projectSlots(p).map(s=>(s.text||"").trim()).filter(Boolean).join("\n\n").trim();
+}
+function countArticleChars(text,{spaces=true}={}){
+  const noBreaks=String(text||"").replace(/\r?\n/g,"");
+  return spaces?noBreaks.length:noBreaks.replace(/\s/g,"").length;
+}
+function archiveTitleForProject(p){return (p.archiveTitle||p.title||"제목 없음").trim()}
+function archiveCharCount(p){
+  const body=archiveBodyForProject(p);
+  return Number(p.archiveCharCount||countArticleChars(body,{spaces:true}));
+}
 function renderStudio(){
   const working=state.projects.filter(p=>p.status!=="published");
   const done=state.projects.filter(p=>p.status==="published")
     .sort((a,b)=>String(b.publishedAt||"").localeCompare(String(a.publishedAt||"")));
   if(state.doneLimit==null)state.doneLimit=3;
   const shown=done.slice(0,state.doneLimit);
+  const totalChars=done.reduce((sum,p)=>sum+archiveCharCount(p),0);
   $("projectList").innerHTML=(working.length
       ? working.map(projectCard).join("")
-      : empty("🏭",done.length?"진행 중인 작업이 없어요.":"아직 Studio 작업이 없어요.",done.length?"다음 글을 시작해보세요.":"Thread 하나를 골라 콘텐츠 작업대로 보내보세요."))
+      : empty("🏭",done.length?"진행 중인 작업이 없어요.":"아직 Studio 작업이 없어요.",done.length?"글방에 글이 쌓이고 있어요. 다음 글을 시작해볼까요?":"Thread 하나를 골라 작업대로 보내보세요."))
     +(done.length?`<div class="shelf-done">
-        <div class="shelf-done-head">📚 내보낸 글 <b>${done.length}</b></div>
+        <div class="writing-room-head"><div class="shelf-done-head">📚 나의 글방 <b>${done.length}편</b></div><div class="writing-room-total">총 ${totalChars.toLocaleString("ko-KR")}자</div></div>
         ${shown.map(projectCard).join("")}
-        ${done.length>shown.length?`<button class="more-btn" data-more="done" type="button">${done.length-shown.length}개 더 보기</button>`:""}
+        ${done.length>shown.length?`<button class="more-btn" data-more="done" type="button">${done.length-shown.length}편 더 보기</button>`:""}
       </div>`:"");
 }
 const templates={
@@ -2595,33 +2645,57 @@ function projectSlots(p){const base=templates[p.format]||templates.blog;return b
 function projectCard(p){
   const slots=projectSlots(p),done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
   const pub=p.status==="published";
-  return `<article class="card click-card ${pub?"published":""}" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"블로그"}</span>${pub?`<span class="status done">✓ 내보냄</span>`:`<span class="date">${pct}%</span>`}</div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
-    ${pub
-      ? `<div class="pub-line">${esc(fmt((p.publishedAt||"").slice(0,10)))}${p.url?` · <a href="${esc(p.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">글 보러가기 ↗</a>`:""}</div>`
-      : `<div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div>`}
+  if(pub){
+    const chars=archiveCharCount(p),title=archiveTitleForProject(p);
+    return `<article class="card click-card archive-card" data-open-project="${p.id}">
+      <div class="card-head"><span class="chip">📖 완성 글</span><span class="date">${esc(fmt((p.publishedAt||p.updatedAt||"").slice(0,10)))}</span></div>
+      <div class="title">${esc(title)}</div>
+      <div class="archive-meta"><span><b>${chars.toLocaleString("ko-KR")}</b>자</span>${t?`<span>🌱 ${esc(t.title)}</span>`:""}</div>
+    </article>`;
+  }
+  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"글 작업"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
+    <div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div>
   </article>`;
 }
 function openPublishDialog(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;
+  const slots=readSlotTextInto(p);
+  const body=slots.map(s=>(s.text||"").trim()).filter(Boolean).join("\n\n").trim();
+  if(!body)return toast("아직 작성한 내용이 없어요.");
   $("publishProjectId").value=pid;
-  $("publishUrl").value=p.url||"";
-  $("publishDate").value=(p.publishedAt||"").slice(0,10)||today();
+  $("publishTitle").value=p.archiveTitle||p.title||"";
+  const chars=countArticleChars(body,{spaces:true});
+  const noSpaces=countArticleChars(body,{spaces:false});
+  $("publishPreviewNote").innerHTML=`지금 작업대를 합치면 <b>${chars.toLocaleString("ko-KR")}자</b>입니다. <span style="color:var(--muted)">(공백 제외 ${noSpaces.toLocaleString("ko-KR")}자)</span>`;
   $("publishDialog").showModal();
+  setTimeout(()=>$("publishTitle")?.focus(),80);
 }
 async function confirmPublish(){
   const p=state.projects.find(x=>x.id===$("publishProjectId").value);if(!p)return;
-  p.status="published";p.url=$("publishUrl").value.trim();
-  p.publishedAt=$("publishDate").value||today();
+  const title=$("publishTitle").value.trim();if(!title)return toast("완성된 글의 제목을 적어주세요.");
+  const slots=readSlotTextInto(p);
+  const body=slots.map(s=>(s.text||"").trim()).filter(Boolean).join("\n\n").trim();
+  if(!body)return toast("아직 작성한 내용이 없어요.");
+
+  p.slots=slotsToData(slots);
+  p.status="published";
+  p.archiveTitle=title;
+  p.archiveBody=body;
+  p.archiveCharCount=countArticleChars(body,{spaces:true});
+  p.archiveCharCountNoSpaces=countArticleChars(body,{spaces:false});
+  p.archiveSlots=slots.map(s=>({id:s.id,title:s.title||"",prompt:s.prompt||"",gardenerQuestion:s.gardenerQuestion||"",text:s.text||""}));
+  p.publishedAt=new Date().toISOString();
   p.updatedAt=new Date().toISOString();
   await persist("projects",p);
+  clearStudioDraft();
   $("publishDialog").close();renderAll();openProject(p.id);
   const n=state.projects.filter(x=>x.status==="published").length;
-  toast(`내보낸 글 ${n}편째예요. 🌾`);
+  toast(`나의 글방에 ${n}번째 글을 보관했어요. 📚`);
 }
 async function unpublishProject(pid){
   const p=state.projects.find(x=>x.id===pid);if(!p)return;
   p.status="writing";p.updatedAt=new Date().toISOString();
-  await persist("projects",p);renderAll();openProject(pid);toast("다시 작업 중으로 되돌렸어요.");
+  await persist("projects",p);renderAll();openProject(pid);toast("글방에서 꺼내 작업대로 되돌렸어요.");
 }
 function downloadText(text,name){const b=new Blob([text],{type:"text/markdown;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();}
 function exportProject(pid){
@@ -2631,37 +2705,60 @@ function exportProject(pid){
   if(!paras.length){toast("아직 작성한 내용이 없어요. 이야기 구조 칸을 채워보세요.");return}
   const body=("# "+(p.title||"제목 없음")+"\n\n"+paras.join("\n\n")).trim();
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(body).then(()=>toast("글이 복사됐어요 — 블로그에 붙여넣기 하세요. ✍️")).catch(()=>downloadText(body,(p.title||"draft")+".md"));
+    navigator.clipboard.writeText(body).then(()=>toast("글이 복사됐어요. ✍️")).catch(()=>downloadText(body,(p.title||"draft")+".md"));
   }else downloadText(body,(p.title||"draft")+".md");
+}
+function archiveSlotsForProject(p){
+  if(Array.isArray(p.archiveSlots)&&p.archiveSlots.length)return p.archiveSlots;
+  return projectSlots(p).map(s=>({id:s.id,title:s.title,prompt:s.prompt,gardenerQuestion:s.gardenerQuestion||"",text:s.text||""}));
+}
+function copyTextToClipboard(text,doneMessage="복사했습니다."){
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast(doneMessage)).catch(()=>downloadText(text,"writing.txt"));
+  }else downloadText(text,"writing.txt");
+}
+function openArchivedProject(p){
+  $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");
+  const body=archiveBodyForProject(p),title=archiveTitleForProject(p);
+  const chars=Number(p.archiveCharCount||countArticleChars(body,{spaces:true}));
+  const noSpaces=Number(p.archiveCharCountNoSpaces||countArticleChars(body,{spaces:false}));
+  const steps=archiveSlotsForProject(p).filter(s=>(s.text||"").trim()||s.gardenerQuestion||s.prompt);
+  const process=steps.map(s=>`<div class="archive-step">
+    <h4>${esc(s.title||s.id||"문항")}</h4>
+    ${s.prompt?`<div class="archive-step-q"><b>기본 질문</b> · ${esc(s.prompt)}</div>`:""}
+    ${s.gardenerQuestion?`<div class="archive-step-q gardener"><b>🌿 정원사 질문</b><br>${esc(s.gardenerQuestion)}</div>`:""}
+    ${(s.text||"").trim()?`<div class="archive-step-answer">${esc(s.text)}</div>`:""}
+  </div>`).join("");
+
+  $("projectDetail").innerHTML=`<div class="archive-view">
+    <div class="detail-topline"><button class="back-btn" data-back-studio type="button">← 나의 글방</button><div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-unpublish="${p.id}" type="button">작업대로 되돌리기</button><button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div></div>
+    <article class="archive-paper">
+      <div class="eyebrow">MY WRITING ROOM</div>
+      <h1>${esc(title)}</h1>
+      <div class="archive-paper-meta"><span>${esc(fmt((p.publishedAt||p.updatedAt||"").slice(0,10)))}</span><span>공백 포함 <b>${chars.toLocaleString("ko-KR")}자</b></span><span>공백 제외 ${noSpaces.toLocaleString("ko-KR")}자</span></div>
+      <div class="archive-body">${esc(body)}</div>
+      <div class="archive-actions"><button class="btn soft" data-copy-archive="${p.id}" type="button">📋 글 전체 복사</button></div>
+    </article>
+    <details class="archive-process"><summary>작업 과정 보기 · ${steps.length}개 문항</summary><div class="archive-process-body">${process||'<div class="helper" style="padding-top:13px">보관된 작업 과정이 없습니다.</div>'}</div></details>
+  </div>`;
 }
 function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
+  if(p.status==="published")return openArchivedProject(p);
   const _draft=loadStudioDraft();
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
-  const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100);
+  const done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100);
   const next=slots.find(s=>!((s.text||"").trim()));
   const nextLine=next
     ? `<div class="next-question"><span class="next-label">다음 칸</span><p class="serif">${esc(next.title)}</p></div>`
     :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
-  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button>${p.status==="published"?`<button class="text-btn" data-unpublish="${p.id}" type="button">작업 중으로 되돌리기</button>`:`<button class="text-btn" data-publish="${p.id}" type="button">✓ 내보냄 표시</button>`}<button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div>
+  $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
-    <div class="studio-layout section">
-      <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>빈칸이 다음 생각을 끌어냅니다.</p></div><span class="save-hint" id="saveHint"></span></div>
-      ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block" data-save-all-slots="${p.id}" type="button">작업대 저장</button></section>
-      <aside class="material-pool">
-        <button class="pool-toggle" id="poolToggle" type="button"><span>🧺 재료함 <b>${pool.length}</b></span><span class="pool-caret">▾</span></button>
-        <div class="pool-body hidden" id="poolBody">
-          <div id="poolTabs"></div>
-          <input class="input pool-search" id="poolSearch" placeholder="재료 검색" autocomplete="off">
-          <div id="poolList"></div>
-        </div>
-      </aside>
+    <div class="section">
+      <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>질문과 재료를 발판 삼아 한 편의 글을 완성합니다.</p></div><span class="save-hint" id="saveHint"></span></div>
+      ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block finish-writing-btn" data-publish="${p.id}" type="button">📚 글로 내보내기</button></section>
     </div>`;
   setTimeout(growAll,0);
-  state.poolThread=t?threadFragments(t.id):null;
-  state.poolAll=state.fragments;
-  state.poolMode=t?"thread":"all";
-  renderPool();
   /* 저장 못 하고 닫혔던 초안이 이 작업대의 것이고, 마지막 저장보다 새것이면 되살린다 */
   if(_draft&&_draft.pid===id&&_draft.at>new Date(p.updatedAt||0).getTime()){
     let restored=false;
@@ -2715,6 +2812,19 @@ function slotsToData(slots){return slots.map(s=>({
   ...(s.thoughtFragmentId?{thoughtFragmentId:s.thoughtFragmentId}:{})
 }))}
 async function persistSlots(p,slots){p.slots=slotsToData(slots);p.updatedAt=new Date().toISOString();await persist("projects",p)}
+function studioAttachedMaterialHTML(f,pid,slotId){
+  const source=srcLabel(f);
+  const thought=String(f.thought||f.text||"").trim();
+  const quote=String(f.externalText||"").trim();
+  const context=String(f.context||"").trim();
+  return `<div class="material attached slot-material-full">
+    <button class="mat-del" data-detach="${f.id}" data-slot="${slotId}" data-project="${pid}" type="button" aria-label="이 재료 빼기">✕</button>
+    <div class="slot-material-source">${source}</div>
+    ${quote?`<div class="slot-material-part"><span class="slot-material-part-label">가져온 문장 · 장면</span><blockquote class="slot-material-quote">${esc(quote)}${f.locator?`<span class="slot-material-locator">${esc(f.locator)}</span>`:""}</blockquote></div>`:""}
+    ${thought?`<div class="slot-material-part"><span class="slot-material-part-label">내 생각</span><div class="slot-material-thought">${esc(thought)}</div></div>`:""}
+    ${context?`<div class="slot-material-part"><span class="slot-material-part-label">맥락</span><div class="slot-material-thought" style="font-family:var(--sans);font-size:.74rem;color:var(--muted)">${esc(context)}</div></div>`:""}
+  </div>`;
+}
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
   const answered=!!((s.text||"").trim());
@@ -2734,9 +2844,10 @@ function slotHTML(p,s){
       ${gardenerOn?`<div class="slot-guidance-actions"><button class="btn soft slot-gardener-call" data-call-slot-gardener="${s.id}" data-project="${p.id}" type="button">${s.gardenerQuestion?"↻ 정원사 질문 다시 받기":"🌿 정원사 질문 받기"}</button></div>`:""}
     </div>
 
-    ${attached.length?`<div class="slot-material-zone"><span class="slot-material-label">MATERIAL · ${attached.length}</span>${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}</div>`:""}
+    ${attached.length?`<div class="slot-material-zone"><span class="slot-material-label">MATERIAL · ${attached.length}</span>${attached.map(f=>studioAttachedMaterialHTML(f,p.id,s.id)).join("")}</div>`:""}
 
-    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea>
+    <span class="slot-insight-label">MY WRITING · 이 질문과 재료에서 이어진 내 생각</span>
+    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="읽고 생각한 뒤, 여기서 새롭게 이어진 내 생각을 적어보세요.">${esc(s.text||"")}</textarea>
     <div class="slot-thought-export"><button class="btn ${savedThought?"soft":""}" data-export-slot-thought="${s.id}" data-project="${p.id}" type="button">${savedThought?"🌱 생각 카드 업데이트":"🌱 생각으로 남기기"}</button></div>
   </div>`;
 }
@@ -3711,7 +3822,6 @@ document.addEventListener("click",async e=>{
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
   const rn=e.target.closest("[data-resurface-next]");if(rn)return renderResurface(true);
-  const ep=e.target.closest("[data-export-project]");if(ep)return exportProject(ep.dataset.exportProject);
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
   if(e.target.closest("#gardenUnlinkedSummary"))return openFragmentList("연결되지 않은 생각",state.fragments.filter(f=>!(f.threadIds||[]).length));
@@ -3728,6 +3838,9 @@ document.addEventListener("click",async e=>{
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
   if(e.target.closest("[data-back-studio]")){flushSlotSave();state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
+  const copyArchive=e.target.closest("[data-copy-archive]");if(copyArchive){const p=state.projects.find(x=>x.id===copyArchive.dataset.copyArchive);if(p)return copyTextToClipboard(`${archiveTitleForProject(p)}
+
+${archiveBodyForProject(p)}`,"완성된 글 전체를 복사했어요. ✍️")}
   const pubB=e.target.closest("[data-publish]");if(pubB)return openPublishDialog(pubB.dataset.publish);
   const unpubB=e.target.closest("[data-unpublish]");if(unpubB)return unpublishProject(unpubB.dataset.unpublish);
   const mb=e.target.closest("[data-more]");
@@ -3845,6 +3958,7 @@ $("mergeGuardMerge").addEventListener("click",startAccountMerge);
 $("migrateRetry").addEventListener("click",retryMigration);
 $("importData").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)importData(f);e.target.value=""});
 $("confirmPublish").addEventListener("click",confirmPublish);
+$("publishTitle").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();confirmPublish()}});
 function renderSparkSettings(){
   const off=localStorage.getItem("tg_spark_off")==="1";
   $("sparkTime").value=localStorage.getItem("tg_spark_time")||"21:00";
