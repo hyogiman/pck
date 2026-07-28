@@ -374,6 +374,18 @@
     .ai-usage-section-title:first-child{margin-top:0;padding-top:0;border-top:0}
     .ai-usage-total{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px;padding:10px 11px;border-radius:11px;background:#eef6ef;color:#315c42;font-size:.77rem;font-weight:850}
     .ai-usage-sub{font-size:.65rem;color:var(--muted)}
+    .official-usage-box{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+    .official-usage-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .official-usage-head strong{display:block;font-size:.78rem;color:#375d45}
+    .official-usage-head small{display:block;margin-top:3px;font-size:.61rem;color:var(--muted)}
+    .official-usage-body{margin-top:10px}
+    .official-usage-grid{display:grid;grid-template-columns:1fr auto;gap:7px 12px;font-size:.71rem}
+    .official-usage-grid .value{text-align:right;font-weight:850;color:var(--ink);font-variant-numeric:tabular-nums}
+    .official-usage-title{grid-column:1/-1;margin-top:6px;padding-top:9px;border-top:1px dashed #d9ddd7;font-size:.64rem;font-weight:900;color:#61766a;letter-spacing:.05em}
+    .official-usage-title:first-child{margin-top:0;padding-top:0;border-top:0}
+    .official-cost-highlight{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border-radius:11px;background:#f2f5f2;color:#3f5d49;font-size:.76rem;font-weight:850}
+    .official-usage-empty{padding:10px 0;font-size:.68rem;color:var(--muted);line-height:1.55}
+    .official-usage-error{padding:10px 11px;border-radius:10px;background:#fff4f1;color:#8a5145;font-size:.68rem;line-height:1.55}
     .ai-usage-note{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:.68rem;line-height:1.55;color:var(--muted)}
     .completion{display:flex;align-items:center;gap:11px}
     .completion strong{font-family:var(--serif);font-size:1.35rem;font-weight:700}
@@ -1079,6 +1091,19 @@
             <button class="btn soft" id="studioLimitPlus10" type="button">오늘 한도 +10회</button>
           </div>
           <div class="ai-usage-note" id="studioUsageNote">실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.</div>
+
+          <div class="official-usage-box" id="openAiOfficialUsageBox">
+            <div class="official-usage-head">
+              <div>
+                <strong>🧾 OpenAI 공식 사용량</strong>
+                <small>OpenAI Usage / Costs API · UTC 기준</small>
+              </div>
+              <button class="btn soft" id="openAiOfficialRefresh" type="button">공식 사용량 새로고침</button>
+            </div>
+            <div class="official-usage-body" id="openAiOfficialUsageBody">
+              <div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>
+            </div>
+          </div>
         </div>
         <div class="actions" style="margin-top:12px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
         <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
@@ -1272,6 +1297,64 @@ function renderStudioUsage(data){
     const max=100;
     plus.disabled=limit>=max;
     plus.textContent=limit>=max?"오늘 최대 한도 100회":"오늘 한도 +10회";
+  }
+}
+function formatOfficialUsd(n){
+  const v=Number(n||0);
+  if(v===0)return "$0.0000";
+  if(v<0.0001)return "< $0.0001";
+  if(v<0.01)return `$${v.toFixed(4)}`;
+  return `$${v.toFixed(2)}`;
+}
+function renderOpenAiOfficialUsage(data){
+  const box=$("openAiOfficialUsageBody");if(!box)return;
+  if(!data){
+    box.innerHTML=`<div class="official-usage-empty">공식 사용량 데이터를 불러오지 못했습니다.</div>`;
+    return;
+  }
+
+  const t=data.today||{},m=data.month||{};
+  const currency=String(data.currency||"usd").toUpperCase();
+  const projectLabel=data.projectScoped?"생각의 텃밭 OpenAI Project":"조직 전체";
+
+  box.innerHTML=`<div class="official-usage-grid">
+    <span class="official-usage-title">오늘 · UTC · ${esc(projectLabel)}</span>
+    <span>GPT 입력 토큰</span><span class="value">${Number(t.completionsInputTokens||0).toLocaleString("ko-KR")}</span>
+    <span>GPT 출력 토큰</span><span class="value">${Number(t.completionsOutputTokens||0).toLocaleString("ko-KR")}</span>
+    <span>GPT 요청</span><span class="value">${Number(t.completionsRequests||0).toLocaleString("ko-KR")}회</span>
+    <span>Embedding 입력 토큰</span><span class="value">${Number(t.embeddingInputTokens||0).toLocaleString("ko-KR")}</span>
+    <span>Embedding 요청</span><span class="value">${Number(t.embeddingRequests||0).toLocaleString("ko-KR")}회</span>
+    <span class="official-cost-highlight"><span>오늘 OpenAI 공식 비용</span><strong>${formatOfficialUsd(t.costUsd||0)} ${esc(currency)}</strong></span>
+
+    <span class="official-usage-title">이번 달 누적 · UTC</span>
+    <span>GPT 입력 / 출력</span><span class="value">${Number(m.completionsInputTokens||0).toLocaleString("ko-KR")} / ${Number(m.completionsOutputTokens||0).toLocaleString("ko-KR")}</span>
+    <span>Embedding 입력 토큰</span><span class="value">${Number(m.embeddingInputTokens||0).toLocaleString("ko-KR")}</span>
+    <span class="official-cost-highlight"><span>이번 달 OpenAI 공식 비용</span><strong>${formatOfficialUsd(m.costUsd||0)} ${esc(currency)}</strong></span>
+  </div>
+  <div class="ai-usage-note" style="margin-top:9px">OpenAI 공식 Usage/Costs API에서 가져온 값입니다. 앱 자체 계기판은 KST, 이 공식 집계는 OpenAI 대시보드와 같은 UTC 기준입니다.</div>`;
+}
+async function refreshOpenAiOfficialUsage(){
+  const body=$("openAiOfficialUsageBody"),btn=$("openAiOfficialRefresh");
+  if(!body||!btn)return;
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous){
+    body.innerHTML=`<div class="official-usage-error">Google 로그인 후 공식 사용량을 확인할 수 있습니다.</div>`;
+    return;
+  }
+
+  const old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";
+  body.innerHTML=`<div class="official-usage-empty">OpenAI 공식 Usage / Costs를 조회하고 있어요…</div>`;
+  try{
+    const data=await callFn("openAiOfficialUsage",{});
+    renderOpenAiOfficialUsage(data);
+  }catch(e){
+    console.warn("OpenAI official usage failed",e);
+    const msg=String(e?.message||"");
+    const setup=msg.includes("OPENAI_ADMIN_KEY")||msg.includes("OPENAI_PROJECT_ID")||msg.includes("설정");
+    body.innerHTML=`<div class="official-usage-error">${setup
+      ?"OpenAI Admin Key 또는 Project ID 설정이 아직 끝나지 않았어요. 아래 배포 안내의 Secret 설정을 먼저 해주세요."
+      :"OpenAI 공식 사용량을 불러오지 못했습니다. Admin Key 권한과 Project ID를 확인해주세요."}</div>`;
+  }finally{
+    btn.disabled=false;btn.textContent=old;
   }
 }
 async function refreshStudioUsage(){
@@ -3556,6 +3639,7 @@ $("sheetSettings").addEventListener("click",()=>{
   closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();
   $("studioUsagePanel")?.classList.add("hidden");
   if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 AI 사용량 보기";
+  if($("openAiOfficialUsageBody"))$("openAiOfficialUsageBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>`;
   $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
 });
@@ -3628,6 +3712,7 @@ $("sparkToggle").addEventListener("click",()=>{
   renderSparkSettings();renderSpark();
 });
 $("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
+$("openAiOfficialRefresh").addEventListener("click",refreshOpenAiOfficialUsage);
 $("studioLimitPlus10").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
   const btn=$("studioLimitPlus10");
