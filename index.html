@@ -339,6 +339,21 @@
     .gardener-box{margin-top:10px;padding:12px 14px;border:1px solid #d3e2d5;background:var(--accent3);border-radius:13px;text-align:left}
     .gardener-box .g-label{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--accent)}
     .gardener-box p{font-family:var(--serif);margin:6px 0 0;font-size:.94rem;line-height:1.58;color:#2c4a38}
+    .studio-guidance-zone{margin-top:8px}
+    .slot-material-zone{margin:12px 0 10px;padding:10px 11px 4px;border:1px solid #dedfd4;border-radius:12px;background:#fbfaf5}
+    .slot-material-label{display:block;margin:0 2px 8px;font-size:.61rem;font-weight:900;letter-spacing:.09em;color:#8a897d}
+    .slot-material-zone .material.attached{margin-bottom:7px;background:#fff;border-color:#e4e1d6}
+    .studio-guidance-zone .gardener-box{margin-top:0}
+    .attach-ai-recommend{margin:11px 0 13px;padding:12px;border:1px solid #c8dfcf;border-radius:14px;background:linear-gradient(145deg,#f7fbf7,#edf6ef)}
+    .attach-ai-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .attach-ai-head strong{font-size:.76rem;color:#2d6847}
+    .attach-ai-head small{font-size:.62rem;color:var(--muted);text-align:right}
+    .attach-ai-card{display:flex;align-items:flex-start;gap:9px;width:100%;padding:10px 11px;margin-top:7px;border:1px solid #d7e6da;border-radius:12px;background:rgba(255,255,255,.86);text-align:left;cursor:pointer}
+    .attach-ai-card:first-of-type{margin-top:0}
+    .attach-ai-rank{display:grid;place-items:center;min-width:24px;height:24px;border-radius:999px;background:#dcecdf;color:#2e6847;font-size:.67rem;font-weight:900}
+    .attach-ai-main{min-width:0;flex:1}
+    .attach-ai-source{font-size:.63rem;color:#64806d;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .attach-ai-text{font-family:var(--serif);font-size:.82rem;line-height:1.5;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .studio-gardener-call{margin-top:9px;border-color:#bdd8c5!important;color:#2d6847!important;background:#f2f8f3!important;font-weight:850}
     .studio-gardener-call:disabled{opacity:.62}
     .ai-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
@@ -990,6 +1005,7 @@
     <div class="modal-head"><div><div class="eyebrow">MATERIAL</div><h2>이 칸에 넣을 생각 조각</h2></div><button class="close-btn" data-close="attachDialog" type="button">✕</button></div>
     <input id="attachProjectId" type="hidden" /><input id="attachSlotId" type="hidden" />
     <div id="attachTabs"></div>
+    <div id="attachAiRecommend" class="attach-ai-recommend hidden"></div>
     <input class="input" id="attachSearch" placeholder="재료 검색 (문장·책 제목)" autocomplete="off" style="margin-bottom:12px">
     <div id="attachFragmentList"></div>
   </div>
@@ -1100,7 +1116,8 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
   aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
-  threadMatchCache:{},threadMatchLoading:{}};
+  threadMatchCache:{},threadMatchLoading:{},
+  studioMaterialCache:{},studioMaterialLoading:{}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2301,7 +2318,7 @@ const templates={
 const FORMAT_LABEL={blog:"블로그",shorts:"유튜브 · 쇼츠",instagram:"인스타",podcast:"팟캐스트"};
 function projectSlots(p){const base=templates[p.format]||templates.blog;return base.map(b=>({ ...b, ...(p.slots?.find(s=>s.id===b.id)||{text:"",fragmentIds:[]})}))}
 function projectCard(p){
-  const slots=projectSlots(p),done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
+  const slots=projectSlots(p),done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100),t=state.threads.find(x=>x.id===p.threadId);
   const pub=p.status==="published";
   return `<article class="card click-card ${pub?"published":""}" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"블로그"}</span>${pub?`<span class="status done">✓ 내보냄</span>`:`<span class="date">${pct}%</span>`}</div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
     ${pub
@@ -2346,8 +2363,8 @@ function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
   const _draft=loadStudioDraft();
   $("studioIndex").classList.add("hidden");$("projectDetail").classList.remove("hidden");const slots=projectSlots(p),t=state.threads.find(x=>x.id===p.threadId);
-  const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>s.text||(s.fragmentIds||[]).length).length,pct=Math.round(done/slots.length*100);
-  const next=slots.find(s=>!(s.text||(s.fragmentIds||[]).length));
+  const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100);
+  const next=slots.find(s=>!((s.text||"").trim()));
   const nextLine=next
     ? (studioGardenerEnabled()
         ? `<div class="next-question"><span class="next-label">🌿 정원사</span><p class="serif">다음 질문이 필요할 때 정원사를 불러보세요.</p><button class="btn soft studio-gardener-call" data-call-studio-gardener="${p.id}" type="button">다음 질문 받기</button><div class="helper" style="margin-top:7px">누를 때만 AI를 사용합니다.</div></div>`
@@ -2419,19 +2436,28 @@ function slotsToData(slots){return slots.map(s=>({id:s.id,text:s.text||"",fragme
 async function persistSlots(p,slots){p.slots=slotsToData(slots);p.updatedAt=new Date().toISOString();await persist("projects",p)}
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
-  const filled=!!(s.text||attached.length);
-  return `<div class="slot ${filled?"done":"empty-slot"}" data-slot-card="${s.id}" data-project-card="${p.id}"><div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
-    ${filled
-      ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
-      : `<div data-base-slot-question="${s.id}"><p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}</div>`}
-    ${!filled?`<div class="gardener-box hidden" data-gardener-slot="${s.id}" data-gardener-project="${p.id}"></div>`:""}
-    ${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}
-    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea></div>`;
+  const answered=!!((s.text||"").trim());
+
+  return `<div class="slot ${answered?"done":"empty-slot"} ${attached.length?"has-materials":""}" data-slot-card="${s.id}" data-project-card="${p.id}">
+    <div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
+
+    <div class="studio-guidance-zone">
+      ${answered
+        ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
+        : `<div data-base-slot-question="${s.id}"><p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}</div>`}
+      ${!answered?`<div class="gardener-box hidden" data-gardener-slot="${s.id}" data-gardener-project="${p.id}"></div>`:""}
+    </div>
+
+    ${attached.length?`<div class="slot-material-zone"><span class="slot-material-label">MATERIAL · ${attached.length}</span>${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}</div>`:""}
+
+    <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea>
+  </div>`;
 }
 function studioQuestionKey(pid,slotId){return `${pid}:${slotId}`}
 function nextEmptyStudioSlot(p){
   if(!p)return null;
-  return projectSlots(p).find(s=>!((s.text||"").trim()||(s.fragmentIds||[]).length))||null;
+  // 재료는 '답변'이 아니다. 텍스트를 실제로 쓴 칸만 완료로 본다.
+  return projectSlots(p).find(s=>!((s.text||"").trim()))||null;
 }
 function setBaseStudioQuestionVisible(slotId,visible){
   const base=document.querySelector(`[data-base-slot-question="${CSS.escape(slotId)}"]`);
@@ -2442,9 +2468,9 @@ function renderStudioGardenerBox(pid,slotId){
   if(!box)return;
   const p=state.projects.find(x=>x.id===pid);
   const slot=p?projectSlots(p).find(s=>s.id===slotId):null;
-  const filled=!!((slot?.text||"").trim()||(slot?.fragmentIds||[]).length);
+  const answered=!!((slot?.text||"").trim());
 
-  if(!studioGardenerEnabled()||filled){
+  if(!studioGardenerEnabled()||answered){
     box.classList.add("hidden");box.innerHTML="";
     setBaseStudioQuestionVisible(slotId,true);
     return;
@@ -3031,13 +3057,81 @@ async function saveProject(){
   const p={id:uid(),title,format,threadId:$("projectThread").value,slots:templates[format].map(s=>({id:s.id,text:"",fragmentIds:[]})),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
   state.projects.unshift(p);await persist("projects",p);$("projectDialog").close();renderStudio();openProject(p.id);toast("Studio 작업대를 만들었습니다.");
 }
+function studioMaterialKey(pid,slotId){return `${pid}:${slotId}`}
+function renderAttachAiRecommendations(pid,slotId){
+  const box=$("attachAiRecommend");if(!box)return;
+  const q=($("attachSearch")?.value||"").trim();
+  if(q){box.classList.add("hidden");return}
+
+  const key=studioMaterialKey(pid,slotId);
+  const cache=state.studioMaterialCache[key];
+
+  if(!cache){
+    box.innerHTML=`<div class="link-recommend-loading"><span class="ai-dot"></span><span>지금까지 쓴 내용과 가까운 재료를 찾고 있어요…</span></div>`;
+    box.classList.remove("hidden");
+    return;
+  }
+
+  const items=(cache.items||[]).map((x,i)=>{
+    const f=state.fragments.find(v=>v.id===x.id);
+    if(!f)return "";
+    return `<button class="attach-ai-card" data-attach-fragment="${f.id}" type="button">
+      <span class="attach-ai-rank">${i+1}</span>
+      <span class="attach-ai-main">
+        <span class="attach-ai-source">${srcLabel(f)}</span>
+        <span class="attach-ai-text">${esc((f.thought||f.text||f.externalText||"").slice(0,170))}</span>
+      </span>
+    </button>`;
+  }).filter(Boolean);
+
+  if(!items.length){box.classList.add("hidden");box.innerHTML="";return}
+
+  box.innerHTML=`<div class="attach-ai-head"><strong>✨ AI 추천 재료</strong><small>제목 · 앞선 답변 · 현재 문항을 바탕으로</small></div>${items.join("")}`;
+  box.classList.remove("hidden");
+}
+async function loadStudioMaterialRecommendations(pid,slotId){
+  if(!state.firebase.connected||!state.firebase.user)return;
+  const key=studioMaterialKey(pid,slotId);
+  if(state.studioMaterialLoading[key])return;
+
+  state.studioMaterialLoading[key]=true;
+  renderAttachAiRecommendations(pid,slotId);
+
+  try{
+    const res=await callFn("studioMaterialRecommendations",{projectId:pid,slotId});
+    state.studioMaterialCache[key]={items:res?.items||[],cachedQuery:!!res?.cachedQuery};
+  }catch(e){
+    console.warn("Studio material recommendation skipped",e?.code||e?.message||e);
+    state.studioMaterialCache[key]={items:[],failed:true};
+  }finally{
+    state.studioMaterialLoading[key]=false;
+    renderAttachAiRecommendations(pid,slotId);
+  }
+}
 function openAttachDialog(pid,slotId){
   $("attachProjectId").value=pid;$("attachSlotId").value=slotId;
   const p=state.projects.find(x=>x.id===pid);
+  if(!p)return;
+
+  // 화면에 방금 수정한 문장이 있다면 먼저 메모리와 Firestore에 반영한다.
+  // 추천은 그 저장이 끝난 뒤 시작하지만 dialog 자체는 바로 연다.
+  clearTimeout(slotSaveTimer);slotSaveTimer=null;
+  const slots=readSlotTextInto(p);
+
   state.attachThread=p?.threadId?threadFragments(p.threadId):null;
   state.attachAll=state.fragments;
   state.attachMode=state.attachThread?"thread":"all";
-  $("attachSearch").value="";renderAttachList();$("attachDialog").showModal();
+  $("attachSearch").value="";
+  delete state.studioMaterialCache[studioMaterialKey(pid,slotId)];
+  renderAttachList();
+  renderAttachAiRecommendations(pid,slotId);
+  $("attachDialog").showModal();
+
+  (async()=>{
+    try{await persistSlots(p,slots);clearStudioDraft();markSaved("자동 저장됨 ✓");}
+    catch(e){console.warn("Studio material pre-save skipped",e)}
+    loadStudioMaterialRecommendations(pid,slotId);
+  })();
 }
 function renderAttachList(){
   const tabs=$("attachTabs");
@@ -3046,7 +3140,11 @@ function renderAttachList(){
     ${state.attachThread?`<button class="pool-tab ${state.attachMode==="thread"?"on":""}" data-attach-mode="thread" type="button">이 Thread ${state.attachThread.length}</button>`:""}
     <button class="pool-tab ${state.attachMode==="all"?"on":""}" data-attach-mode="all" type="button">전체 ${state.attachAll.length}</button>
     ${seedCount?`<button class="pool-tab ${state.attachMode==="seed"?"on":""}" data-attach-mode="seed" type="button">✨ 씨앗 ${seedCount}</button>`:""}</div>`;
+
   const q=($("attachSearch")?.value||"").trim().toLowerCase();
+  const pid=$("attachProjectId")?.value,slotId=$("attachSlotId")?.value;
+  if(pid&&slotId)renderAttachAiRecommendations(pid,slotId);
+
   let pool=state.attachMode==="seed"?state.fragments.filter(f=>effectiveLens(f)==="seed")
     :(state.attachMode==="thread"&&state.attachThread)?state.attachThread:state.attachAll;
   if(q)pool=pool.filter(f=>[f.thought,f.text,f.externalText,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(q));
@@ -3062,6 +3160,7 @@ async function attachFragment(pid,slotId,fid){
   const slot=slots.find(s=>s.id===slotId);if(!slot)return;
   slot.fragmentIds=[...new Set([...(slot.fragmentIds||[]),fid])];
   await persistSlots(p,slots);
+  delete state.studioMaterialCache[studioMaterialKey(pid,slotId)];
   $("attachDialog").close();openProject(pid);toast("재료를 배치했습니다.");
 }
 async function detachFragment(pid,slotId,fid){
