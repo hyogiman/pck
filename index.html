@@ -477,6 +477,30 @@
     .related-preview-quote{font-family:var(--serif);font-size:.92rem;line-height:1.65;padding:12px 14px;background:var(--soft);border-left:3px solid var(--accent);border-radius:0 10px 10px 0;margin:0 0 12px}
     .related-preview-thought{font-family:var(--serif);font-size:1.05rem;line-height:1.75;white-space:pre-wrap;color:var(--ink)}
     .related-preview-context{margin-top:12px;font-size:.8rem;line-height:1.6;color:var(--muted)}
+    .cont-links{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+    .cont-line{margin:0}
+    .cont-child{border-color:#cfe0d3!important;color:#477258!important;background:#f1f7f2!important}
+    .stem-modal{max-width:760px}
+    .stem-intro{margin:2px 0 14px;padding:11px 13px;border:1px solid #d5e4d8;border-radius:13px;background:linear-gradient(145deg,#f8fbf7,#eef6ef);font-size:.72rem;line-height:1.55;color:#5c7564}
+    .stem-root-group{margin-top:13px}
+    .stem-node{position:relative}
+    .stem-children{margin-left:15px;padding-left:14px;border-left:1.5px solid #cddfd1}
+    .stem-branch-label{margin:5px 0 6px 2px;font-size:.59rem;font-weight:900;letter-spacing:.07em;color:#7d9583}
+    .stem-card{position:relative;margin:8px 0;padding:13px 14px;border:1px solid #dcded4;border-radius:14px;background:#fffefa;box-shadow:0 3px 10px rgba(44,62,47,.035)}
+    .stem-card.current{border:1.5px solid #77a888;background:linear-gradient(145deg,#fffefa,#f4faf5);box-shadow:0 5px 18px rgba(56,103,73,.08)}
+    .stem-card.trash{opacity:.65;background:#f6f4ef;border-style:dashed}
+    .stem-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+    .stem-date{font-size:.63rem;font-weight:850;color:#718077}
+    .stem-badges{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+    .stem-current{padding:3px 7px;border-radius:999px;background:#dceee1;color:#2e6948;font-size:.57rem;font-weight:900}
+    .stem-trash{padding:3px 7px;border-radius:999px;background:#ece8df;color:#827967;font-size:.57rem;font-weight:850}
+    .stem-text{font-family:var(--serif);font-size:.91rem;line-height:1.65;color:var(--ink);white-space:pre-wrap}
+    .stem-quote{margin:0 0 8px;padding:8px 10px;border-left:2px solid #a8c7b0;background:#f7f8f3;font-family:var(--serif);font-size:.76rem;line-height:1.55;color:#5f665e}
+    .stem-context{margin-top:8px;font-size:.67rem;line-height:1.5;color:var(--muted)}
+    .stem-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+    .stem-connector{display:flex;align-items:center;gap:7px;margin:2px 0 2px 3px;color:#86a08d;font-size:.62rem}
+    .stem-connector:before{content:"↳";font-size:.8rem}
+    .stem-cycle{margin:7px 0;padding:8px 10px;border-radius:10px;background:#f7f5ef;color:#8a8375;font-size:.64rem}
     .ai-recommend-wait{display:flex;align-items:center;gap:9px;margin-top:10px;padding:11px 13px;border:1px dashed #c7d9cc;border-radius:12px;background:rgba(238,246,239,.65);color:#66806e;font-size:.72rem;line-height:1.45}
     .ai-recommend-wait .ai-dot{width:7px;height:7px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(54,108,77,.18);animation:aiPulse 1.25s ease-out infinite;flex:0 0 auto}
     @keyframes aiPulse{0%{box-shadow:0 0 0 0 rgba(54,108,77,.22)}70%{box-shadow:0 0 0 7px rgba(54,108,77,0)}100%{box-shadow:0 0 0 0 rgba(54,108,77,0)}}
@@ -691,6 +715,8 @@
         </select>
         <select class="select" id="fragLens">
           <option value="all">전체 표시</option>
+          <option value="stem">🌿 생각 줄기 있음</option>
+          <option value="solo">○ 생각 줄기 없음</option>
           <option value="question">❓ 질문</option>
           <option value="decision">⚖️ 결정</option>
           <option value="desire">🧭 욕망</option>
@@ -945,6 +971,17 @@
   </div>
 </dialog>
 
+
+
+<dialog id="thoughtStemDialog">
+  <div class="modal stem-modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">THOUGHT STEM</div><h2>생각의 줄기</h2><p class="helper" id="thoughtStemSummary"></p></div>
+      <button class="close-btn" data-close="thoughtStemDialog" type="button">✕</button>
+    </div>
+    <div id="thoughtStemBody"></div>
+  </div>
+</dialog>
 
 <dialog id="relatedPreviewDialog">
   <div class="modal">
@@ -1851,11 +1888,120 @@ function stampInfo(f){
     ? {main:`${dateStr} · ${time}`,moved:""}
     : {main:dateStr,moved:`${fmt(inputDay)} ${time}에 옮겨 적음`};
 }
+function thoughtStemChildren(id,{includeTrash=true}={}){
+  const pool=includeTrash?allFragments():state.fragments;
+  return pool.filter(f=>(f.continuedFrom||[]).includes(id));
+}
+function thoughtHasStemLink(f){
+  if(!f)return false;
+  if((f.continuedFrom||[]).length)return true;
+  return allFragments().some(x=>(x.continuedFrom||[]).includes(f.id));
+}
 function continuedFromLine(f){
-  const ids=f.continuedFrom||[];if(!ids.length)return "";
-  const prev=allFragments().find(x=>x.id===ids[0]);if(!prev)return "";
-  const d=fmt((prev.date||prev.createdAt||"").slice(0,10));
-  return `<button class="cont-line" data-open-prev="${prev.id}" type="button">↰ ${esc(d)}의 생각에서 이어짐</button>`;
+  const parents=(f.continuedFrom||[]).map(id=>allFragments().find(x=>x.id===id)).filter(Boolean);
+  const children=thoughtStemChildren(f.id);
+  if(!parents.length&&!children.length)return "";
+
+  const parent=parents[0];
+  const parentLine=parent
+    ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${esc(fmt((parent.date||parent.createdAt||"").slice(0,10)))}의 생각에서 이어짐</button>`
+    : "";
+
+  const childLine=children.length
+    ? `<button class="cont-line cont-child" data-open-thought-stem="${f.id}" type="button">↳ 이 생각에서 이어진 생각 ${children.length}개</button>`
+    : "";
+
+  return `<div class="cont-links">${parentLine}${childLine}</div>`;
+}
+function thoughtStemComponent(startId){
+  const pool=allFragments();
+  const byId=new Map(pool.map(f=>[f.id,f]));
+  if(!byId.has(startId))return [];
+
+  const children=new Map();
+  pool.forEach(f=>{
+    (f.continuedFrom||[]).forEach(pid=>{
+      if(!children.has(pid))children.set(pid,[]);
+      children.get(pid).push(f.id);
+    });
+  });
+
+  const seen=new Set(),stack=[startId];
+  while(stack.length){
+    const id=stack.pop();
+    if(seen.has(id)||!byId.has(id))continue;
+    seen.add(id);
+    const f=byId.get(id);
+    (f.continuedFrom||[]).forEach(pid=>{if(byId.has(pid))stack.push(pid)});
+    (children.get(id)||[]).forEach(cid=>{if(byId.has(cid))stack.push(cid)});
+  }
+  return [...seen].map(id=>byId.get(id));
+}
+function thoughtStemSortKey(f){
+  return `${String(f.date||f.createdAt||"").slice(0,10)}|${String(f.createdAt||"")}`;
+}
+function thoughtStemCardHTML(f,startId){
+  const src=f.sourceId?state.sources.find(s=>s.id===f.sourceId):null;
+  const threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
+  const isTrash=!!f.deletedAt;
+  const text=(f.thought||f.text||"").trim();
+  return `<div class="stem-card ${f.id===startId?"current":""} ${isTrash?"trash":""}">
+    <div class="stem-card-head">
+      <span class="stem-date">${esc(fmt((f.date||f.createdAt||"").slice(0,10)))}</span>
+      <span class="stem-badges">${f.id===startId?'<span class="stem-current">현재 생각</span>':""}${isTrash?'<span class="stem-trash">휴지통</span>':""}</span>
+    </div>
+    ${f.externalText?`<blockquote class="stem-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${text?`<div class="stem-text">${esc(text)}</div>`:`<div class="stem-text" style="color:var(--muted)">(내용 없음)</div>`}
+    ${f.context?`<div class="stem-context">${esc(f.context)}</div>`:""}
+    <div class="stem-meta">
+      ${src?`<span class="tag">${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}
+      ${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}
+      ${lensBadge(f)}
+    </div>
+  </div>`;
+}
+function openThoughtStem(startId){
+  const component=thoughtStemComponent(startId);
+  if(!component.length)return toast("연결된 생각을 찾지 못했습니다.");
+
+  const byId=new Map(component.map(f=>[f.id,f]));
+  const componentIds=new Set(byId.keys());
+  const childMap=new Map();
+  component.forEach(f=>{
+    (f.continuedFrom||[]).forEach(pid=>{
+      if(!componentIds.has(pid))return;
+      if(!childMap.has(pid))childMap.set(pid,[]);
+      childMap.get(pid).push(f.id);
+    });
+  });
+  childMap.forEach(arr=>arr.sort((a,b)=>thoughtStemSortKey(byId.get(a)).localeCompare(thoughtStemSortKey(byId.get(b)))));
+
+  let roots=component.filter(f=>!(f.continuedFrom||[]).some(pid=>componentIds.has(pid)));
+  if(!roots.length)roots=[component.slice().sort((a,b)=>thoughtStemSortKey(a).localeCompare(thoughtStemSortKey(b)))[0]];
+  roots.sort((a,b)=>thoughtStemSortKey(a).localeCompare(thoughtStemSortKey(b)));
+
+  const visited=new Set();
+  function nodeHTML(id){
+    const f=byId.get(id);if(!f)return "";
+    if(visited.has(id))return `<div class="stem-cycle">이미 위에서 나타난 생각과 다시 연결됩니다.</div>`;
+    visited.add(id);
+    const kids=childMap.get(id)||[];
+    return `<div class="stem-node">
+      ${thoughtStemCardHTML(f,startId)}
+      ${kids.length?`<div class="stem-children"><div class="stem-branch-label">${kids.length>1?`${kids.length}개의 갈래`:"다음 생각"}</div>${kids.map(cid=>`<div class="stem-connector">이어짐</div>${nodeHTML(cid)}`).join("")}</div>`:""}
+    </div>`;
+  }
+
+  let body=roots.map(r=>`<div class="stem-root-group">${nodeHTML(r.id)}</div>`).join("");
+  const unrendered=component.filter(f=>!visited.has(f.id)).sort((a,b)=>thoughtStemSortKey(a).localeCompare(thoughtStemSortKey(b)));
+  if(unrendered.length)body+=`<div class="stem-root-group">${unrendered.map(f=>thoughtStemCardHTML(f,startId)).join("")}</div>`;
+
+  const liveCount=component.filter(f=>!f.deletedAt).length;
+  const trashCount=component.length-liveCount;
+  $("thoughtStemSummary").textContent=`${liveCount}개의 생각이 하나의 줄기로 이어져 있어요.${trashCount?` · 휴지통 ${trashCount}개 포함`:""}`;
+  $("thoughtStemBody").innerHTML=`<div class="stem-intro">Thread로 분류하지 않아도, 직접 이어둔 생각은 여기서 하나의 줄기로 다시 볼 수 있어요.</div>${body}`;
+  $("thoughtStemDialog").showModal();
+  setTimeout(()=>{$("thoughtStemDialog")?.querySelector(".modal")?.scrollTo?.(0,0)},0);
 }
 function fragArchiveCard(f,q){
   const src=f.sourceId?state.sources.find(s=>s.id===f.sourceId):null;
@@ -1922,9 +2068,11 @@ function renderFragments(){
   // 매체
   if(srcSel==="none")list=list.filter(f=>!f.sourceId);
   else if(srcSel!=="all")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&srcType(s)===srcSel});
-  // 렌즈 · 중요
+  // 표시 방식 · 렌즈 · 중요
   const lensSel=$("fragLens")?.value||"all";
-  if(lensSel!=="all")list=list.filter(f=>effectiveLens(f)===lensSel);
+  if(lensSel==="stem")list=list.filter(thoughtHasStemLink);
+  else if(lensSel==="solo")list=list.filter(f=>!thoughtHasStemLink(f));
+  else if(lensSel!=="all")list=list.filter(f=>effectiveLens(f)===lensSel);
   if(state.fragStarOnly)list=list.filter(f=>f.starred);
   // 검색
   if(ql)list=list.filter(f=>[f.thought,f.text,f.externalText,f.context,f.locator,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(ql));
@@ -3541,6 +3689,7 @@ document.addEventListener("click",async e=>{
   const sth=e.target.closest("[data-search-thread]");if(sth){$("searchDialog").close();setView("garden");return openThread(sth.dataset.searchThread)}
   const spr=e.target.closest("[data-search-project]");if(spr){$("searchDialog").close();setView("studio");return openProject(spr.dataset.searchProject)}
   const pp=e.target.closest("[data-platform-pick]");if(pp){const v=pp.dataset.platformPick;$("sourcePlatform").value=($("sourcePlatform").value.trim()===v)?"":v;renderPlatformChips();return}
+  const stem=e.target.closest("[data-open-thought-stem]");if(stem)return openThoughtStem(stem.dataset.openThoughtStem);
   const rl=e.target.closest("[data-open-related]");if(rl)return openRelatedPreview(rl.dataset.openRelated,{mode:"fragment",currentId:$("editFragmentId").value});
   const tc=e.target.closest("[data-preview-thread-candidate]");if(tc)return openRelatedPreview(tc.dataset.previewThreadCandidate,{mode:"thread",threadId:tc.dataset.threadId});
   const lp=e.target.closest("[data-lens-pick]");
@@ -3557,7 +3706,7 @@ document.addEventListener("click",async e=>{
   const trPurge=e.target.closest("[data-purge-frag]");if(trPurge)return purgeFragmentAsk(trPurge.dataset.purgeFrag);
   const ef=e.target.closest("[data-edit-fragment]");if(ef)return openEditFragment(ef.dataset.editFragment);
   const prevBtn=e.target.closest("[data-open-prev]");if(prevBtn){const pid2=prevBtn.dataset.openPrev;if((state.trash||[]).some(x=>x.id===pid2)){toast("이어진 생각이 휴지통에 있어요.");return}return openEditFragment(pid2)}
-  const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom],[data-open-prev]"))return openEditFragment(ofg.dataset.openFrag);
+  const ofg=e.target.closest("[data-open-frag]");if(ofg&&!e.target.closest("audio,video,[data-zoom],[data-open-prev],[data-open-thought-stem]"))return openEditFragment(ofg.dataset.openFrag);
   if(e.target.closest("[data-back-library]")){state.openSourceId=null;$("libraryIndex").classList.remove("hidden");$("sourceDetail").classList.add("hidden");return renderLibrary()}
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
@@ -3788,7 +3937,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
-["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
