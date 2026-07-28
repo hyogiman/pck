@@ -356,6 +356,13 @@
     .attach-ai-text{font-family:var(--serif);font-size:.82rem;line-height:1.5;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .studio-gardener-call{margin-top:9px;border-color:#bdd8c5!important;color:#2d6847!important;background:#f2f8f3!important;font-weight:850}
     .studio-gardener-call:disabled{opacity:.62}
+    .slot-guidance-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+    .slot-gardener-call{border-color:#bdd8c5!important;color:#2d6847!important;background:#f2f8f3!important;font-weight:800}
+    .slot-gardener-call:disabled{opacity:.62}
+    .slot-thought-export{margin-top:9px;display:flex;justify-content:flex-end}
+    .slot-thought-export .btn{font-size:.73rem}
+    .gardener-box.persisted{margin-top:10px}
+    .gardener-box .g-actions{margin-top:9px}
     .ai-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
     .ai-setting-row>div{min-width:0}
     .ai-setting-row b{display:block;font-size:.84rem}
@@ -1059,6 +1066,9 @@
             <span>출력 토큰</span><span class="value">—</span>
             <span>추정 사용비용</span><span class="value">—</span>
           </div>
+          <div class="actions" style="margin-top:11px">
+            <button class="btn soft" id="studioLimitPlus10" type="button">오늘 한도 +10회</button>
+          </div>
           <div class="ai-usage-note" id="studioUsageNote">실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.</div>
         </div>
         <div class="actions" style="margin-top:12px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
@@ -1208,7 +1218,7 @@ function renderAiSettings(){
   hint.innerHTML=!ready
     ?"Studio 정원사는 Google 로그인 상태에서만 사용할 수 있습니다."
     : enabled
-      ?"켜져 있습니다. <b>Studio에서 ‘다음 질문 받기’를 누를 때만</b> 정원사를 호출합니다. 작성 중에는 자동 호출하지 않습니다. <b>서버에서 하루 30회로 제한</b>되어 있습니다."
+      ?"켜져 있습니다. <b>각 문항의 ‘정원사 질문 받기’를 누를 때만</b> 정원사를 호출합니다. 작성 중에는 자동 호출하지 않습니다. <b>기본은 하루 30회</b>이며, 필요하면 설정에서 10회씩 늘릴 수 있습니다."
       :"꺼져 있습니다. GPT 호출이 발생하지 않습니다.";
 }
 function formatUsdEstimate(value){
@@ -1228,7 +1238,13 @@ function renderStudioUsage(data){
     <span>입력 토큰</span><span class="value">${input.toLocaleString("ko-KR")}</span>
     <span>출력 토큰</span><span class="value">${output.toLocaleString("ko-KR")}</span>
     <span>추정 사용비용</span><span class="value">약 ${formatUsdEstimate(data?.estimatedCostUsd)}</span>`;
-  note.innerHTML=`오늘(KST) 생성된 새 질문만 집계합니다. 같은 질문을 캐시에서 다시 보는 것은 차감되지 않습니다.${cached?`<br>입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 생성된 새 질문만 집계합니다. 같은 질문을 캐시에서 다시 보는 것은 차감되지 않습니다.${cached?`<br>입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>오늘 한도는 필요할 때 10회씩 늘릴 수 있고, 내일(KST)에는 다시 기본 30회로 시작합니다.<br><b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  const plus=$("studioLimitPlus10");
+  if(plus){
+    const max=100;
+    plus.disabled=limit>=max;
+    plus.textContent=limit>=max?"오늘 최대 한도 100회":"오늘 한도 +10회";
+  }
 }
 async function refreshStudioUsage(){
   const grid=$("studioUsageGrid");
@@ -2366,9 +2382,7 @@ function openProject(id){
   const pool=t?threadFragments(t.id):state.fragments,done=slots.filter(s=>(s.text||"").trim()).length,pct=Math.round(done/slots.length*100);
   const next=slots.find(s=>!((s.text||"").trim()));
   const nextLine=next
-    ? (studioGardenerEnabled()
-        ? `<div class="next-question"><span class="next-label">🌿 정원사</span><p class="serif">다음 질문이 필요할 때 정원사를 불러보세요.</p><button class="btn soft studio-gardener-call" data-call-studio-gardener="${p.id}" type="button">다음 질문 받기</button><div class="helper" style="margin-top:7px">누를 때만 AI를 사용합니다.</div></div>`
-        : `<div class="next-question"><span class="next-label">다음 질문</span><p class="serif">${esc(next.prompt)}</p></div>`)
+    ? `<div class="next-question"><span class="next-label">다음 칸</span><p class="serif">${esc(next.title)}</p></div>`
     :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
   $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn" data-export-project="${p.id}" type="button">✍️ 글로 내보내기</button>${p.status==="published"?`<button class="text-btn" data-unpublish="${p.id}" type="button">작업 중으로 되돌리기</button>`:`<button class="text-btn" data-publish="${p.id}" type="button">✓ 내보냄 표시</button>`}<button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
@@ -2432,25 +2446,39 @@ function readSlotTextInto(p){
   $$("[data-slot-text]").forEach(el=>{const s=slots.find(x=>x.id===el.dataset.slotText);if(s)s.text=el.value});
   return slots;
 }
-function slotsToData(slots){return slots.map(s=>({id:s.id,text:s.text||"",fragmentIds:s.fragmentIds||[]}))}
+function slotsToData(slots){return slots.map(s=>({
+  id:s.id,
+  text:s.text||"",
+  fragmentIds:s.fragmentIds||[],
+  ...(s.gardenerQuestion?{gardenerQuestion:s.gardenerQuestion}:{}),
+  ...(s.gardenerQuestionType?{gardenerQuestionType:s.gardenerQuestionType}:{}),
+  ...(s.gardenerQuestionModel?{gardenerQuestionModel:s.gardenerQuestionModel}:{}),
+  ...(s.thoughtFragmentId?{thoughtFragmentId:s.thoughtFragmentId}:{})
+}))}
 async function persistSlots(p,slots){p.slots=slotsToData(slots);p.updatedAt=new Date().toISOString();await persist("projects",p)}
 function slotHTML(p,s){
   const attached=(s.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
   const answered=!!((s.text||"").trim());
+  const savedThought=s.thoughtFragmentId?state.fragments.find(f=>f.id===s.thoughtFragmentId):null;
+  const gardenerOn=studioGardenerEnabled();
 
   return `<div class="slot ${answered?"done":"empty-slot"} ${attached.length?"has-materials":""}" data-slot-card="${s.id}" data-project-card="${p.id}">
     <div class="slot-head"><h3>${esc(s.title)}</h3><button class="btn soft" data-attach-slot="${s.id}" data-project="${p.id}" type="button">+ 재료</button></div>
 
     <div class="studio-guidance-zone">
-      ${answered
-        ? `<div class="slot-prompt">${esc(s.prompt)}</div>`
-        : `<div data-base-slot-question="${s.id}"><p class="slot-question serif">${esc(s.prompt)}</p>${s.mind?`<button class="btn primary slot-answer" data-answer-slot="${s.id}" data-project="${p.id}" type="button">✍️ 이 질문에 답하기</button>`:""}</div>`}
-      ${!answered?`<div class="gardener-box hidden" data-gardener-slot="${s.id}" data-gardener-project="${p.id}"></div>`:""}
+      <div data-base-slot-question="${s.id}"><p class="slot-question serif">${esc(s.prompt)}</p></div>
+
+      <div class="gardener-box ${s.gardenerQuestion?"persisted":"hidden"}" data-gardener-slot="${s.id}" data-gardener-project="${p.id}">
+        ${s.gardenerQuestion?`<span class="g-label">🌿 정원사가 건네는 질문</span><p>${esc(s.gardenerQuestion)}</p>`:""}
+      </div>
+
+      ${gardenerOn?`<div class="slot-guidance-actions"><button class="btn soft slot-gardener-call" data-call-slot-gardener="${s.id}" data-project="${p.id}" type="button">${s.gardenerQuestion?"↻ 정원사 질문 다시 받기":"🌿 정원사 질문 받기"}</button></div>`:""}
     </div>
 
     ${attached.length?`<div class="slot-material-zone"><span class="slot-material-label">MATERIAL · ${attached.length}</span>${attached.map(f=>`<div class="material attached"><button class="mat-del" data-detach="${f.id}" data-slot="${s.id}" data-project="${p.id}" type="button" aria-label="이 재료 빼기">✕</button>${srcLabel(f)}<br>${esc((f.thought||f.text||f.externalText||"").slice(0,140))}</div>`).join("")}</div>`:""}
 
     <textarea class="textarea slot-text" data-slot-text="${s.id}" placeholder="여기에 내 말로 적어보세요.">${esc(s.text||"")}</textarea>
+    <div class="slot-thought-export"><button class="btn ${savedThought?"soft":""}" data-export-slot-thought="${s.id}" data-project="${p.id}" type="button">${savedThought?"🌱 생각 카드 업데이트":"🌱 생각으로 남기기"}</button></div>
   </div>`;
 }
 function studioQuestionKey(pid,slotId){return `${pid}:${slotId}`}
@@ -2459,40 +2487,28 @@ function nextEmptyStudioSlot(p){
   // 재료는 '답변'이 아니다. 텍스트를 실제로 쓴 칸만 완료로 본다.
   return projectSlots(p).find(s=>!((s.text||"").trim()))||null;
 }
-function setBaseStudioQuestionVisible(slotId,visible){
-  const base=document.querySelector(`[data-base-slot-question="${CSS.escape(slotId)}"]`);
-  if(base)base.classList.toggle("hidden",!visible);
-}
+function setBaseStudioQuestionVisible(slotId,visible){ return; }
 function renderStudioGardenerBox(pid,slotId){
   const box=document.querySelector(`[data-gardener-project="${CSS.escape(pid)}"][data-gardener-slot="${CSS.escape(slotId)}"]`);
   if(!box)return;
   const p=state.projects.find(x=>x.id===pid);
   const slot=p?projectSlots(p).find(s=>s.id===slotId):null;
-  const answered=!!((slot?.text||"").trim());
+  const cached=state.studioQuestionCache[studioQuestionKey(pid,slotId)];
+  const question=slot?.gardenerQuestion||cached?.question||"";
 
-  if(!studioGardenerEnabled()||answered){
-    box.classList.add("hidden");box.innerHTML="";
-    setBaseStudioQuestionVisible(slotId,true);
+  if(!studioGardenerEnabled()||!question){
+    box.classList.add("hidden");box.classList.remove("persisted");box.innerHTML="";
     return;
   }
 
-  const item=state.studioQuestionCache[studioQuestionKey(pid,slotId)];
-  if(!item?.question){
-    box.classList.add("hidden");box.innerHTML="";
-    setBaseStudioQuestionVisible(slotId,true);
-    return;
-  }
-
-  box.innerHTML=`<span class="g-label">🌿 정원사가 건네는 질문</span><p>${esc(item.question)}</p>`;
-  box.classList.remove("hidden");
-  setBaseStudioQuestionVisible(slotId,false);
+  box.innerHTML=`<span class="g-label">🌿 정원사가 건네는 질문</span><p>${esc(question)}</p>`;
+  box.classList.remove("hidden");box.classList.add("persisted");
 }
 function showStudioGardenerLoading(pid,slotId){
   const box=document.querySelector(`[data-gardener-project="${CSS.escape(pid)}"][data-gardener-slot="${CSS.escape(slotId)}"]`);
   if(!box||!studioGardenerEnabled())return;
-  box.innerHTML=`<span class="g-label">🌿 정원사</span><p>제목과 재료, 앞선 생각을 살펴보는 중…</p>`;
-  box.classList.remove("hidden");
-  setBaseStudioQuestionVisible(slotId,false);
+  box.innerHTML=`<span class="g-label">🌿 정원사</span><p>이 문항에 맞는 질문을 고르는 중…</p>`;
+  box.classList.remove("hidden");box.classList.remove("persisted");
 }
 async function requestStudioGardenerQuestion(pid,slotId,generate=false){
   if(!studioGardenerEnabled()||!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return;
@@ -2505,6 +2521,17 @@ async function requestStudioGardenerQuestion(pid,slotId,generate=false){
     if(res?.enabled===false)return;
     if(res?.question){
       state.studioQuestionCache[key]={question:res.question,type:res.type||"",model:res.model||""};
+      const p=state.projects.find(x=>x.id===pid);
+      if(p){
+        const slots=readSlotTextInto(p);
+        const slot=slots.find(s=>s.id===slotId);
+        if(slot){
+          slot.gardenerQuestion=res.question;
+          slot.gardenerQuestionType=res.type||"";
+          slot.gardenerQuestionModel=res.model||"";
+          await persistSlots(p,slots);
+        }
+      }
       renderStudioGardenerBox(pid,slotId);
     }else{
       delete state.studioQuestionCache[key];
@@ -2524,46 +2551,105 @@ async function ensureNextStudioGardenerQuestion(p,{generate=true}={}){
   if(!next)return;
   await requestStudioGardenerQuestion(p.id,next.id,generate);
 }
-async function callStudioGardenerManually(pid,button=null){
+async function callStudioGardenerForSlot(pid,slotId,button=null){
   if(!studioGardenerEnabled())return toast("설정에서 Studio 정원사를 먼저 켜주세요.");
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
 
   const p=state.projects.find(x=>x.id===pid);
   if(!p)return;
 
-  const original=button?.textContent||"다음 질문 받기";
+  const original=button?.textContent||"정원사 질문 받기";
   if(button){button.disabled=true;button.textContent="질문을 고르는 중…";}
 
   try{
-    // 사용자가 방금 수정한 문장까지 정확히 반영한 뒤에만 AI에게 전달한다.
+    // 누른 순간까지 쓴 내용만 서버에 반영한 뒤, '이 슬롯' 질문만 요청한다.
     clearTimeout(slotSaveTimer);slotSaveTimer=null;
     await persistSlots(p,readSlotTextInto(p));
     clearStudioDraft();
     markSaved("자동 저장됨 ✓");
 
-    const next=nextEmptyStudioSlot(p);
-    if(!next){
-      toast("모든 칸이 채워져 있어요.");
-      return;
-    }
+    await requestStudioGardenerQuestion(pid,slotId,true);
 
-    await requestStudioGardenerQuestion(p.id,next.id,true);
-
-    const cached=state.studioQuestionCache[studioQuestionKey(p.id,next.id)];
-    if(cached?.question){
-      toast(`정원사가 '${next.title}' 질문을 준비했어요. 🌿`);
-      document.querySelector(`[data-slot-card="${CSS.escape(next.id)}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
+    const slot=projectSlots(p).find(s=>s.id===slotId);
+    if(slot?.gardenerQuestion){
+      toast(`'${slot.title}'에 정원사 질문을 놓았어요. 🌿`);
+      document.querySelector(`[data-slot-card="${CSS.escape(slotId)}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
     }
   }catch(err){
-    console.warn("Studio gardener manual call",err);
-    toast("정원사를 부르지 못했어요. 기존 질문으로 계속 쓸 수 있습니다.");
+    console.warn("Studio gardener slot call",err);
+    toast("정원사를 부르지 못했어요. 기본 질문으로 계속 쓸 수 있습니다.");
   }finally{
-    if(button){button.disabled=false;button.textContent=original;}
+    if(button){
+      const slot=projectSlots(p).find(s=>s.id===slotId);
+      button.disabled=false;
+      button.textContent=slot?.gardenerQuestion?"↻ 정원사 질문 다시 받기":original;
+    }
   }
 }
 function loadStudioGardenerQuestions(p){
   // 수동 호출 정책: 프로젝트를 열거나 글을 쓰는 것만으로는 AI를 호출하지 않는다.
   return;
+}
+
+function studioThoughtContext(p,s){
+  const q=(s.gardenerQuestion||s.prompt||"").trim();
+  return [`Studio · ${p.title||"제목 없음"}`,s.title?`문항 · ${s.title}`:"",q?`Q. ${q}`:""].filter(Boolean).join("\n");
+}
+async function exportStudioSlotThought(pid,slotId,button=null){
+  const p=state.projects.find(x=>x.id===pid);if(!p)return;
+
+  clearTimeout(slotSaveTimer);slotSaveTimer=null;
+  const slots=readSlotTextInto(p);
+  const slot=slots.find(s=>s.id===slotId);if(!slot)return;
+
+  const thought=(slot.text||"").trim();
+  if(!thought)return toast("먼저 이 문항에 내 생각을 적어주세요.");
+
+  const context=studioThoughtContext(p,slot);
+  let f=slot.thoughtFragmentId?state.fragments.find(x=>x.id===slot.thoughtFragmentId):null;
+  const isNew=!f;
+
+  if(isNew){
+    f={
+      id:uid(),
+      type:"thought",
+      thought,
+      externalText:"",
+      locator:"",
+      context,
+      threadIds:p.threadId?[p.threadId]:[],
+      attachments:[],
+      studioProjectId:p.id,
+      studioSlotId:slot.id,
+      date:today(),
+      createdAt:new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+    state.fragments.unshift(f);
+  }else{
+    f.thought=thought;
+    f.context=context;
+    f.studioProjectId=p.id;
+    f.studioSlotId=slot.id;
+    if(p.threadId)f.threadIds=[...new Set([...(f.threadIds||[]),p.threadId])];
+    f.updatedAt=new Date().toISOString();
+  }
+
+  const original=button?.textContent||"🌱 생각으로 남기기";
+  if(button){button.disabled=true;button.textContent=isNew?"생각을 심는 중…":"생각을 다듬는 중…";}
+
+  try{
+    await persist("fragments",f);
+    requestFragmentEmbedding(f.id);
+    slot.thoughtFragmentId=f.id;
+    await persistSlots(p,slots);
+    renderAll();openProject(pid);
+    toast(isNew?"Studio의 답을 생각 조각으로 남겼어요. 🌱":"연결된 생각 카드를 업데이트했어요. 🌱");
+  }catch(e){
+    console.warn("Studio slot thought export",e);
+    toast("생각으로 남기지 못했습니다.");
+    if(button){button.disabled=false;button.textContent=original;}
+  }
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
@@ -3422,15 +3508,13 @@ document.addEventListener("click",async e=>{
     if(sp)openCapture("",{kind:"spark",prompt:sp.q,category:sp.c});
     return;
   }
-  const gardenerCall=e.target.closest("[data-call-studio-gardener]");
-  if(gardenerCall){
-    return callStudioGardenerManually(gardenerCall.dataset.callStudioGardener,gardenerCall);
+  const slotGardener=e.target.closest("[data-call-slot-gardener]");
+  if(slotGardener){
+    return callStudioGardenerForSlot(slotGardener.dataset.project,slotGardener.dataset.callSlotGardener,slotGardener);
   }
-  const ans=e.target.closest("[data-answer-slot]");
-  if(ans){
-    const p=state.projects.find(x=>x.id===ans.dataset.project);if(!p)return;
-    const slot=projectSlots(p).find(s=>s.id===ans.dataset.answerSlot);if(!slot)return;
-    return openCapture("",{projectId:p.id,slotId:slot.id,prompt:slot.prompt});
+  const exportThought=e.target.closest("[data-export-slot-thought]");
+  if(exportThought){
+    return exportStudioSlotThought(exportThought.dataset.project,exportThought.dataset.exportSlotThought,exportThought);
   }
   const saveSlots=e.target.closest("[data-save-all-slots]");if(saveSlots)return saveAllSlots(saveSlots.dataset.saveAllSlots);
   const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
@@ -3516,6 +3600,24 @@ $("sparkToggle").addEventListener("click",()=>{
   renderSparkSettings();renderSpark();
 });
 $("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
+$("studioLimitPlus10").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
+  const btn=$("studioLimitPlus10");
+  const ok=confirm("오늘 Studio 정원사 한도를 10회 늘릴까요?\n질문을 실제로 생성할 때만 API 사용량이 발생합니다.");
+  if(!ok)return;
+  btn.disabled=true;
+  const old=btn.textContent;btn.textContent="한도 늘리는 중…";
+  try{
+    const res=await callFn("increaseStudioGardenerLimit",{});
+    await refreshStudioUsage();
+    if(res?.maxReached)toast(`오늘 한도는 ${res.limit}회입니다.`);
+    else toast(`오늘 정원사 한도를 ${res.limit}회로 늘렸어요. 🌿`);
+  }catch(e){
+    console.warn("Studio limit increase failed",e);
+    toast("한도를 늘리지 못했습니다.");
+    btn.disabled=false;btn.textContent=old;
+  }
+});
 $("studioUsageToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 확인할 수 있습니다.");
   const panel=$("studioUsagePanel"),btn=$("studioUsageToggle");
