@@ -770,7 +770,7 @@
     <div id="gardenIndex">
       <div class="section-head"><div><h2>🌱 Garden</h2><p>반복해서 돌아오는 생각의 흐름만 모아봅니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
       <div class="meta" id="gardenSummary"></div>
-      <div class="search-row"><input class="input" id="gardenSearch" placeholder="Thread 검색" /></div>
+      <div class="search-row"><input class="input" id="gardenSearch" placeholder="오래된 Thread도 검색할 수 있어요" /></div>
       <div id="threadList"></div>
       <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button"><span>아직 어느 Thread에도 연결되지 않은 생각</span><b id="gardenUnlinkedCount">0개</b></button>
     </div>
@@ -2261,19 +2261,43 @@ function openSource(id){
 }
 function sourceFragments(id){return state.fragments.filter(f=>f.sourceId===id)}
 function lastSourceActivity(id){return sourceFragments(id).map(f=>(f.date||f.createdAt||"").slice(0,10)).filter(Boolean).sort().reverse()[0]||(state.sources.find(s=>s.id===id)?.updatedAt||"")}
-function threadActivity(t){const fs=threadFragments(t.id);return fs.length?(fs.map(f=>(f.date||f.createdAt||"").slice(0,10)).sort().reverse()[0]):((t.createdAt||"").slice(0,10))}
+function threadActivity(t){
+  if(t.lastLinkedAt)return String(t.lastLinkedAt).slice(0,10);
+  const fs=threadFragments(t.id);
+  return fs.length
+    ? fs.map(f=>(f.date||f.createdAt||"").slice(0,10)).filter(Boolean).sort().reverse()[0]
+    : ((t.createdAt||"").slice(0,10));
+}
+function threadIsGardenRecent(t){const d=threadActivity(t);return !!d&&daysAgo(d)<=4}
+async function touchThreadActivity(tid){
+  const t=state.threads.find(x=>x.id===tid);if(!t)return;
+  t.lastLinkedAt=new Date().toISOString();
+  t.updatedAt=new Date().toISOString();
+  await persist("threads",t);
+}
 function renderGarden(){
-  $("gardenSummary").innerHTML=`<span class="status">🌱 Thread ${state.threads.length}</span>`;
   const q=$("gardenSearch").value.trim().toLowerCase();
   if(state.gardenThreadLimit==null)state.gardenThreadLimit=8;
 
-  const ts=state.threads
-    .filter(t=>[t.title,t.question].filter(Boolean).join(" ").toLowerCase().includes(q))
+  // Garden 기본 화면은 '지금 자라고 있는 흐름'만 보여준다.
+  // 오늘을 포함한 최근 5일 안에 새 생각이 연결된 Thread만 노출한다.
+  // 오래된 Thread는 사라지는 것이 아니라, 사용자가 검색할 때 다시 찾을 수 있다.
+  const recentThreads=state.threads.filter(threadIsGardenRecent);
+  $("gardenSummary").innerHTML=q
+    ? `<span class="status">🔎 Thread 검색</span>`
+    : `<span class="status">🌱 최근 5일 Thread ${recentThreads.length}</span>`;
+
+  let ts=state.threads
+    .filter(t=>q ? [t.title,t.question].filter(Boolean).join(" ").toLowerCase().includes(q) : threadIsGardenRecent(t))
     .sort((a,b)=>String(threadActivity(b)||"").localeCompare(String(threadActivity(a)||"")));
   const tShown=ts.slice(0,state.gardenThreadLimit);
   $("threadList").innerHTML=ts.length
     ? `<div class="thread-index-list">${tShown.map(t=>threadCard(t,true)).join("")}</div>`+(ts.length>tShown.length?`<button class="more-btn" data-more="threads" type="button">Thread ${ts.length-tShown.length}개 더 보기</button>`:"")
-    : empty("🌱",q?"찾는 Thread가 없어요.":"아직 Thread가 없어요.",q?"다른 이름으로 검색해보세요.":"같은 질문을 향하는 생각 조각들이 보일 때 하나의 흐름으로 묶어보세요.");
+    : empty(
+        "🌱",
+        q?"찾는 Thread가 없어요.":"최근 5일 동안 이어진 Thread가 없어요.",
+        q?"다른 이름으로 검색해보세요.":"지금 붙잡고 싶은 흐름이 생길 때만 다시 이어가면 돼요."
+      );
 
   const unlinked=state.fragments.filter(f=>!(f.threadIds||[]).length);
   $("gardenUnlinkedCount").textContent=`${unlinked.length}개`;
@@ -2530,6 +2554,7 @@ async function connectRelatedPreview(){
       target.threadIds=[...new Set([...(target.threadIds||[]),t.id])];
       target.updatedAt=new Date().toISOString();
       await persist("fragments",target);
+      await touchThreadActivity(t.id);
       $("relatedPreviewDialog").close();
       renderAll();openThread(t.id);toast("이 생각을 Thread에 연결했습니다. 🌱");
     }else{
@@ -3010,6 +3035,7 @@ async function exportStudioSlotThought(pid,slotId,button=null){
 
   try{
     await persist("fragments",f);
+    if(p.threadId)await touchThreadActivity(p.threadId);
     requestFragmentEmbedding(f.id);
     slot.thoughtFragmentId=f.id;
     await persistSlots(p,slots);
@@ -3398,7 +3424,7 @@ async function saveThread(){
   state.threads=old?state.threads.map(x=>x.id===t.id?t:x):[t,...state.threads];await persist("threads",t);
   if(pendingFid){
     const f=state.fragments.find(x=>x.id===pendingFid);
-    if(f){f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f);}
+    if(f){f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f);await touchThreadActivity(t.id);}
   }
   $("threadDialog").close();renderAll();toast(old?"Thread를 수정했습니다.":"생각의 줄기를 만들었습니다. 🌱");
 }
@@ -3493,6 +3519,7 @@ async function linkFragment(fid,tid){
   f.threadIds=[...new Set([...(f.threadIds||[]),tid])];
   f.updatedAt=new Date().toISOString();
   await persist("fragments",f);
+  await touchThreadActivity(tid);
   delete state.threadMatchCache[fid];
   $("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
 }
@@ -3502,7 +3529,7 @@ async function addThreadThought(tid){
   const f={id:uid(),type:"thought",thought:text,threadIds:[tid],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
   try{
     if(state.pendingFiles.thread.length)f.attachments=await uploadFiles(state.pendingFiles.thread,f.id,"thread");
-    state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);state.pendingFiles.thread=[];openThread(tid);renderHome();toast("생각을 한 줄 더 이어갔습니다.");
+    state.fragments.unshift(f);await persist("fragments",f);await touchThreadActivity(tid);requestFragmentEmbedding(f.id);state.pendingFiles.thread=[];openThread(tid);renderHome();renderGarden();toast("생각을 한 줄 더 이어갔습니다.");
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function openProjectDialog(threadId=""){
