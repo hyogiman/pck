@@ -370,6 +370,10 @@
     .ai-usage-panel{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:#fffdf7}
     .ai-usage-grid{display:grid;grid-template-columns:1fr auto;gap:7px 14px;font-size:.78rem;align-items:center}
     .ai-usage-grid .value{font-weight:800;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+    .ai-usage-section-title{grid-column:1/-1;margin-top:5px;padding-top:9px;border-top:1px dashed var(--line);font-size:.66rem;font-weight:900;letter-spacing:.07em;color:#53715f}
+    .ai-usage-section-title:first-child{margin-top:0;padding-top:0;border-top:0}
+    .ai-usage-total{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px;padding:10px 11px;border-radius:11px;background:#eef6ef;color:#315c42;font-size:.77rem;font-weight:850}
+    .ai-usage-sub{font-size:.65rem;color:var(--muted)}
     .ai-usage-note{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:.68rem;line-height:1.55;color:var(--muted)}
     .completion{display:flex;align-items:center;gap:11px}
     .completion strong{font-family:var(--serif);font-size:1.35rem;font-weight:700}
@@ -1057,14 +1061,19 @@
           <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
         </div>
         <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
-        <div class="actions" style="margin-top:12px"><button class="btn" id="studioUsageToggle" type="button">오늘 사용량 보기</button></div>
+        <div class="actions" style="margin-top:12px"><button class="btn" id="studioUsageToggle" type="button">오늘 AI 사용량 보기</button></div>
         <div class="ai-usage-panel hidden" id="studioUsagePanel">
           <div class="ai-usage-grid" id="studioUsageGrid">
-            <span>오늘 질문 사용</span><span class="value">—</span>
+            <span class="ai-usage-section-title">🌿 정원사 질문</span>
+            <span>질문 사용</span><span class="value">—</span>
             <span>남은 질문</span><span class="value">—</span>
-            <span>입력 토큰</span><span class="value">—</span>
-            <span>출력 토큰</span><span class="value">—</span>
-            <span>추정 사용비용</span><span class="value">—</span>
+            <span>입력 / 출력</span><span class="value">—</span>
+            <span>추정 비용</span><span class="value">—</span>
+            <span class="ai-usage-section-title">🧠 의미 검색 · 임베딩</span>
+            <span>생각 색인</span><span class="value">—</span>
+            <span>Studio 재료 검색</span><span class="value">—</span>
+            <span>추정 비용</span><span class="value">—</span>
+            <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>—</strong></span>
           </div>
           <div class="actions" style="margin-top:11px">
             <button class="btn soft" id="studioLimitPlus10" type="button">오늘 한도 +10회</button>
@@ -1230,15 +1239,34 @@ function formatUsdEstimate(value){
 function renderStudioUsage(data){
   const grid=$("studioUsageGrid"),note=$("studioUsageNote");
   if(!grid||!note)return;
+
   const used=Number(data?.used||0),limit=Number(data?.limit||30),remaining=Number(data?.remaining??Math.max(0,limit-used));
   const input=Number(data?.inputTokens||0),cached=Number(data?.cachedInputTokens||0),output=Number(data?.outputTokens||0);
+  const fragmentTokens=Number(data?.fragmentEmbeddingTokens||0),fragmentCount=Number(data?.fragmentEmbeddingCount||0);
+  const materialTokens=Number(data?.studioMaterialEmbeddingTokens||0),materialCount=Number(data?.studioMaterialEmbeddingCount||0);
+  const embeddingTokens=Number(data?.embeddingTokens||fragmentTokens+materialTokens);
+  const gardenerCost=Number(data?.gardenerEstimatedCostUsd??data?.estimatedCostUsd??0);
+  const embeddingCost=Number(data?.embeddingEstimatedCostUsd||0);
+  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+embeddingCost));
+
   grid.innerHTML=`
-    <span>오늘 질문 사용</span><span class="value">${used} / ${limit}회</span>
+    <span class="ai-usage-section-title">🌿 정원사 질문 · GPT-5.4 mini</span>
+    <span>질문 사용</span><span class="value">${used} / ${limit}회</span>
     <span>남은 질문</span><span class="value">${remaining}회</span>
     <span>입력 토큰</span><span class="value">${input.toLocaleString("ko-KR")}</span>
     <span>출력 토큰</span><span class="value">${output.toLocaleString("ko-KR")}</span>
-    <span>추정 사용비용</span><span class="value">약 ${formatUsdEstimate(data?.estimatedCostUsd)}</span>`;
-  note.innerHTML=`오늘(KST) 생성된 새 질문만 집계합니다. 같은 질문을 캐시에서 다시 보는 것은 차감되지 않습니다.${cached?`<br>입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>오늘 한도는 필요할 때 10회씩 늘릴 수 있고, 내일(KST)에는 다시 기본 30회로 시작합니다.<br><b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+    <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(gardenerCost)}</span>
+
+    <span class="ai-usage-section-title">🧠 의미 검색 · text-embedding-3-small</span>
+    <span>생각 색인</span><span class="value">${fragmentTokens.toLocaleString("ko-KR")} tokens${fragmentCount?` · ${fragmentCount}건`:""}</span>
+    <span>Studio 재료 검색</span><span class="value">${materialTokens.toLocaleString("ko-KR")} tokens${materialCount?` · ${materialCount}건`:""}</span>
+    <span>임베딩 합계</span><span class="value">${embeddingTokens.toLocaleString("ko-KR")} tokens</span>
+    <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(embeddingCost)}</span>
+
+    <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
+
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+
   const plus=$("studioLimitPlus10");
   if(plus){
     const max=100;
@@ -3527,7 +3555,7 @@ $("signOutBtn").addEventListener("click",signOutGarden);
 $("sheetSettings").addEventListener("click",()=>{
   closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();
   $("studioUsagePanel")?.classList.add("hidden");
-  if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 사용량 보기";
+  if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 AI 사용량 보기";
   $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
 });
@@ -3623,7 +3651,7 @@ $("studioUsageToggle").addEventListener("click",async()=>{
   const panel=$("studioUsagePanel"),btn=$("studioUsageToggle");
   const opening=panel.classList.contains("hidden");
   panel.classList.toggle("hidden",!opening);
-  btn.textContent=opening?"오늘 사용량 접기":"오늘 사용량 보기";
+  btn.textContent=opening?"오늘 AI 사용량 접기":"오늘 AI 사용량 보기";
   if(opening)await refreshStudioUsage();
 });
 $("studioGardenerToggle").addEventListener("click",async()=>{
