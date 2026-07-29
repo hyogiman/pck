@@ -847,7 +847,7 @@
 
     <div class="section between-thoughts-section">
       <div class="section-head">
-        <div><h2>🌿 두 생각 사이</h2><p>AI가 여러 생각과 그 출처까지 함께 훑어보고, 함께 놓을 이유가 있는 두 생각만 골라봅니다.</p></div>
+        <div><h2>🌿 두 생각 사이</h2><p>AI가 생각의 짧은 표식을 먼저 훑고, 가능성 있는 조합만 원문·출처까지 다시 읽어 두 생각을 고릅니다.</p></div>
         <button class="btn hidden" id="betweenThoughtsNext" type="button">↻ 다른 조합</button>
       </div>
       <div id="betweenThoughtsBox"></div>
@@ -1482,7 +1482,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
-  betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",noPair:false}};
+  betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1879,6 +1879,7 @@ function renderStudioUsage(data){
   const interviewCount=Number(data?.bloomingInterviewQuestions||0),interviewInput=Number(data?.bloomingInterviewInputTokens||0),interviewCached=Number(data?.bloomingInterviewCachedInputTokens||0),interviewOutput=Number(data?.bloomingInterviewOutputTokens||0);
   const interviewCost=Number(data?.bloomingInterviewEstimatedCostUsd||0);
   const betweenCount=Number(data?.betweenThoughtsQuestions||0),betweenCurations=Number(data?.betweenThoughtsCurations||0),betweenPrepared=Number(data?.betweenThoughtsPreparedPairs||betweenCount),betweenInput=Number(data?.betweenThoughtsInputTokens||0),betweenCached=Number(data?.betweenThoughtsCachedInputTokens||0),betweenOutput=Number(data?.betweenThoughtsOutputTokens||0);
+  const betweenProfiles=Number(data?.betweenThoughtsProfileGenerations||0),betweenProfileInput=Number(data?.betweenThoughtsProfileInputTokens||0),betweenProfileCached=Number(data?.betweenThoughtsProfileCachedInputTokens||0),betweenProfileOutput=Number(data?.betweenThoughtsProfileOutputTokens||0);
   const betweenCost=Number(data?.betweenThoughtsEstimatedCostUsd||0);
   const embeddingCost=Number(data?.embeddingEstimatedCostUsd||0);
   const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+betweenCost+embeddingCost));
@@ -1899,9 +1900,12 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-section-title">🌿 두 생각 사이 · GPT-5.4 mini</span>
     <span>AI 큐레이션</span><span class="value">${betweenCurations}회</span>
+    <span>생각 프로필 생성</span><span class="value">${betweenProfiles}개</span>
     <span>준비한 질문</span><span class="value">${betweenPrepared}개</span>
-    <span>입력 토큰</span><span class="value">${betweenInput.toLocaleString("ko-KR")}</span>
-    <span>출력 토큰</span><span class="value">${betweenOutput.toLocaleString("ko-KR")}</span>
+    <span>큐레이션 입력</span><span class="value">${betweenInput.toLocaleString("ko-KR")}</span>
+    <span>큐레이션 출력</span><span class="value">${betweenOutput.toLocaleString("ko-KR")}</span>
+    <span>프로필 입력</span><span class="value">${betweenProfileInput.toLocaleString("ko-KR")}</span>
+    <span>프로필 출력</span><span class="value">${betweenProfileOutput.toLocaleString("ko-KR")}</span>
     <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(betweenCost)}</span>
 
     <span class="ai-usage-section-title">🧠 의미 검색 · text-embedding-3-small</span>
@@ -1912,7 +1916,7 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
 
-  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 입력 토큰 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 의미 있는 조합을 고르기 위해 여러 생각과 연결된 출처·인용을 한 번에 읽습니다. 그래서 한 질문만 만드는 기능보다 입력 토큰이 더 들 수 있습니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 큐레이션 입력 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenProfileCached?`<br>생각 프로필 입력 중 ${betweenProfileCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 Fragment가 새로 생기거나 수정될 때 짧은 생각 프로필을 한 번 만들고 재사용합니다. 큐레이션 때는 여러 프로필을 먼저 훑은 뒤, 가능성이 높은 조합만 원문·출처·인용까지 다시 읽습니다. 준비된 조합은 기본 3일 동안 재사용합니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
 
   const plus=$("studioLimitPlus10");
   if(plus){
@@ -2238,6 +2242,11 @@ function requestFragmentEmbedding(fragmentId){
     callFn("embedFragment",{fragmentId}).catch(e=>{
       console.warn("fragment embedding skipped",e?.code||e?.message||e);
     });
+    if(!state.firebase.user?.isAnonymous){
+      callFn("betweenThoughtsProfile",{fragmentId}).catch(e=>{
+        console.warn("between thoughts profile skipped",e?.code||e?.message||e);
+      });
+    }
   },0);
 }
 async function startAccountMerge(){
@@ -2818,19 +2827,19 @@ function betweenThoughtExcerpt(f,max=220){return betweenThoughtExcerptText(betwe
 function betweenThoughtCandidateSignature(){return state.fragments.filter(betweenThoughtEligible).map(f=>`${f.id}:${f.updatedAt||f.createdAt||""}`).sort().join("|")}
 function betweenThoughtCandidateIds(){
   const pool=state.fragments.filter(betweenThoughtEligible).slice().sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")));
-  if(pool.length<=28)return pool.map(f=>f.id);
+  const max=36;if(pool.length<=max)return pool.map(f=>f.id);
   const selected=[],seen=new Set();
-  const add=f=>{if(f&&!seen.has(f.id)&&selected.length<28){seen.add(f.id);selected.push(f)}};
-  pool.filter(f=>f.starred).forEach(add);                         // 사용자가 중요 표시한 생각
-  pool.filter(f=>f.sourceId||f.externalText).slice(0,8).forEach(add); // 출처·인용이 있는 생각
-  pool.slice(0,8).forEach(add);                                  // 최근 생각
-  const remaining=28-selected.length;
+  const add=f=>{if(f&&!seen.has(f.id)&&selected.length<max){seen.add(f.id);selected.push(f)}};
+  pool.filter(f=>f.starred).forEach(add);                              // 사용자가 중요 표시한 생각
+  pool.filter(f=>f.sourceId||f.externalText).slice(0,10).forEach(add); // 출처·인용이 있는 생각
+  pool.slice(0,10).forEach(add);                                       // 최근 생각
+  const remaining=max-selected.length;
   if(remaining>0){
     const step=Math.max(1,(pool.length-1)/Math.max(1,remaining-1));
     for(let i=0;i<remaining;i++)add(pool[Math.min(pool.length-1,Math.round(i*step))]);
   }
   pool.forEach(add);
-  return selected.slice(0,28).map(f=>f.id);
+  return selected.slice(0,max).map(f=>f.id);
 }
 function betweenThoughtDisplayParts(f,full=false){
   const src=betweenThoughtSource(f),thought=String(f?.thought||f?.text||"").trim(),quote=String(f?.externalText||"").trim();
@@ -2860,8 +2869,11 @@ function renderBetweenThoughts(){
   const eligible=state.fragments.filter(betweenThoughtEligible);
   if(eligible.length<2){box.innerHTML=`<div class="between-thought-empty">생각이 조금 더 쌓이면, 함께 놓을 이유가 있는 두 생각을 찾아볼게요.</div>`;return}
   const sig=betweenThoughtCandidateSignature();
-  if(sig!==state.betweenThoughts.candidateSignature){state.betweenThoughts.candidateSignature=sig;state.betweenThoughts.noPair=false;state.betweenThoughts.items=[];state.betweenThoughts.index=0}
-  if(state.betweenThoughts.loading){box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 여러 생각과 출처를 함께 훑어보며, 억지스럽지 않은 연결을 고르고 있어요…</div>`;return}
+  if(sig!==state.betweenThoughts.candidateSignature){
+    state.betweenThoughts.candidateSignature=sig;
+    if(!state.betweenThoughts.items?.length){state.betweenThoughts.noPair=false;state.betweenThoughts.index=0}
+  }
+  if(state.betweenThoughts.loading){box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 생각의 짧은 표식을 먼저 훑고, 가능성 있는 조합만 원문과 출처까지 다시 읽고 있어요…</div>`;return}
   if(state.betweenThoughts.noPair){box.innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>새로운 생각이 더 쌓이면 다시 찾아볼게요.</div>`;return}
   if(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous){requestBetweenThoughtCuration();return}
   box.innerHTML=`<div class="between-thought-empty">두 생각 사이는 Google 계정 연결 후 AI가 여러 생각을 함께 읽고 골라드려요.</div>`;
@@ -2872,11 +2884,11 @@ async function requestBetweenThoughtCuration(forceRefresh=false){
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return renderBetweenThoughts();
   bt.loading=true;bt.expanded={};
   $("betweenThoughtsNext")?.classList.add("hidden");
-  $("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 여러 생각과 출처를 함께 훑어보며, 억지스럽지 않은 연결을 고르고 있어요…</div>`;
+  $("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 생각의 짧은 표식을 먼저 훑고, 가능성 있는 조합만 원문과 출처까지 다시 읽고 있어요…</div>`;
   try{
     const data=await callFn("betweenThoughtsCurate",{candidateIds,excludePairKeys:bt.seenPairKeys.slice(-12),forceRefresh:!!forceRefresh});
     const items=(data?.items||[]).filter(x=>Array.isArray(x?.fragmentIds)&&x.fragmentIds.length===2&&x.question).filter(x=>x.fragmentIds.every(id=>state.fragments.some(f=>f.id===id)));
-    bt.items=items;bt.index=0;bt.curationId=String(data?.curationId||"");bt.model=String(data?.model||"");bt.noPair=!items.length;
+    bt.items=items;bt.index=0;bt.curationId=String(data?.curationId||"");bt.model=String(data?.model||"");bt.curatedAtMs=Number(data?.generatedAtMs||Date.now());bt.noPair=!items.length;
     if(!items.length){bt.items=[];$("betweenThoughtsBox").innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>새로운 생각이 더 쌓이면 다시 찾아볼게요.</div>`;return}
     items.forEach(x=>{const k=betweenThoughtPairKey(x.fragmentIds);if(k&&!bt.seenPairKeys.includes(k))bt.seenPairKeys.push(k)});
   }catch(e){console.error(e);bt.items=[];$("betweenThoughtsBox").innerHTML=`<div class="between-thought-empty">두 생각을 고르는 중 잠시 멈췄어요.<br>${esc(e?.message||"잠시 후 다시 시도해 주세요.")}</div>`;return}
