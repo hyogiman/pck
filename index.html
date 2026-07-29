@@ -243,6 +243,12 @@
     .blooming-history-item div{font-family:var(--serif);font-size:.8rem;line-height:1.6;white-space:pre-wrap}
     .blooming-reflect{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
     .blooming-reflect-title{font-weight:850;font-size:.8rem;color:#415047;margin-bottom:5px}
+    .interview-mic{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;background:#eef4ee;font-size:1.25rem;margin-bottom:10px}
+    .interview-lead{font-family:var(--serif);font-size:1rem;line-height:1.7;color:#344039;margin:0 0 12px}
+    .interview-fragment{padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:#f8faf7;font-family:var(--serif);font-size:.86rem;line-height:1.65;color:#3c4741;white-space:pre-wrap;max-height:180px;overflow:auto}
+    .interview-question{margin:14px 0 4px;padding:15px 16px;border-radius:15px;background:#f2f6f0;border:1px solid #dbe7da;font-family:var(--serif);font-size:1.03rem;line-height:1.7;color:#2f3d34}
+    .interview-loading{padding:22px 8px;text-align:center;color:var(--muted);font-size:.78rem;line-height:1.7}
+    .interview-test-badge{display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#f4efe3;color:#7f6741;font-size:.6rem;font-weight:800;vertical-align:middle}
     @media(max-width:620px){.blooming-compare-grid{grid-template-columns:1fr}}
     .spark-q{-webkit-user-select:text;user-select:text;font-size:1.08rem;line-height:1.58;margin:0 0 13px;color:#2b3134}
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
@@ -913,6 +919,17 @@
   </div>
 </dialog>
 
+<dialog id="bloomingInterviewDialog">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-head">
+      <div><div class="eyebrow">BLOOMING INTERVIEW</div><h2 id="bloomingInterviewTitle">🎙️ 잠깐만요!</h2></div>
+      <button class="close-btn" id="bloomingInterviewClose" type="button">✕</button>
+    </div>
+    <div id="bloomingInterviewBody"></div>
+    <div class="modal-actions" id="bloomingInterviewActions"></div>
+  </div>
+</dialog>
+
 <dialog id="sourceLinkDialog">
   <div class="modal">
     <div class="modal-head">
@@ -1259,15 +1276,27 @@
         </div>
       </div>
     </details>
+
+    <details class="setting-section">
+      <summary><span>🎙️ Blooming Interview</span><span class="setting-state" id="bloomingInterviewSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="helper">가끔 평범한 생각을 저장하는 바로 그 순간, 인터뷰어가 불쑥 나타납니다. 먼저 “잠깐만요!” 하고 물어본 뒤, <b>내가 응할 때만 AI가 방금 쓴 생각을 읽고 질문 하나</b>를 만듭니다. 답하면 그 답은 새 Fragment가 되고 원래 생각과 자동으로 이어집니다.</div>
+        <div class="row2" style="margin-top:10px"><div><span class="field-lbl">불쑥 찾아오는 인터뷰</span><div class="helper" style="margin-top:4px">보통 36~60시간 정도 거리를 두며, 최근 7일에는 최대 3번까지만 나타납니다. 지나쳐도 다시 바로 쫓아오지 않습니다.</div></div><div style="display:flex;align-items:flex-end"><button class="btn" id="bloomingInterviewToggle" type="button" style="width:100%">끄기</button></div></div>
+        <div class="helper" id="bloomingInterviewHint" style="margin-top:9px"></div>
+        <div class="actions" style="margin-top:12px"><button class="btn soft" id="armBloomingInterviewTest" type="button">🎙️ 다음 생각 저장 때 1회 테스트</button></div>
+        <div class="helper" id="bloomingInterviewTestHint" style="margin-top:7px">테스트는 실제 등장 간격이나 주 3회 제한에 영향을 주지 않습니다. 다음에 일반 생각을 저장하면 같은 흐름을 한 번 확인할 수 있어요.</div>
+      </div>
+    </details>
   </div>
 </dialog>
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v21 · Blooming Question fresh-first + sparse return */
+/* Thought Garden v23 · Blooming Interview */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
+const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState", BLOOMING_INTERVIEW_TEST_KEY="thoughtGarden_bloomingInterviewTestNext";
 const BOOK_SEARCH_PROXY="https://us-central1-idea-pocket-56063.cloudfunctions.net/bookSearch";
 const DEFAULT_FIREBASE_CONFIG={
   apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
@@ -1284,7 +1313,8 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
   threadMatchCache:{},threadMatchLoading:{},
-  studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null};
+  studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
+  bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,test:false,busy:false}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1363,6 +1393,154 @@ async function saveStudioGardenerSetting(enabled){
       updatedAtServer:api.serverTimestamp()
     },{merge:true});
   }
+}
+function bloomingInterviewEnabled(){
+  const v=localStorage.getItem(BLOOMING_INTERVIEW_ENABLED_KEY);
+  return v===null?true:v==="1";
+}
+function randomInterviewHours(min,max){return min+Math.random()*(max-min)}
+function normalizeBloomingInterviewState(raw){
+  const now=Date.now();
+  const x=(raw&&typeof raw==="object")?raw:{};
+  const appearances=Array.isArray(x.appearances)?x.appearances.filter(v=>!Number.isNaN(new Date(v).getTime())).slice(-20):[];
+  let nextEligibleAt=x.nextEligibleAt;
+  if(!nextEligibleAt||Number.isNaN(new Date(nextEligibleAt).getTime())) nextEligibleAt=new Date(now+randomInterviewHours(12,36)*3600000).toISOString();
+  return {nextEligibleAt,appearances};
+}
+function bloomingInterviewSchedule(){
+  try{return normalizeBloomingInterviewState(JSON.parse(localStorage.getItem(BLOOMING_INTERVIEW_STATE_KEY)||"null"))}
+  catch(_){return normalizeBloomingInterviewState(null)}
+}
+function saveLocalBloomingInterviewSchedule(st){
+  const normalized=normalizeBloomingInterviewState(st);
+  localStorage.setItem(BLOOMING_INTERVIEW_STATE_KEY,JSON.stringify(normalized));
+  return normalized;
+}
+async function saveCloudBloomingInterviewSchedule(st){
+  const normalized=saveLocalBloomingInterviewSchedule(st);
+  if(state.firebase.connected&&state.firebase.uid&&!state.firebase.user?.isAnonymous){
+    const {api,db,uid}=state.firebase;
+    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{bloomingInterviewState:normalized,updatedAtServer:api.serverTimestamp()},{merge:true});
+  }
+  return normalized;
+}
+async function loadCloudBloomingInterviewSettings(){
+  const localEnabled=bloomingInterviewEnabled();
+  const localState=bloomingInterviewSchedule();
+  if(!state.firebase.connected||!state.firebase.uid){saveLocalBloomingInterviewSchedule(localState);return}
+  const {api,db,uid}=state.firebase;
+  const ref=api.doc(db,"users",uid,"settings","private"),snap=await api.getDoc(ref),data=snap.exists()?snap.data()||{}:{};
+  if(typeof data.bloomingInterviewEnabled==="boolean")localStorage.setItem(BLOOMING_INTERVIEW_ENABLED_KEY,data.bloomingInterviewEnabled?"1":"0");
+  else localStorage.setItem(BLOOMING_INTERVIEW_ENABLED_KEY,localEnabled?"1":"0");
+  if(data.bloomingInterviewState&&typeof data.bloomingInterviewState==="object")saveLocalBloomingInterviewSchedule(data.bloomingInterviewState);
+  else saveLocalBloomingInterviewSchedule(localState);
+  if(!state.firebase.user?.isAnonymous&&(typeof data.bloomingInterviewEnabled!=="boolean"||!data.bloomingInterviewState)){
+    await api.setDoc(ref,{bloomingInterviewEnabled:bloomingInterviewEnabled(),bloomingInterviewState:bloomingInterviewSchedule(),updatedAtServer:api.serverTimestamp()},{merge:true});
+  }
+}
+async function saveBloomingInterviewSetting(enabled){
+  localStorage.setItem(BLOOMING_INTERVIEW_ENABLED_KEY,enabled?"1":"0");
+  const st=bloomingInterviewSchedule();saveLocalBloomingInterviewSchedule(st);
+  if(state.firebase.connected&&state.firebase.uid&&!state.firebase.user?.isAnonymous){
+    const {api,db,uid}=state.firebase;
+    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{bloomingInterviewEnabled:enabled,bloomingInterviewState:st,updatedAtServer:api.serverTimestamp()},{merge:true});
+  }
+}
+function interviewTestArmed(){return localStorage.getItem(BLOOMING_INTERVIEW_TEST_KEY)==="1"}
+function armBloomingInterviewTest(on=true){
+  if(on)localStorage.setItem(BLOOMING_INTERVIEW_TEST_KEY,"1");else localStorage.removeItem(BLOOMING_INTERVIEW_TEST_KEY);
+  renderBloomingInterviewSettings();
+}
+function interviewableFragment(f){
+  const text=String(f?.thought||f?.text||"").trim();
+  return !!f&&text.length>=4&&!f.bloomingQuestionKey&&!f.bloomingInterviewSourceId&&!f.bloomingReflectionForKey&&!f.studioProjectId;
+}
+function recentInterviewAppearances(st,now=Date.now()){
+  const cutoff=now-7*86400000;
+  return (st.appearances||[]).filter(x=>{const t=new Date(x).getTime();return Number.isFinite(t)&&t>=cutoff});
+}
+function fragmentInterviewExcerpt(f){
+  const t=String(f?.thought||f?.text||"").trim();
+  return t.length>420?t.slice(0,420)+"…":t;
+}
+function openBloomingInterviewInvite(f,{test=false}={}){
+  state.bloomingInterview={sourceId:f.id,question:null,model:null,returnAfterSaveId:f.id,test,busy:false};
+  $("bloomingInterviewTitle").innerHTML=`🎙️ 잠깐만요!${test?'<span class="interview-test-badge">TEST</span>':""}`;
+  $("bloomingInterviewBody").innerHTML=`<div class="interview-mic">🎙️</div><p class="interview-lead">방금 남긴 이 생각, 하나만 더 물어봐도 될까요?</p><div class="interview-fragment">${esc(fragmentInterviewExcerpt(f))}</div>`;
+  $("bloomingInterviewActions").innerHTML=`<button class="btn" id="bloomingInterviewSkip" type="button">그냥 지나갈게요</button><button class="btn primary" id="bloomingInterviewAccept" type="button">좋아요</button>`;
+  $("bloomingInterviewSkip").onclick=finishBloomingInterview;
+  $("bloomingInterviewAccept").onclick=requestBloomingInterviewQuestion;
+  $("bloomingInterviewDialog").showModal();
+}
+async function maybeOfferBloomingInterview(f){
+  if(!interviewableFragment(f))return false;
+  const ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous&&state.firebase.functions);
+  if(!ready)return false;
+  const forced=interviewTestArmed();
+  if(forced){armBloomingInterviewTest(false);openBloomingInterviewInvite(f,{test:true});return true}
+  if(!bloomingInterviewEnabled())return false;
+  const now=Date.now(),st=bloomingInterviewSchedule(),recent=recentInterviewAppearances(st,now);
+  if(recent.length>=3)return false;
+  if(new Date(st.nextEligibleAt).getTime()>now)return false;
+  st.appearances=[...recent,new Date(now).toISOString()];
+  st.nextEligibleAt=new Date(now+randomInterviewHours(36,60)*3600000).toISOString();
+  saveCloudBloomingInterviewSchedule(st).catch(e=>console.warn("Blooming Interview schedule sync skipped",e));
+  openBloomingInterviewInvite(f,{test:false});return true;
+}
+async function requestBloomingInterviewQuestion(){
+  const bi=state.bloomingInterview;if(!bi?.sourceId||bi.busy)return;
+  bi.busy=true;
+  $("bloomingInterviewTitle").innerHTML=`🎙️ 질문 하나만${bi.test?'<span class="interview-test-badge">TEST</span>':""}`;
+  $("bloomingInterviewBody").innerHTML=`<div class="interview-loading">방금 남긴 생각을 읽고 있어요.<br>아직 가보지 않은 방향에서 질문 하나를 고르는 중…</div>`;
+  $("bloomingInterviewActions").innerHTML=`<button class="btn" id="bloomingInterviewCancelLoading" type="button">그만둘게요</button>`;
+  $("bloomingInterviewCancelLoading").onclick=finishBloomingInterview;
+  try{
+    const data=await callFn("bloomingInterviewQuestion",{fragmentId:bi.sourceId});
+    if(state.bloomingInterview!==bi||!$("bloomingInterviewDialog")?.open)return;
+    if(!data?.question)throw new Error(data?.reason||"질문이 비어 있습니다.");
+    bi.question=String(data.question);bi.model=String(data.model||"");bi.busy=false;
+    const src=state.fragments.find(x=>x.id===bi.sourceId);
+    $("bloomingInterviewBody").innerHTML=`<div class="interview-fragment">${esc(fragmentInterviewExcerpt(src))}</div><div class="interview-question">${esc(bi.question)}</div><textarea class="textarea" id="bloomingInterviewAnswer" placeholder="지금 떠오르는 만큼만 적어도 괜찮아요." style="margin-top:12px;min-height:120px"></textarea>`;
+    $("bloomingInterviewActions").innerHTML=`<button class="btn" id="bloomingInterviewNoAnswer" type="button">지금은 답하지 않을게요</button><button class="btn primary" id="saveBloomingInterviewAnswer" type="button">🌱 생각으로 남기기</button>`;
+    $("bloomingInterviewNoAnswer").onclick=finishBloomingInterview;
+    $("saveBloomingInterviewAnswer").onclick=saveBloomingInterviewAnswer;
+    setTimeout(()=>$('bloomingInterviewAnswer')?.focus(),80);
+  }catch(e){
+    console.warn("Blooming Interview question failed",e);
+    bi.busy=false;
+    $("bloomingInterviewBody").innerHTML=`<div class="interview-loading">질문을 가져오지 못했어요.<br>방금 생각은 이미 안전하게 저장되어 있습니다.</div>`;
+    $("bloomingInterviewActions").innerHTML=`<button class="btn primary" id="bloomingInterviewErrorClose" type="button">괜찮아요</button>`;
+    $("bloomingInterviewErrorClose").onclick=finishBloomingInterview;
+  }
+}
+async function saveBloomingInterviewAnswer(){
+  const bi=state.bloomingInterview,answer=$("bloomingInterviewAnswer")?.value.trim();
+  if(!bi?.sourceId||!bi.question)return;
+  if(!answer)return toast("떠오른 생각을 한 줄이라도 적어주세요.");
+  const btn=$("saveBloomingInterviewAnswer");if(btn){btn.disabled=true;btn.textContent="생각을 잇는 중…"}
+  const createdAt=new Date().toISOString();
+  const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🎙️ Blooming Interview\nQ. ${bi.question}`,continuedFrom:[bi.sourceId],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,bloomingInterviewSourceId:bi.sourceId,bloomingInterviewQuestion:bi.question,bloomingInterviewAnsweredAt:createdAt,bloomingInterviewModel:bi.model||""};
+  try{
+    state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);renderAll();
+    finishBloomingInterview();
+    toast("인터뷰에서 나온 생각을 원래 생각에 이어 붙였어요. 🌱");
+  }catch(e){
+    console.error(e);toast("인터뷰 답을 생각으로 남기지 못했습니다.");if(btn){btn.disabled=false;btn.textContent="🌱 생각으로 남기기"}
+  }
+}
+function finishBloomingInterview(){
+  const bi=state.bloomingInterview||{},returnId=bi.returnAfterSaveId;
+  state.bloomingInterview={sourceId:null,question:null,model:null,returnAfterSaveId:null,test:false,busy:false};
+  if($("bloomingInterviewDialog")?.open)$("bloomingInterviewDialog").close();
+  if(returnId){$("afterSaveFragmentId").value=returnId;setTimeout(()=>{if(!$("afterSaveDialog").open)$("afterSaveDialog").showModal()},60)}
+}
+function renderBloomingInterviewSettings(){
+  const btn=$("bloomingInterviewToggle"),hint=$("bloomingInterviewHint"),summary=$("bloomingInterviewSettingState"),test=$("armBloomingInterviewTest");
+  if(!btn||!hint||!summary||!test)return;
+  const enabled=bloomingInterviewEnabled(),ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous);
+  btn.textContent=enabled?"끄기":"켜기";btn.disabled=!ready;summary.textContent=enabled?"켜짐":"꺼짐";
+  hint.innerHTML=!ready?"Blooming Interview는 Google 로그인 상태에서만 사용할 수 있습니다.":enabled?"켜져 있습니다. 팝업 자체는 AI를 쓰지 않고 즉시 나타나며, <b>‘좋아요’를 눌러 질문을 요청할 때만</b> GPT 호출이 발생합니다.":"꺼져 있습니다. 생각을 저장해도 인터뷰어가 나타나지 않습니다.";
+  const armed=interviewTestArmed();test.disabled=!ready||!enabled;test.textContent=armed?"✓ 다음 생각 저장 때 테스트 대기 중":"🎙️ 다음 생각 저장 때 1회 테스트";
 }
 function hashBloomingSeed(seed){
   let h=2166136261;
@@ -1538,8 +1716,10 @@ function renderStudioUsage(data){
   const materialTokens=Number(data?.studioMaterialEmbeddingTokens||0),materialCount=Number(data?.studioMaterialEmbeddingCount||0);
   const embeddingTokens=Number(data?.embeddingTokens||fragmentTokens+materialTokens);
   const gardenerCost=Number(data?.gardenerEstimatedCostUsd??data?.estimatedCostUsd??0);
+  const interviewCount=Number(data?.bloomingInterviewQuestions||0),interviewInput=Number(data?.bloomingInterviewInputTokens||0),interviewCached=Number(data?.bloomingInterviewCachedInputTokens||0),interviewOutput=Number(data?.bloomingInterviewOutputTokens||0);
+  const interviewCost=Number(data?.bloomingInterviewEstimatedCostUsd||0);
   const embeddingCost=Number(data?.embeddingEstimatedCostUsd||0);
-  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+embeddingCost));
+  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+embeddingCost));
 
   grid.innerHTML=`
     <span class="ai-usage-section-title">🌿 정원사 질문 · GPT-5.4 mini</span>
@@ -1549,6 +1729,12 @@ function renderStudioUsage(data){
     <span>출력 토큰</span><span class="value">${output.toLocaleString("ko-KR")}</span>
     <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(gardenerCost)}</span>
 
+    <span class="ai-usage-section-title">🎙️ Blooming Interview · GPT-5.4 mini</span>
+    <span>질문 생성</span><span class="value">${interviewCount}회</span>
+    <span>입력 토큰</span><span class="value">${interviewInput.toLocaleString("ko-KR")}</span>
+    <span>출력 토큰</span><span class="value">${interviewOutput.toLocaleString("ko-KR")}</span>
+    <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(interviewCost)}</span>
+
     <span class="ai-usage-section-title">🧠 의미 검색 · text-embedding-3-small</span>
     <span>생각 색인</span><span class="value">${fragmentTokens.toLocaleString("ko-KR")} tokens${fragmentCount?` · ${fragmentCount}건`:""}</span>
     <span>Studio 재료 검색</span><span class="value">${materialTokens.toLocaleString("ko-KR")} tokens${materialCount?` · ${materialCount}건`:""}</span>
@@ -1557,7 +1743,7 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
 
-  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
 
   const plus=$("studioLimitPlus10");
   if(plus){
@@ -1793,9 +1979,10 @@ async function activateFirebaseUser(user,{pushLocalKeys=false}={}){
   attachRealtime();
   await loadCloudApiKeys({pushLocal:pushLocalKeys});
   await loadCloudAiSettings();
+  await loadCloudBloomingInterviewSettings();
   await loadCloudCustomBlooming();
   ensurePersonalBloomSchedule();
-  renderApiSettings();renderAccountStatus();renderAiSettings();renderCustomBloomingSettings();
+  renderApiSettings();renderAccountStatus();renderAiSettings();renderBloomingInterviewSettings();renderCustomBloomingSettings();
   if($("accountDialog")?.open)$("accountDialog").close();
 }
 async function beginGoogleAuth(){
@@ -2137,7 +2324,7 @@ function continuedFromLine(f){
 
   const parent=parents[0];
   const parentLine=parent
-    ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${esc(fmt((parent.date||parent.createdAt||"").slice(0,10)))}의 생각에서 이어짐</button>`
+    ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${f.bloomingInterviewSourceId?"🎙️ Blooming Interview · ":""}${esc(fmt((parent.date||parent.createdAt||"").slice(0,10)))}의 생각에서 이어짐</button>`
     : "";
 
   const childLine=children.length
@@ -3441,7 +3628,9 @@ async function saveCapture(){
     }
     renderAll();
     if(ctx?.kind==="spark"&&previousBlooming.length){openBloomingComparison(f,previousBlooming,ctx);return}
-    $("afterSaveFragmentId").value=f.id;$("afterSaveDialog").showModal();
+    $("afterSaveFragmentId").value=f.id;
+    if(!ctx&&await maybeOfferBloomingInterview(f))return;
+    $("afterSaveDialog").showModal();
   }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
 }
 function renderTodayDialog(){
@@ -4120,10 +4309,10 @@ async function resetEverything(){
   if(answer!=="전체삭제")return toast("초기화를 취소했습니다.");
   for(const f of state.fragments)await deleteAttachments(f.attachments||[]);
   for(const name of ["projects","threads","fragments","sources"])await deleteCollectionDocs(name);
-  localStorage.removeItem(BLOOMING_CUSTOM_KEY);localStorage.removeItem(BLOOMING_HISTORY_KEY);localStorage.removeItem("tg_spark");
+  localStorage.removeItem(BLOOMING_CUSTOM_KEY);localStorage.removeItem(BLOOMING_HISTORY_KEY);localStorage.removeItem("tg_spark");localStorage.removeItem(BLOOMING_INTERVIEW_STATE_KEY);localStorage.removeItem(BLOOMING_INTERVIEW_TEST_KEY);
   if(state.firebase.connected&&state.firebase.uid){
     const {api,db,uid}=state.firebase;
-    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{customBloomingQuestions:[],updatedAtServer:api.serverTimestamp()},{merge:true});
+    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{customBloomingQuestions:[],bloomingInterviewState:normalizeBloomingInterviewState(null),updatedAtServer:api.serverTimestamp()},{merge:true});
   }
   renderAll();setView("capture");$("settingsDialog").close();toast("모든 데이터를 초기화했습니다.");
 }
@@ -4147,7 +4336,7 @@ async function migrateV01(){
   let d;try{d=JSON.parse(localStorage.getItem("thoughtGarden_v01")||"null")}catch{}if(!d?.fragments?.length)return toast("이 브라우저에서 V0.1 기록을 찾지 못했습니다.");
   let n=0;for(const old of d.fragments){const f={id:old.id||uid(),type:["moment","decision"].includes(old.type)?old.type:"thought",thought:old.myThought||old.content||old.quote||old.title||"",context:old.people||old.sourceTitle||"",choice:old.decisionOptions||"",externalText:old.quote||"",locator:old.page?`p.${old.page}`:"",threadIds:[],date:old.date||today(),createdAt:old.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};state.fragments.push(f);await persist("fragments",f);n++}renderAll();toast(`V0.1 기록 ${n}개를 가져왔습니다.`)
 }
-function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:allFragments(),threads:state.threads,projects:state.projects,customBloomingQuestions:customBloomingQuestions(),bloomingHistory:bloomingHistory()},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
+function exportData(){const blob=new Blob([JSON.stringify({app:"thought-garden-v02",exportedAt:new Date().toISOString(),sources:state.sources,fragments:allFragments(),threads:state.threads,projects:state.projects,customBloomingQuestions:customBloomingQuestions(),bloomingHistory:bloomingHistory(),bloomingInterviewState:bloomingInterviewSchedule()},null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`thought-garden-v02-${today()}.json`;a.click();URL.revokeObjectURL(url)}
 async function importData(file){try{
   const d=JSON.parse(await file.text());
   const merged={};
@@ -4172,6 +4361,9 @@ async function importData(file){try{
       if(!here||String(v?.lastShownAt||"")>String(here?.lastShownAt||""))local[k]=v;
     }
     saveBloomingHistory(local);
+  }
+  if(d.bloomingInterviewState&&typeof d.bloomingInterviewState==="object"){
+    await saveCloudBloomingInterviewSchedule(d.bloomingInterviewState);
   }
   if(state.firebase.connected){
     for(const x of merged.fragments)await persist("fragments",x);
@@ -4293,7 +4485,7 @@ $("googleAccountBtn").addEventListener("click",beginGoogleAuth);
 $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
 $("signOutBtn").addEventListener("click",signOutGarden);
 $("sheetSettings").addEventListener("click",()=>{
-  closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();
+  closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();renderBloomingInterviewSettings();
   $("studioUsagePanel")?.classList.add("hidden");
   if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 AI 사용량 보기";
   if($("openAiOfficialUsageBody"))$("openAiOfficialUsageBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>`;
@@ -4370,6 +4562,17 @@ $("sparkToggle").addEventListener("click",()=>{
   localStorage.setItem("tg_spark_off",off?"0":"1");
   renderSparkSettings();renderSpark();
 });
+$("bloomingInterviewToggle").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
+  const next=!bloomingInterviewEnabled();
+  try{await saveBloomingInterviewSetting(next);renderBloomingInterviewSettings();toast(next?"Blooming Interview를 켰습니다. 🎙️":"Blooming Interview를 껐습니다.")}catch(e){console.warn(e);toast("Blooming Interview 설정을 저장하지 못했습니다.")}
+});
+$("armBloomingInterviewTest").addEventListener("click",()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 테스트할 수 있습니다.");
+  if(!bloomingInterviewEnabled())return toast("Blooming Interview를 먼저 켜주세요.");
+  const next=!interviewTestArmed();armBloomingInterviewTest(next);toast(next?"다음 일반 생각을 저장하면 인터뷰가 한 번 나타납니다. 🎙️":"인터뷰 테스트를 취소했습니다.");
+});
+$("bloomingInterviewClose").addEventListener("click",finishBloomingInterview);
 $("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
 $("openAiOfficialRefresh").addEventListener("click",refreshOpenAiOfficialUsage);
 $("studioLimitPlus10").addEventListener("click",async()=>{
@@ -4447,6 +4650,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
   toast(state.firebase.connected&&!state.firebase.user?.isAnonymous?"API 설정을 계정에 동기화했습니다.":"API 설정을 이 기기에 저장했습니다. Google 연결 후 자동 동기화됩니다.");
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
+$("bloomingInterviewDialog").addEventListener("click",e=>{if(e.target===$("bloomingInterviewDialog"))finishBloomingInterview()});
 ["captureDialog","afterSaveDialog","bloomingCompareDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
