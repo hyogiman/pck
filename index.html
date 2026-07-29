@@ -1252,7 +1252,7 @@
         <div class="helper" id="sparkHint" style="margin-top:9px"></div>
         <div class="blooming-custom-wrap">
           <div class="blooming-custom-head"><b>🌱 나를 위한 질문 심기</b><span class="blooming-custom-count" id="customBloomingCount"></span></div>
-          <div class="helper">미래의 나에게 다시 묻고 싶은 질문을 적어두세요. 처음에는 심은 뒤 <b>30~60일 동안 묻어두고</b> 그 뒤부터 나타날 수 있습니다. 기본 700개의 다양성을 해치지 않도록 처음 만나는 내 질문도 <b>최소 10일 간격</b>으로만 섞입니다. 한 번 실제로 나타난 뒤에는 답변 여부와 관계없이 <b>100~130일 동안 다시 묻어두고</b>, 재등장 질문 전체는 기본 질문이 남아 있는 동안 <b>최소 30일 간격</b>을 둡니다. 나타날 때는 ‘내가 만든 질문’ 배지가 붙습니다.</div>
+          <div class="helper">미래의 나에게 다시 묻고 싶은 질문을 적어두세요. 처음에는 심은 뒤 <b>30~60일 동안 묻어두고</b> 그 뒤부터 나타날 수 있습니다. 기본 700개의 다양성을 해치지 않도록 처음 만나는 내 질문을 포함해 내가 심은 질문끼리는 <b>20~30일 이상 간격</b>을 두고 드물게 섞입니다. 한 번 실제로 나타난 뒤에는 답변 여부와 관계없이 <b>100~130일 동안 다시 묻어두고</b>, 재등장 질문 전체는 기본 질문이 남아 있는 동안 <b>최소 30일 간격</b>을 둡니다. 나타날 때는 ‘내가 만든 질문’ 배지가 붙습니다.</div>
           <textarea class="textarea" id="customBloomingInput" placeholder="예: 요즘 내가 정말 지키고 싶은 한 가지는 무엇인가요?" style="margin-top:9px;min-height:76px"></textarea>
           <button class="btn primary block" id="addCustomBlooming" type="button" style="margin-top:8px">＋ 내 질문 저장</button>
           <div class="blooming-custom-list" id="customBloomingList"></div>
@@ -1373,6 +1373,7 @@ function hashBloomingSeed(seed){
 function customBloomingDaysFromSeed(seed){return 30+(hashBloomingSeed(seed)%31)}
 function repeatBloomingDaysFromSeed(seed){return 100+(hashBloomingSeed(seed)%31)}
 function randomPersonalBloomDays(){return 30+Math.floor(Math.random()*31)}
+function randomPersonalQuestionGapDays(){return 20+Math.floor(Math.random()*11)}
 function randomBloomingRepeatDays(){return 100+Math.floor(Math.random()*31)}
 function addBloomingDays(base,days){
   const d=new Date(base||new Date());
@@ -2320,7 +2321,7 @@ const SPARKS=[{c:"일상",q:"오늘 하루 중 가장 조용했던 순간은 언
    1) 기본 질문 700개 중 아직 만나지 않은 질문을 기본값으로 삼는다.
    2) 질문은 답변 여부가 아니라 실제 홈 등장일을 기준으로 100~130일 동안 다시 나오지 않는다.
    3) 아직 보지 않은 기본 질문이 남아 있는 동안 재등장은 최소 30일 간격으로만 허용해 700개의 폭을 우선한다.
-   4) 내가 심은 질문은 첫 등장 전 30~60일 숙성하며, 기본 질문의 폭을 해치지 않도록 첫 등장끼리도 최소 10일 간격을 둔다.
+   4) 내가 심은 질문은 첫 등장 전 30~60일 숙성하며, 첫 등장과 재등장을 모두 합쳐 내 질문끼리는 매번 20~30일의 간격을 둔다.
    5) 기본 700개를 모두 한 번 만난 뒤에는 숙성이 끝난 과거 질문들이 자연스럽게 다음 순환을 만든다. ── */
 function sparkState(){try{return JSON.parse(localStorage.getItem("tg_spark")||"{}")}catch(e){return {}}}
 function saveSparkState(v){try{localStorage.setItem("tg_spark",JSON.stringify(v))}catch(e){}}
@@ -2354,18 +2355,32 @@ function daysSinceSparkStateDate(v){
   const d=daysAgo(String(v).slice(0,10));
   return d===null?Infinity:d;
 }
+function sparkDayPlus(days){
+  const d=new Date(`${today()}T12:00:00`);d.setDate(d.getDate()+Number(days||0));return d.toISOString().slice(0,10);
+}
+function personalQuestionGapReady(st){
+  const due=String(st?.nextPersonalQuestionDay||"");
+  if(due)return today()>=due;
+  // v21 이전 상태를 자연스럽게 이어받는다. 예전 마지막 첫 등장 기록이 있다면 최소 20일은 띄운다.
+  return daysSinceSparkStateDate(st?.lastPersonalFirstDay)>=20;
+}
+function markNextPersonalQuestionWindow(next){
+  next.lastPersonalQuestionDay=today();
+  next.lastPersonalFirstDay=today(); // 구버전 호환용
+  next.nextPersonalQuestionDay=sparkDayPlus(randomPersonalQuestionGapDays());
+}
 function pickFirstMaturePersonalSpark(st,freshRemain){
   const eligible=customBloomingQuestions().filter(x=>!x.lastShownAt&&customBloomingIsEligible(x));
-  if(!eligible.length)return null;
-  // 아직 기본 700개가 남아 있으면 개인 질문의 첫 등장도 드물게 섞는다.
-  if(freshRemain&&daysSinceSparkStateDate(st?.lastPersonalFirstDay)<10)return null;
+  if(!eligible.length||!personalQuestionGapReady(st))return null;
+  // 내 질문은 기본 700개 사이에서 가끔 반짝이도록 한다. 숙성이 끝나도 바로 나오지는 않는다.
   if(freshRemain&&Math.random()>=0.18)return null;
   const x=eligible[Math.floor(Math.random()*eligible.length)];
   return {key:`u:${x.id}`};
 }
 function pickMatureRepeatSpark(st,freshRemain){
   const h=bloomingHistory();
-  const eligible=Object.keys(h).filter(k=>sparkByKey(k)&&bloomingRepeatIsEligible(k));
+  let eligible=Object.keys(h).filter(k=>sparkByKey(k)&&bloomingRepeatIsEligible(k));
+  if(!personalQuestionGapReady(st))eligible=eligible.filter(k=>!k.startsWith("u:"));
   if(!eligible.length)return null;
   // 핵심 안전장치: 아직 새 기본 질문이 남아 있는 동안에는 재등장을 월 1회 수준으로 제한한다.
   // 100일이 지난 질문이 매일 쌓여도 '재등장 물결'이 생기지 않는다.
@@ -2390,7 +2405,7 @@ function todaySpark(force){
   const special=personal||repeat;
   if(special){
     next.key=special.key;delete next.i;delete next.seen;
-    if(personal)next.lastPersonalFirstDay=today();
+    if(special.key.startsWith("u:"))markNextPersonalQuestionWindow(next);
     if(repeat)next.lastRepeatDay=today();
     saveSparkState(next);markBloomingShown(special.key);return sparkByKey(special.key);
   }
@@ -2400,11 +2415,13 @@ function todaySpark(force){
     const fallbackRepeat=pickMatureRepeatSpark(st,false);
     if(fallbackRepeat){
       next.key=fallbackRepeat.key;next.lastRepeatDay=today();delete next.i;delete next.seen;
+      if(fallbackRepeat.key.startsWith("u:"))markNextPersonalQuestionWindow(next);
       saveSparkState(next);markBloomingShown(fallbackRepeat.key);return sparkByKey(fallbackRepeat.key);
     }
     const fallbackPersonal=pickFirstMaturePersonalSpark(st,false);
     if(fallbackPersonal){
-      next.key=fallbackPersonal.key;next.lastPersonalFirstDay=today();delete next.i;delete next.seen;
+      next.key=fallbackPersonal.key;delete next.i;delete next.seen;
+      markNextPersonalQuestionWindow(next);
       saveSparkState(next);markBloomingShown(fallbackPersonal.key);return sparkByKey(fallbackPersonal.key);
     }
     return null;
