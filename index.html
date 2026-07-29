@@ -247,8 +247,9 @@
     .interview-lead{font-family:var(--serif);font-size:1rem;line-height:1.7;color:#344039;margin:0 0 12px}
     .interview-fragment{padding:13px 14px;border:1px solid var(--line);border-radius:14px;background:#f8faf7;font-family:var(--serif);font-size:.86rem;line-height:1.65;color:#3c4741;white-space:pre-wrap;max-height:180px;overflow:auto}
     .interview-question{margin:14px 0 4px;padding:15px 16px;border-radius:15px;background:#f2f6f0;border:1px solid #dbe7da;font-family:var(--serif);font-size:1.03rem;line-height:1.7;color:#2f3d34}
+    .interview-card-question{margin:11px 0 10px;padding:11px 13px;border-radius:13px;background:#f2f6f0;border:1px solid #dbe7da;color:#405448;font-size:.77rem;line-height:1.6}
+    .interview-card-question-label{display:block;margin-bottom:3px;color:var(--accent);font-size:.68rem;font-weight:850;letter-spacing:.04em}
     .interview-loading{padding:22px 8px;text-align:center;color:var(--muted);font-size:.78rem;line-height:1.7}
-    .interview-test-badge{display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#f4efe3;color:#7f6741;font-size:.6rem;font-weight:800;vertical-align:middle}
     @media(max-width:620px){.blooming-compare-grid{grid-template-columns:1fr}}
     .spark-q{-webkit-user-select:text;user-select:text;font-size:1.08rem;line-height:1.58;margin:0 0 13px;color:#2b3134}
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
@@ -1205,6 +1206,13 @@
           <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
         </div>
         <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>📊 AI 사용량</span></summary>
+      <div class="setting-body">
+        <div class="helper">정원사, Blooming Interview, 의미 검색에 사용된 AI 호출과 비용을 한곳에서 확인합니다.</div>
         <div class="actions" style="margin-top:12px"><button class="btn" id="studioUsageToggle" type="button">오늘 AI 사용량 보기</button></div>
         <div class="ai-usage-panel hidden" id="studioUsagePanel">
           <div class="ai-usage-grid" id="studioUsageGrid">
@@ -1237,8 +1245,12 @@
             </div>
           </div>
         </div>
-        <div class="actions" style="margin-top:12px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
-        <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
+          <b>🧠 의미 검색 색인</b>
+          <div class="helper" style="margin-top:5px">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다. 기존 생각에 색인이 없다면 한 번에 보완할 수 있습니다.</div>
+          <div class="actions" style="margin-top:10px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
+          <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
+        </div>
       </div>
     </details>
 
@@ -1283,8 +1295,6 @@
         <div class="helper">가끔 평범한 생각을 저장하는 바로 그 순간, 인터뷰어가 불쑥 나타납니다. 먼저 “잠깐만요!” 하고 물어본 뒤, <b>내가 응할 때만 AI가 방금 쓴 생각을 읽고 질문 하나</b>를 만듭니다. 답하면 그 답은 새 Fragment가 되고 원래 생각과 자동으로 이어집니다.</div>
         <div class="row2" style="margin-top:10px"><div><span class="field-lbl">불쑥 찾아오는 인터뷰</span><div class="helper" style="margin-top:4px">보통 36~60시간 정도 거리를 두며, 최근 7일에는 최대 3번까지만 나타납니다. 지나쳐도 다시 바로 쫓아오지 않습니다.</div></div><div style="display:flex;align-items:flex-end"><button class="btn" id="bloomingInterviewToggle" type="button" style="width:100%">끄기</button></div></div>
         <div class="helper" id="bloomingInterviewHint" style="margin-top:9px"></div>
-        <div class="actions" style="margin-top:12px"><button class="btn soft" id="armBloomingInterviewTest" type="button">🎙️ 다음 생각 저장 때 1회 테스트</button></div>
-        <div class="helper" id="bloomingInterviewTestHint" style="margin-top:7px">테스트는 실제 등장 간격이나 주 3회 제한에 영향을 주지 않습니다. 다음에 일반 생각을 저장하면 같은 흐름을 한 번 확인할 수 있어요.</div>
       </div>
     </details>
   </div>
@@ -1293,10 +1303,10 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v23 · Blooming Interview */
+/* Thought Garden v25 · Settings cleanup + Blooming Interview polish */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
-const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState", BLOOMING_INTERVIEW_TEST_KEY="thoughtGarden_bloomingInterviewTestNext";
+const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
 const BOOK_SEARCH_PROXY="https://us-central1-idea-pocket-56063.cloudfunctions.net/bookSearch";
 const DEFAULT_FIREBASE_CONFIG={
   apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
@@ -1314,7 +1324,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
-  bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,test:false,busy:false}};
+  bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1446,11 +1456,6 @@ async function saveBloomingInterviewSetting(enabled){
     await api.setDoc(api.doc(db,"users",uid,"settings","private"),{bloomingInterviewEnabled:enabled,bloomingInterviewState:st,updatedAtServer:api.serverTimestamp()},{merge:true});
   }
 }
-function interviewTestArmed(){return localStorage.getItem(BLOOMING_INTERVIEW_TEST_KEY)==="1"}
-function armBloomingInterviewTest(on=true){
-  if(on)localStorage.setItem(BLOOMING_INTERVIEW_TEST_KEY,"1");else localStorage.removeItem(BLOOMING_INTERVIEW_TEST_KEY);
-  renderBloomingInterviewSettings();
-}
 function interviewableFragment(f){
   const text=String(f?.thought||f?.text||"").trim();
   return !!f&&text.length>=4&&!f.bloomingQuestionKey&&!f.bloomingInterviewSourceId&&!f.bloomingReflectionForKey&&!f.studioProjectId;
@@ -1463,10 +1468,10 @@ function fragmentInterviewExcerpt(f){
   const t=String(f?.thought||f?.text||"").trim();
   return t.length>420?t.slice(0,420)+"…":t;
 }
-function openBloomingInterviewInvite(f,{test=false}={}){
-  state.bloomingInterview={sourceId:f.id,question:null,model:null,returnAfterSaveId:f.id,test,busy:false};
-  $("bloomingInterviewTitle").innerHTML=`🎙️ 잠깐만요!${test?'<span class="interview-test-badge">TEST</span>':""}`;
-  $("bloomingInterviewBody").innerHTML=`<div class="interview-mic">🎙️</div><p class="interview-lead">방금 남긴 이 생각, 하나만 더 물어봐도 될까요?</p><div class="interview-fragment">${esc(fragmentInterviewExcerpt(f))}</div>`;
+function openBloomingInterviewInvite(f){
+  state.bloomingInterview={sourceId:f.id,question:null,model:null,returnAfterSaveId:f.id,busy:false};
+  $("bloomingInterviewTitle").innerHTML=`🎙️ 잠깐만요!`;
+  $("bloomingInterviewBody").innerHTML=`<p class="interview-lead">방금 남긴 이 생각, 하나만 더 물어봐도 될까요?</p><div class="interview-fragment">${esc(fragmentInterviewExcerpt(f))}</div>`;
   $("bloomingInterviewActions").innerHTML=`<button class="btn" id="bloomingInterviewSkip" type="button">그냥 지나갈게요</button><button class="btn primary" id="bloomingInterviewAccept" type="button">좋아요</button>`;
   $("bloomingInterviewSkip").onclick=finishBloomingInterview;
   $("bloomingInterviewAccept").onclick=requestBloomingInterviewQuestion;
@@ -1476,8 +1481,6 @@ async function maybeOfferBloomingInterview(f){
   if(!interviewableFragment(f))return false;
   const ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous&&state.firebase.functions);
   if(!ready)return false;
-  const forced=interviewTestArmed();
-  if(forced){armBloomingInterviewTest(false);openBloomingInterviewInvite(f,{test:true});return true}
   if(!bloomingInterviewEnabled())return false;
   const now=Date.now(),st=bloomingInterviewSchedule(),recent=recentInterviewAppearances(st,now);
   if(recent.length>=3)return false;
@@ -1485,13 +1488,13 @@ async function maybeOfferBloomingInterview(f){
   st.appearances=[...recent,new Date(now).toISOString()];
   st.nextEligibleAt=new Date(now+randomInterviewHours(36,60)*3600000).toISOString();
   saveCloudBloomingInterviewSchedule(st).catch(e=>console.warn("Blooming Interview schedule sync skipped",e));
-  openBloomingInterviewInvite(f,{test:false});return true;
+  openBloomingInterviewInvite(f);return true;
 }
 async function requestBloomingInterviewQuestion(){
   const bi=state.bloomingInterview;if(!bi?.sourceId||bi.busy)return;
   bi.busy=true;
-  $("bloomingInterviewTitle").innerHTML=`🎙️ 질문 하나만${bi.test?'<span class="interview-test-badge">TEST</span>':""}`;
-  $("bloomingInterviewBody").innerHTML=`<div class="interview-loading">방금 남긴 생각을 읽고 있어요.<br>아직 가보지 않은 방향에서 질문 하나를 고르는 중…</div>`;
+  $("bloomingInterviewTitle").innerHTML=`🎙️ 질문 하나만`;
+  $("bloomingInterviewBody").innerHTML=`<div class="interview-loading">좋아요. 잠시만요.<br>방금 생각에서 이어질 질문 하나를 적고 있어요…</div>`;
   $("bloomingInterviewActions").innerHTML=`<button class="btn" id="bloomingInterviewCancelLoading" type="button">그만둘게요</button>`;
   $("bloomingInterviewCancelLoading").onclick=finishBloomingInterview;
   try{
@@ -1530,17 +1533,16 @@ async function saveBloomingInterviewAnswer(){
 }
 function finishBloomingInterview(){
   const bi=state.bloomingInterview||{},returnId=bi.returnAfterSaveId;
-  state.bloomingInterview={sourceId:null,question:null,model:null,returnAfterSaveId:null,test:false,busy:false};
+  state.bloomingInterview={sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false};
   if($("bloomingInterviewDialog")?.open)$("bloomingInterviewDialog").close();
   if(returnId){$("afterSaveFragmentId").value=returnId;setTimeout(()=>{if(!$("afterSaveDialog").open)$("afterSaveDialog").showModal()},60)}
 }
 function renderBloomingInterviewSettings(){
-  const btn=$("bloomingInterviewToggle"),hint=$("bloomingInterviewHint"),summary=$("bloomingInterviewSettingState"),test=$("armBloomingInterviewTest");
-  if(!btn||!hint||!summary||!test)return;
+  const btn=$("bloomingInterviewToggle"),hint=$("bloomingInterviewHint"),summary=$("bloomingInterviewSettingState");
+  if(!btn||!hint||!summary)return;
   const enabled=bloomingInterviewEnabled(),ready=!!(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous);
   btn.textContent=enabled?"끄기":"켜기";btn.disabled=!ready;summary.textContent=enabled?"켜짐":"꺼짐";
   hint.innerHTML=!ready?"Blooming Interview는 Google 로그인 상태에서만 사용할 수 있습니다.":enabled?"켜져 있습니다. 팝업 자체는 AI를 쓰지 않고 즉시 나타나며, <b>‘좋아요’를 눌러 질문을 요청할 때만</b> GPT 호출이 발생합니다.":"꺼져 있습니다. 생각을 저장해도 인터뷰어가 나타나지 않습니다.";
-  const armed=interviewTestArmed();test.disabled=!ready||!enabled;test.textContent=armed?"✓ 다음 생각 저장 때 테스트 대기 중":"🎙️ 다음 생각 저장 때 1회 테스트";
 }
 function hashBloomingSeed(seed){
   let h=2166136261;
@@ -2371,8 +2373,9 @@ function thoughtStemCardHTML(f,startId){
       <span class="stem-badges">${f.id===startId?'<span class="stem-current">현재 생각</span>':""}${isTrash?'<span class="stem-trash">휴지통</span>':""}</span>
     </div>
     ${f.externalText?`<blockquote class="stem-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
     ${text?`<div class="stem-text">${esc(text)}</div>`:`<div class="stem-text" style="color:var(--muted)">(내용 없음)</div>`}
-    ${f.context?`<div class="stem-context">${esc(f.context)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&f.context?`<div class="stem-context">${esc(f.context)}</div>`:""}
     <div class="stem-meta">
       ${src?`<span class="tag">${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}
       ${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}
@@ -2432,8 +2435,9 @@ function fragArchiveCard(f,q){
   return `<article class="note" data-open-frag="${f.id}">
     ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${mark(f.externalText,q)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${mark(f.bloomingInterviewQuestion,q)}</div>`:""}
     ${(f.thought||f.text)?`<p class="note-body">${mark(f.thought||f.text,q)}</p>`:""}
-    ${f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
     <div class="note-foot"><span class="note-meta">${f.starred?'<span class="note-star">★</span>':""}<span class="nm-src">${icon} ${label}</span>${lensBadge(f)}<span class="nm-date">${esc(st.main)}</span></span></div>
@@ -3078,8 +3082,9 @@ function fragmentCard(f,compact=false){
   return `<article class="note">
     ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
     ${f.thought||f.text?`<p class="note-body">${esc(f.thought||f.text||"")}</p>`:""}
-    ${f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
@@ -4309,7 +4314,7 @@ async function resetEverything(){
   if(answer!=="전체삭제")return toast("초기화를 취소했습니다.");
   for(const f of state.fragments)await deleteAttachments(f.attachments||[]);
   for(const name of ["projects","threads","fragments","sources"])await deleteCollectionDocs(name);
-  localStorage.removeItem(BLOOMING_CUSTOM_KEY);localStorage.removeItem(BLOOMING_HISTORY_KEY);localStorage.removeItem("tg_spark");localStorage.removeItem(BLOOMING_INTERVIEW_STATE_KEY);localStorage.removeItem(BLOOMING_INTERVIEW_TEST_KEY);
+  localStorage.removeItem(BLOOMING_CUSTOM_KEY);localStorage.removeItem(BLOOMING_HISTORY_KEY);localStorage.removeItem("tg_spark");localStorage.removeItem(BLOOMING_INTERVIEW_STATE_KEY);
   if(state.firebase.connected&&state.firebase.uid){
     const {api,db,uid}=state.firebase;
     await api.setDoc(api.doc(db,"users",uid,"settings","private"),{customBloomingQuestions:[],bloomingInterviewState:normalizeBloomingInterviewState(null),updatedAtServer:api.serverTimestamp()},{merge:true});
@@ -4566,11 +4571,6 @@ $("bloomingInterviewToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
   const next=!bloomingInterviewEnabled();
   try{await saveBloomingInterviewSetting(next);renderBloomingInterviewSettings();toast(next?"Blooming Interview를 켰습니다. 🎙️":"Blooming Interview를 껐습니다.")}catch(e){console.warn(e);toast("Blooming Interview 설정을 저장하지 못했습니다.")}
-});
-$("armBloomingInterviewTest").addEventListener("click",()=>{
-  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 테스트할 수 있습니다.");
-  if(!bloomingInterviewEnabled())return toast("Blooming Interview를 먼저 켜주세요.");
-  const next=!interviewTestArmed();armBloomingInterviewTest(next);toast(next?"다음 일반 생각을 저장하면 인터뷰가 한 번 나타납니다. 🎙️":"인터뷰 테스트를 취소했습니다.");
 });
 $("bloomingInterviewClose").addEventListener("click",finishBloomingInterview);
 $("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
