@@ -195,6 +195,27 @@
     .home-lounge-head p{max-width:560px;line-height:1.55}
     .home-lounge-feature{margin-top:24px}
     .home-lounge-feature .section-head h2{letter-spacing:-.025em}
+    .between-thoughts-section{margin-top:34px}
+    .between-thoughts-shell{position:relative;border:1px solid #dbe5dc;background:linear-gradient(180deg,#fbfdf9 0%,#f6faf6 100%);border-radius:22px;padding:17px 16px 15px;box-shadow:0 6px 22px rgba(56,78,62,.055);overflow:hidden}
+    .between-thoughts-shell:before{content:"";position:absolute;left:28px;top:66px;bottom:66px;width:1px;background:linear-gradient(180deg,transparent,#cbd9ce 18%,#cbd9ce 82%,transparent);pointer-events:none}
+    .between-thought-card{position:relative;margin-left:18px;background:#fff;border:1px solid #e0e8e1;border-radius:16px;padding:14px 14px 13px;box-shadow:0 3px 12px rgba(50,66,55,.035)}
+    .between-thought-card:before{content:"";position:absolute;left:-25px;top:19px;width:11px;height:11px;border-radius:50%;background:#f7faf6;border:2px solid #8eaa95;box-shadow:0 0 0 4px #f8fbf7}
+    .between-thought-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;font-size:.69rem;color:var(--muted);font-weight:700}
+    .between-thought-label{color:#5c7562;letter-spacing:.02em}
+    .between-thought-text{font-family:var(--serif);font-size:.96rem;line-height:1.7;color:#28312c;white-space:pre-wrap;word-break:keep-all}
+    .between-thought-expand{margin-top:8px;border:0;background:none;padding:0;color:#6a7f70;font-size:.7rem;font-weight:800;cursor:pointer}
+    .between-thought-bridge{position:relative;display:flex;align-items:center;justify-content:center;height:54px;margin-left:18px}
+    .between-thought-bridge span{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#eff6ef;border:1px solid #d8e5da;font-size:1rem;box-shadow:0 2px 8px rgba(55,78,61,.06);z-index:1}
+    .between-thought-prompt{text-align:center;margin:15px 6px 0;font-size:.88rem;line-height:1.55;color:#45524b;font-weight:760}
+    .between-thought-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:11px}
+    .between-thought-actions .btn.primary{min-width:210px}
+    .between-thought-loading,.between-thought-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.6}
+    .between-question-source{display:grid;gap:8px;margin:8px 0 14px}
+    .between-question-source .mini-thought{background:#f7f9f5;border:1px solid var(--line);border-radius:13px;padding:11px 12px;font-family:var(--serif);font-size:.83rem;line-height:1.55;color:#3d4741}
+    .between-question-divider{text-align:center;color:#8aa091;font-size:.77rem;font-weight:800}
+    .between-question-box{background:#eff6ef;border:1px solid #d7e6da;border-radius:16px;padding:14px 15px;font-size:1rem;line-height:1.65;color:#284432;font-weight:760;letter-spacing:-.02em}
+    .between-card-question{margin:0 0 11px;padding:11px 12px;border-radius:13px;background:#eff6ef;border:1px solid #d7e6da;color:#31533f;font-size:.84rem;line-height:1.55}
+    .between-card-question-label{display:block;margin-bottom:4px;font-size:.67rem;font-weight:900;letter-spacing:.04em;color:#62816b}
     .home-overview-section{margin-top:34px}
     .compact-head{margin-bottom:9px}
     .home-overview-shell{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px 11px 9px;box-shadow:0 2px 10px rgba(40,44,32,.035)}
@@ -214,6 +235,14 @@
     @media(max-width:520px){
       .home-lounge-head{margin-bottom:0}
       .home-lounge-feature{margin-top:20px}
+      .between-thoughts-section{margin-top:28px}
+      .between-thoughts-shell{padding:14px 12px 13px;border-radius:18px}
+      .between-thoughts-shell:before{left:22px}
+      .between-thought-card{margin-left:17px;padding:12px 12px 11px}
+      .between-thought-card:before{left:-21px}
+      .between-thought-text{font-size:.9rem;line-height:1.65}
+      .between-thought-actions{display:grid;grid-template-columns:1fr}
+      .between-thought-actions .btn.primary{min-width:0;width:100%}
       .home-overview-section{margin-top:28px}
       .home-overview-shell{padding:8px 8px 7px}
       .home-overview-shell .recent-summary-item{padding:9px 7px}
@@ -533,11 +562,17 @@
     .lens-chip.on{background:var(--accent2);border-color:#bcd3c1;color:var(--accent)}
     .lens-badge{font-size:.66rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:2px 8px;font-weight:700;flex:0 0 auto}
     .mirror-card{padding:8px 6px}
-    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:11px 12px;border-radius:12px}
+    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:13px 12px;border-radius:13px}
     .mirror-row:hover{background:#fbfcf9}
     .mirror-row+.mirror-row{border-top:1px dashed var(--line)}
-    .mirror-row small{display:block;font-size:.66rem;font-weight:800;letter-spacing:.07em;color:var(--seal);margin-bottom:5px;text-transform:uppercase}
-    .mirror-row .serif{font-size:.98rem;line-height:1.55;color:#2b3134}
+    .mirror-kicker{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+    .mirror-kind{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#316346;font-size:.64rem;font-weight:900;letter-spacing:.06em}
+    .mirror-caption{font-size:.7rem;font-weight:750;color:var(--muted)}
+    .mirror-title{display:block;font-size:1rem;line-height:1.5;color:#242c28;font-weight:760;letter-spacing:-.02em}
+    .mirror-note{display:block;margin-top:6px;font-size:.79rem;line-height:1.45;color:#727975}
+    .mirror-branch{display:grid;gap:7px;margin-top:2px}
+    .mirror-frag{display:block;font-size:.9rem;line-height:1.5;color:#3b423f}
+    .mirror-arrow{font-size:.74rem;font-weight:850;color:var(--seal);letter-spacing:.04em}
     .related-box{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
     .related-box .rt-label{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:var(--seal);text-transform:uppercase}
     .related-item{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
@@ -614,8 +649,17 @@
     .thread-index-title{color:#285f3f;font-weight:850}
     .thread-index-sub{color:#748279}
     .thread-index-count{display:grid;place-items:center;min-width:38px;height:38px;padding:0 8px;border-radius:999px;background:linear-gradient(145deg,#eff7f0,#dcecdf);color:#2f6b48;border:1px solid #c9dfce;font-size:.95rem}
-    .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;border:1px dashed var(--line);background:transparent;border-radius:12px;padding:11px 13px;margin-top:13px;color:var(--muted);cursor:pointer;font-size:.76rem}
-    .thread-unlinked-summary b{color:var(--ink)}
+    .garden-weekly-section{margin:10px 0 22px}
+    .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;border:1px solid #c9dccd;background:linear-gradient(145deg,#f7fbf7,#eef6ef);border-radius:16px;padding:14px 15px;margin-top:14px;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 5px 16px rgba(59,94,70,.06);transition:.14s}
+    .thread-unlinked-summary:hover{transform:translateY(-1px);border-color:#aecaB5;background:linear-gradient(145deg,#f4faf5,#e8f3eb)}
+    .thread-unlinked-copy{display:flex;align-items:center;gap:11px;min-width:0}
+    .thread-unlinked-icon{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid #d7e5da;color:#60806b;font-size:1.05rem;font-weight:900}
+    .thread-unlinked-text{display:block;min-width:0}
+    .thread-unlinked-text strong{display:block;font-size:.79rem;line-height:1.35;color:#315341}
+    .thread-unlinked-text small{display:block;margin-top:4px;font-size:.66rem;line-height:1.4;color:var(--muted);font-weight:500}
+    .thread-unlinked-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+    .thread-unlinked-summary b{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:5px 8px;border-radius:999px;background:#fff;border:1px solid #d7e5da;color:#315341;font-size:.7rem}
+    .thread-unlinked-arrow{font-size:1.35rem;line-height:1;color:#71917b}
     .thread-suggest-section{margin-top:22px}
     .related-preview-card{padding:2px 0 4px}
     .related-preview-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
@@ -783,19 +827,20 @@
       </div>
     </div>
 
-    <div class="section hidden home-lounge-feature" id="weeklyMirrorSection">
-      <div class="section-head">
-        <div><h2>🌿 이번 주 텃밭</h2><p>이번 주의 나를 비추는 거울. 성적표가 아닙니다.</p></div>
-      </div>
-      <div id="weeklyMirror"></div>
-    </div>
-
     <div class="section home-lounge-feature">
       <div class="section-head">
         <div><h2>다시, 만나다</h2><p>한동안 떨어져 있던 생각 하나를 오늘의 나에게 다시 건넵니다.</p></div>
         <button class="btn hidden" id="resurfaceNext" data-resurface-next type="button">🔀 다른 조각</button>
       </div>
       <div id="resurfaceBox"></div>
+    </div>
+
+    <div class="section between-thoughts-section">
+      <div class="section-head">
+        <div><h2>🌿 두 생각 사이</h2><p>서로 다른 생각 둘을 한 테이블에 놓아봅니다.</p></div>
+        <button class="btn hidden" id="betweenThoughtsNext" type="button">↻ 다른 두 생각</button>
+      </div>
+      <div id="betweenThoughtsBox"></div>
     </div>
 
     <div class="section home-overview-section">
@@ -875,10 +920,24 @@
   <section class="view" data-view="garden">
     <div id="gardenIndex">
       <div class="section-head"><div><h2>🌱 Garden</h2><p>반복해서 돌아오는 생각의 흐름만 모아봅니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+
+      <div class="section hidden garden-weekly-section" id="weeklyMirrorSection">
+        <div class="section-head compact-head">
+          <div><h2>🌿 이번 주 텃밭</h2><p>이번 주에 실제로 자란 Thread와 새로 뻗은 생각의 줄기.</p></div>
+        </div>
+        <div id="weeklyMirror"></div>
+      </div>
+
       <div class="meta" id="gardenSummary"></div>
       <div class="search-row"><input class="input" id="gardenSearch" placeholder="오래된 Thread도 검색할 수 있어요" /></div>
       <div id="threadList"></div>
-      <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button"><span>아직 어느 Thread에도 연결되지 않은 생각</span><b id="gardenUnlinkedCount">0개</b></button>
+      <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button">
+        <span class="thread-unlinked-copy">
+          <span class="thread-unlinked-icon">○</span>
+          <span class="thread-unlinked-text"><strong>아직 어느 Thread에도 연결되지 않은 생각</strong><small>흐름을 기다리는 생각 조각을 모아봅니다.</small></span>
+        </span>
+        <span class="thread-unlinked-right"><b id="gardenUnlinkedCount">0개</b><span class="thread-unlinked-arrow">›</span></span>
+      </button>
     </div>
     <div id="threadDetail" class="hidden"></div>
   </section>
@@ -1004,6 +1063,17 @@
     </div>
     <div id="bloomingInterviewBody"></div>
     <div class="modal-actions" id="bloomingInterviewActions"></div>
+  </div>
+</dialog>
+
+<dialog id="betweenThoughtsDialog">
+  <div class="modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">BETWEEN THOUGHTS</div><h2 id="betweenThoughtsDialogTitle">🌿 두 생각 사이의 질문</h2></div>
+      <button class="close-btn" data-close="betweenThoughtsDialog" type="button">✕</button>
+    </div>
+    <div id="betweenThoughtsDialogBody"></div>
+    <div class="modal-actions" id="betweenThoughtsDialogActions"></div>
   </div>
 </dialog>
 
@@ -1380,7 +1450,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v26 · Settings UI refinement + Blooming Interview polish */
+/* Thought Garden v30 · Lounge Between Thoughts prototype + Garden weekly move */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -1401,7 +1471,8 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
-  bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false}};
+  bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
+  betweenThoughts:{pairIds:[],loading:false,question:null,model:null,busy:false,expanded:{}}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1797,8 +1868,10 @@ function renderStudioUsage(data){
   const gardenerCost=Number(data?.gardenerEstimatedCostUsd??data?.estimatedCostUsd??0);
   const interviewCount=Number(data?.bloomingInterviewQuestions||0),interviewInput=Number(data?.bloomingInterviewInputTokens||0),interviewCached=Number(data?.bloomingInterviewCachedInputTokens||0),interviewOutput=Number(data?.bloomingInterviewOutputTokens||0);
   const interviewCost=Number(data?.bloomingInterviewEstimatedCostUsd||0);
+  const betweenCount=Number(data?.betweenThoughtsQuestions||0),betweenInput=Number(data?.betweenThoughtsInputTokens||0),betweenCached=Number(data?.betweenThoughtsCachedInputTokens||0),betweenOutput=Number(data?.betweenThoughtsOutputTokens||0);
+  const betweenCost=Number(data?.betweenThoughtsEstimatedCostUsd||0);
   const embeddingCost=Number(data?.embeddingEstimatedCostUsd||0);
-  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+embeddingCost));
+  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+betweenCost+embeddingCost));
 
   grid.innerHTML=`
     <span class="ai-usage-section-title">🌿 정원사 질문 · GPT-5.4 mini</span>
@@ -1814,6 +1887,12 @@ function renderStudioUsage(data){
     <span>출력 토큰</span><span class="value">${interviewOutput.toLocaleString("ko-KR")}</span>
     <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(interviewCost)}</span>
 
+    <span class="ai-usage-section-title">🌿 두 생각 사이 · GPT-5.4 mini</span>
+    <span>질문 생성</span><span class="value">${betweenCount}회</span>
+    <span>입력 토큰</span><span class="value">${betweenInput.toLocaleString("ko-KR")}</span>
+    <span>출력 토큰</span><span class="value">${betweenOutput.toLocaleString("ko-KR")}</span>
+    <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(betweenCost)}</span>
+
     <span class="ai-usage-section-title">🧠 의미 검색 · text-embedding-3-small</span>
     <span>생각 색인</span><span class="value">${fragmentTokens.toLocaleString("ko-KR")} tokens${fragmentCount?` · ${fragmentCount}건`:""}</span>
     <span>Studio 재료 검색</span><span class="value">${materialTokens.toLocaleString("ko-KR")} tokens${materialCount?` · ${materialCount}건`:""}</span>
@@ -1822,7 +1901,7 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
 
-  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 입력 토큰 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
 
   const plus=$("studioLimitPlus10");
   if(plus){
@@ -2402,9 +2481,11 @@ function continuedFromLine(f){
   if(!parents.length&&!children.length)return "";
 
   const parent=parents[0];
-  const parentLine=parent
-    ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${f.bloomingInterviewSourceId?"🎙️ Blooming Interview · ":""}${esc(fmt((parent.date||parent.createdAt||"").slice(0,10)))}의 생각에서 이어짐</button>`
-    : "";
+  const parentLine=parents.length>1
+    ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${f.betweenThoughtsSourceIds?"🌿 두 생각 사이 · ":f.bloomingReflectionForKey?"🪞 시간 사이의 나 · ":""}${parents.length}개의 생각에서 이어짐</button>`
+    : parent
+      ? `<button class="cont-line" data-open-thought-stem="${f.id}" type="button">↰ ${f.bloomingInterviewSourceId?"🎙️ Blooming Interview · ":""}${esc(fmt((parent.date||parent.createdAt||"").slice(0,10)))}의 생각에서 이어짐</button>`
+      : "";
 
   const childLine=children.length
     ? `<button class="cont-line cont-child" data-open-thought-stem="${f.id}" type="button">↳ 이 생각에서 이어진 생각 ${children.length}개</button>`
@@ -2450,9 +2531,9 @@ function thoughtStemCardHTML(f,startId){
       <span class="stem-badges">${f.id===startId?'<span class="stem-current">현재 생각</span>':""}${isTrash?'<span class="stem-trash">휴지통</span>':""}</span>
     </div>
     ${f.externalText?`<blockquote class="stem-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
-    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
+    ${f.betweenThoughtsQuestion?`<div class="between-card-question"><span class="between-card-question-label">🌿 두 생각 사이의 질문</span>${esc(f.betweenThoughtsQuestion)}</div>`:f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
     ${text?`<div class="stem-text">${esc(text)}</div>`:`<div class="stem-text" style="color:var(--muted)">(내용 없음)</div>`}
-    ${!f.bloomingInterviewQuestion&&f.context?`<div class="stem-context">${esc(f.context)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&!f.betweenThoughtsQuestion&&f.context?`<div class="stem-context">${esc(f.context)}</div>`:""}
     <div class="stem-meta">
       ${src?`<span class="tag">${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}
       ${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}
@@ -2512,9 +2593,9 @@ function fragArchiveCard(f,q){
   return `<article class="note" data-open-frag="${f.id}">
     ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${mark(f.externalText,q)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
-    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${mark(f.bloomingInterviewQuestion,q)}</div>`:""}
+    ${f.betweenThoughtsQuestion?`<div class="between-card-question"><span class="between-card-question-label">🌿 두 생각 사이의 질문</span>${mark(f.betweenThoughtsQuestion,q)}</div>`:f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${mark(f.bloomingInterviewQuestion,q)}</div>`:""}
     ${(f.thought||f.text)?`<p class="note-body">${mark(f.thought||f.text,q)}</p>`:""}
-    ${!f.bloomingInterviewQuestion&&f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&!f.betweenThoughtsQuestion&&f.context?`<div class="note-context">${mark(f.context,q)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
     <div class="note-foot"><span class="note-meta">${f.starred?'<span class="note-star">★</span>':""}<span class="nm-src">${icon} ${label}</span>${lensBadge(f)}<span class="nm-date">${esc(st.main)}</span></span></div>
@@ -2717,6 +2798,101 @@ function renderSpark(){
   </div>`;
 }
 
+function betweenThoughtText(f){return String(f?.thought||f?.text||f?.externalText||"").trim()}
+function betweenThoughtEligible(f){return !!f&&!f.deletedAt&&betweenThoughtText(f).length>=8}
+function betweenThoughtSharedThread(a,b){const as=new Set(a?.threadIds||[]);return (b?.threadIds||[]).some(id=>as.has(id))}
+function betweenThoughtDirectlyLinked(a,b){return (a?.continuedFrom||[]).includes(b?.id)||(b?.continuedFrom||[]).includes(a?.id)}
+function betweenThoughtDateGap(a,b){const ad=daysAgo(a?.date||a?.createdAt),bd=daysAgo(b?.date||b?.createdAt);return Number.isFinite(ad)&&Number.isFinite(bd)?Math.abs(ad-bd):0}
+function localBetweenPair(){
+  const pool=state.fragments.filter(betweenThoughtEligible);
+  if(pool.length<2)return null;
+  const sampled=pool.slice(0,120);
+  let best=null,bestScore=-1;
+  for(let i=0;i<sampled.length;i++)for(let j=i+1;j<sampled.length;j++){
+    const a=sampled[i],b=sampled[j];if(betweenThoughtDirectlyLinked(a,b))continue;
+    const A=bigrams(betweenThoughtText(a)),B=bigrams(betweenThoughtText(b));if(A.size<4||B.size<4)continue;
+    let inter=0;for(const g of A)if(B.has(g))inter++;
+    let score=inter/Math.min(A.size,B.size);
+    if(betweenThoughtDateGap(a,b)>=7)score+=.08;
+    if(!betweenThoughtSharedThread(a,b))score+=.06;
+    if((a.sourceId||"")!==(b.sourceId||""))score+=.04;
+    if(score>bestScore){best={a,b};bestScore=score}
+  }
+  if(best)return best;
+  return {a:pool[0],b:pool.find(x=>x.id!==pool[0].id)};
+}
+function betweenThoughtExcerpt(f,max=220){const t=betweenThoughtText(f);return t.length>max?t.slice(0,max).trim()+"…":t}
+function renderBetweenThoughtCard(f,slot){
+  const full=!!state.betweenThoughts.expanded?.[f.id],text=betweenThoughtText(f),shown=full?text:betweenThoughtExcerpt(f);
+  const d=fmt((f.date||f.createdAt||"").slice(0,10));
+  return `<div class="between-thought-card"><div class="between-thought-meta"><span class="between-thought-label">${slot===0?"어느 날의 생각":"또 다른 날의 생각"}</span><span>${esc(d)}</span></div><div class="between-thought-text">${esc(shown)}</div>${text.length>220?`<button class="between-thought-expand" data-between-expand="${f.id}" type="button">${full?"접기":"생각 전체 보기"}</button>`:""}</div>`;
+}
+function renderBetweenThoughts(){
+  const box=$("betweenThoughtsBox"),next=$("betweenThoughtsNext");if(!box)return;
+  const ids=state.betweenThoughts.pairIds||[],pair=ids.map(id=>state.fragments.find(f=>f.id===id)).filter(betweenThoughtEligible);
+  if(pair.length===2){
+    box.innerHTML=`<div class="between-thoughts-shell">${renderBetweenThoughtCard(pair[0],0)}<div class="between-thought-bridge"><span>🌱</span></div>${renderBetweenThoughtCard(pair[1],1)}<div class="between-thought-prompt">이 두 생각 사이에는 무엇이 있을까요?</div><div class="between-thought-actions"><button class="btn primary" data-between-question type="button">✨ 이 두 생각 사이에서 질문 받기</button></div></div>`;
+    next?.classList.remove("hidden");return;
+  }
+  next?.classList.add("hidden");
+  const eligible=state.fragments.filter(betweenThoughtEligible);
+  if(eligible.length<2){box.innerHTML=`<div class="between-thought-empty">생각이 조금 더 쌓이면, 서로 다른 두 생각을 한 자리에 꺼내볼게요.</div>`;return}
+  box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 서로 닿아 있을지도 모르는 두 생각을 꺼내고 있어요…</div>`;
+  requestBetweenThoughtPair();
+}
+async function requestBetweenThoughtPair(reshuffle=false){
+  if(state.betweenThoughts.loading)return;
+  const pool=state.fragments.filter(betweenThoughtEligible);if(pool.length<2)return renderBetweenThoughts();
+  state.betweenThoughts.loading=true;
+  if(reshuffle){state.betweenThoughts.pairIds=[];state.betweenThoughts.expanded={};$("betweenThoughtsNext")?.classList.add("hidden");$("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다른 두 생각을 꺼내고 있어요…</div>`}
+  try{
+    let found=null;
+    const eligibleSeeds=pool.filter(f=>f.embeddingModel&&state.firebase.connected&&state.firebase.user);
+    const seeds=eligibleSeeds.slice().sort(()=>Math.random()-.5).slice(0,5);
+    for(const seed of seeds){
+      try{
+        const res=await callFn("findRelatedFragments",{fragmentId:seed.id});
+        let candidates=(res?.items||[]).map(x=>state.fragments.find(f=>f.id===x.id)).filter(betweenThoughtEligible).filter(x=>x.id!==seed.id&&!betweenThoughtDirectlyLinked(seed,x));
+        if(!candidates.length)continue;
+        candidates.sort((a,b)=>{
+          const qa=(betweenThoughtDateGap(seed,a)>=7?4:0)+(!betweenThoughtSharedThread(seed,a)?2:0)+((seed.sourceId||"")!==(a.sourceId||"")?1:0);
+          const qb=(betweenThoughtDateGap(seed,b)>=7?4:0)+(!betweenThoughtSharedThread(seed,b)?2:0)+((seed.sourceId||"")!==(b.sourceId||"")?1:0);
+          return qb-qa;
+        });
+        found={a:seed,b:candidates[0]};break;
+      }catch(e){console.warn("between thoughts semantic pair fallback",e?.code||e?.message||e)}
+    }
+    if(!found)found=localBetweenPair();
+    if(found?.a&&found?.b){state.betweenThoughts.pairIds=[found.a.id,found.b.id];state.betweenThoughts.question=null;state.betweenThoughts.model=null}
+  }finally{state.betweenThoughts.loading=false;renderBetweenThoughts()}
+}
+async function openBetweenThoughtsQuestion(){
+  const pair=(state.betweenThoughts.pairIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(betweenThoughtEligible);if(pair.length!==2)return toast("두 생각을 다시 골라볼게요.");
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("AI 질문은 Google 계정 연결 후 사용할 수 있어요.");
+  const bt=state.betweenThoughts;if(bt.busy)return;bt.busy=true;
+  $("betweenThoughtsDialogTitle").textContent="🌿 두 생각 사이의 질문";
+  $("betweenThoughtsDialogBody").innerHTML=`<div class="between-question-source"><div class="mini-thought">${esc(betweenThoughtExcerpt(pair[0],180))}</div><div class="between-question-divider">그리고</div><div class="mini-thought">${esc(betweenThoughtExcerpt(pair[1],180))}</div></div><div class="interview-loading">두 생각 사이에 놓일 질문 하나를 고르고 있어요…</div>`;
+  $("betweenThoughtsDialogActions").innerHTML=`<button class="btn" data-close="betweenThoughtsDialog" type="button">닫기</button>`;
+  $("betweenThoughtsDialog").showModal();
+  try{
+    const data=await callFn("betweenThoughtsQuestion",{fragmentIds:pair.map(f=>f.id)});
+    if(!$("betweenThoughtsDialog")?.open)return;
+    if(!data?.question)throw new Error("질문이 비어 있습니다.");
+    bt.question=String(data.question);bt.model=String(data.model||"");
+    $("betweenThoughtsDialogBody").innerHTML=`<div class="between-question-source"><div class="mini-thought">${esc(betweenThoughtExcerpt(pair[0],180))}</div><div class="between-question-divider">그리고</div><div class="mini-thought">${esc(betweenThoughtExcerpt(pair[1],180))}</div></div><div class="between-question-box">${esc(bt.question)}</div><textarea class="textarea" id="betweenThoughtsAnswer" placeholder="두 생각을 함께 바라보며 떠오른 것을 적어보세요." style="margin-top:12px;min-height:125px"></textarea>`;
+    $("betweenThoughtsDialogActions").innerHTML=`<button class="btn" data-close="betweenThoughtsDialog" type="button">지금은 그냥 볼게요</button><button class="btn primary" id="saveBetweenThoughtsAnswer" type="button">🌱 생각으로 남기기</button>`;
+    $("saveBetweenThoughtsAnswer").onclick=saveBetweenThoughtsAnswer;
+    setTimeout(()=>$("betweenThoughtsAnswer")?.focus(),80);
+  }catch(e){console.error(e);$("betweenThoughtsDialogBody").innerHTML=`<div class="between-thought-empty">질문을 불러오지 못했어요.<br>${esc(e?.message||"잠시 후 다시 시도해 주세요.")}</div>`}finally{bt.busy=false}
+}
+async function saveBetweenThoughtsAnswer(){
+  const bt=state.betweenThoughts,answer=($("betweenThoughtsAnswer")?.value||"").trim();if(!answer)return toast("떠오른 생각을 먼저 적어주세요.");
+  const ids=(bt.pairIds||[]).filter(id=>state.fragments.some(f=>f.id===id));if(ids.length!==2||!bt.question)return toast("연결할 두 생각을 찾지 못했어요.");
+  const createdAt=new Date().toISOString();
+  const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🌿 두 생각 사이\nQ. ${bt.question}`,continuedFrom:[...new Set(ids)],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,betweenThoughtsSourceIds:[...new Set(ids)],betweenThoughtsQuestion:bt.question,betweenThoughtsAnsweredAt:createdAt,betweenThoughtsModel:bt.model||""};
+  state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);$("betweenThoughtsDialog").close();state.betweenThoughts.pairIds=[];state.betweenThoughts.question=null;state.betweenThoughts.model=null;state.betweenThoughts.expanded={};renderAll();toast("두 생각 사이에서 나온 생각을 새 조각으로 남겼어요. 🌿");
+}
+
 function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();if($("trashDialog")?.open)renderTrash();renderSpark();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
 function refreshSelects(){
   $("projectThread").innerHTML='<option value="">없음</option>'+state.threads.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join("");
@@ -2745,32 +2921,56 @@ function renderHome(){
     ? working.slice(0,2).map(projectCard).join("")
     : empty("🏭",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
   renderResurface();
-  renderWeeklyMirror();
+  renderBetweenThoughts();
 }
-/* 주간 정원 거울 — 숫자 없이, 이번 주의 나를 세 줄로 비춘다.
-   보여줄 것이 하나도 없으면 섹션째 숨긴다(과제처럼 느껴지지 않게). */
-function weekSeed(){const d=new Date();const y=d.getFullYear();const start=new Date(y,0,1);const w=Math.floor((d-start)/604800000);return y*100+w}
+/* Garden의 이번 주 텃밭 — 억지로 세 칸을 채우지 않는다.
+   이번 주에 실제로 생긴 구조적 성장만 보여준다:
+   1) 가장 많이 자란 Thread
+   2) 새로 생긴 생각의 줄기(parent → child)
+   둘 다 없으면 섹션 자체를 숨긴다. */
 function renderWeeklyMirror(){
   const sec=$("weeklyMirrorSection"),box=$("weeklyMirror");if(!sec||!box)return;
   const rows=[];
-  // ① 계속 자란 생각 — 최근 7일 조각이 가장 많이 붙은 Thread (2개 이상일 때만)
+  const recent=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)<=6);
+
+  // ① 이번 주 가장 많이 자란 Thread — Thread임을 명확하게 표시한다.
   let best=null,bestN=0;
   for(const t of state.threads){
-    const n=state.fragments.filter(f=>(f.threadIds||[]).includes(t.id)&&daysAgo(f.date||f.createdAt)<=6).length;
+    const n=recent.filter(f=>(f.threadIds||[]).includes(t.id)).length;
     if(n>bestN){best=t;bestN=n}
   }
-  if(best&&bestN>=2)rows.push(`<button class="mirror-row" data-open-thread="${best.id}" type="button"><small>계속 자란 생각</small><span class="serif">${esc(best.title)}</span></button>`);
-  // ② 아직 남아 있는 질문 — 질문 렌즈인데, 어떤 생각도 그로부터 이어지지 않은 것 중 가장 최근
-  const answered=new Set();state.fragments.forEach(f=>(f.continuedFrom||[]).forEach(id=>answered.add(id)));
-  const openQ=state.fragments.filter(f=>effectiveLens(f)==="question"&&!answered.has(f.id))
-    .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")))[0];
-  if(openQ)rows.push(`<button class="mirror-row" data-open-frag-mirror="${openQ.id}" type="button"><small>아직 남아 있는 질문</small><span class="serif">“${esc((openQ.thought||openQ.text||"").slice(0,80))}”</span></button>`);
-  // ③ 이번 주 다시 만날 문장 — 7일 이상 지난 생각 중, 이번 주 동안은 같은 문장
-  const past=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7&&(f.thought||f.text));
-  if(past.length){
-    const pick=past[weekSeed()%past.length];
-    rows.push(`<button class="mirror-row" data-open-frag-mirror="${pick.id}" type="button"><small>이번 주 다시 만날 문장</small><span class="serif">“${esc((pick.thought||pick.text||"").slice(0,90))}”</span></button>`);
+  if(best&&bestN>=2){
+    const latest=recent
+      .filter(f=>(f.threadIds||[]).includes(best.id))
+      .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")))[0];
+    rows.push(`<button class="mirror-row" data-open-thread="${best.id}" type="button">
+      <span class="mirror-kicker"><span class="mirror-kind">🌿 THREAD</span><span class="mirror-caption">이번 주 가장 많이 자란 흐름</span></span>
+      <span class="mirror-title">${esc(best.title)}</span>
+      <span class="mirror-note">이번 주 ${bestN}개의 생각이 이 흐름에 이어졌어요.${latest?` · 최근 조각 “${esc((latest.thought||latest.text||"").slice(0,42))}${(latest.thought||latest.text||"").length>42?"…":""}”`:""}</span>
+    </button>`);
   }
+
+  // ② 이번 주 새로 생긴 생각의 줄기 — 질문/랜덤 문장이 아니라 실제 연결 관계를 보여준다.
+  const branchCandidates=recent
+    .filter(f=>(f.continuedFrom||[]).length)
+    .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")));
+  const child=branchCandidates[0];
+  if(child){
+    const parent=(child.continuedFrom||[]).map(id=>state.fragments.find(f=>f.id===id)).find(Boolean);
+    if(parent){
+      const pt=(parent.thought||parent.text||"").trim();
+      const ct=(child.thought||child.text||"").trim();
+      rows.push(`<button class="mirror-row" data-open-frag-mirror="${child.id}" type="button">
+        <span class="mirror-kicker"><span class="mirror-kind">🌱 생각의 줄기</span><span class="mirror-caption">이번 주 새로 이어진 생각</span></span>
+        <span class="mirror-branch">
+          <span class="mirror-frag">“${esc(pt.slice(0,64))}${pt.length>64?"…":""}”</span>
+          <span class="mirror-arrow">↓ 여기서 이어져</span>
+          <span class="mirror-frag">“${esc(ct.slice(0,72))}${ct.length>72?"…":""}”</span>
+        </span>
+      </button>`);
+    }
+  }
+
   if(!rows.length){sec.classList.add("hidden");box.innerHTML="";return}
   sec.classList.remove("hidden");
   box.innerHTML=`<div class="card mirror-card">${rows.join("")}</div>`;
@@ -2840,6 +3040,7 @@ async function touchThreadActivity(tid){
   await persist("threads",t);
 }
 function renderGarden(){
+  renderWeeklyMirror();
   const q=$("gardenSearch").value.trim().toLowerCase();
   if(state.gardenThreadLimit==null)state.gardenThreadLimit=8;
 
@@ -3159,9 +3360,9 @@ function fragmentCard(f,compact=false){
   return `<article class="note">
     ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
-    ${f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
+    ${f.betweenThoughtsQuestion?`<div class="between-card-question"><span class="between-card-question-label">🌿 두 생각 사이의 질문</span>${esc(f.betweenThoughtsQuestion)}</div>`:f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
     ${f.thought||f.text?`<p class="note-body">${esc(f.thought||f.text||"")}</p>`:""}
-    ${!f.bloomingInterviewQuestion&&f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
+    ${!f.bloomingInterviewQuestion&&!f.betweenThoughtsQuestion&&f.context?`<div class="note-context">${esc(f.context)}</div>`:""}
     ${attachmentsHTML(f.attachments||[])}
     ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
@@ -4489,6 +4690,8 @@ document.addEventListener("click",async e=>{
   const es=e.target.closest("[data-edit-source]");if(es)return openSourceDialog(state.sources.find(s=>s.id===es.dataset.editSource));
   const ds=e.target.closest("[data-delete-source]");if(ds)return deleteSource(ds.dataset.deleteSource);
   const rn=e.target.closest("[data-resurface-next]");if(rn)return renderResurface(true);
+  const be=e.target.closest("[data-between-expand]");if(be){state.betweenThoughts.expanded[be.dataset.betweenExpand]=!state.betweenThoughts.expanded[be.dataset.betweenExpand];renderBetweenThoughts();return}
+  if(e.target.closest("[data-between-question]"))return openBetweenThoughtsQuestion();
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
   if(e.target.closest("#gardenUnlinkedSummary"))return openFragmentList("연결되지 않은 생각",state.fragments.filter(f=>!(f.threadIds||[]).length));
@@ -4573,6 +4776,7 @@ $("sheetSettings").addEventListener("click",()=>{
   $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
 });
+$("betweenThoughtsNext").addEventListener("click",()=>requestBetweenThoughtPair(true));
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveBloomingReflection").addEventListener("click",saveBloomingReflection);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
@@ -4732,7 +4936,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
 $("bloomingInterviewDialog").addEventListener("click",e=>{if(e.target===$("bloomingInterviewDialog"))finishBloomingInterview()});
-["captureDialog","afterSaveDialog","bloomingCompareDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","bloomingCompareDialog","betweenThoughtsDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
