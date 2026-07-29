@@ -186,7 +186,44 @@
     .recent-summary-item{background:var(--panel);border:0;border-radius:14px;padding:14px;box-shadow:0 1px 5px rgba(40,44,32,.045);cursor:pointer;text-align:left;width:100%;transition:.14s}
     .recent-summary-item:hover{background:#fbfcf9}
     .recent-summary-item small{display:block;color:var(--muted);font-size:.7rem}
-    .recent-summary-item strong{font-family:var(--serif);display:block;margin-top:4px;font-size:1.3rem;font-weight:700}
+    .recent-summary-item strong{font-family:var(--serif);display:inline-block;margin-top:4px;font-size:1.34rem;font-weight:700}
+    .recent-summary-item>span{margin-left:4px;color:var(--muted);font-size:.67rem;font-weight:650}
+
+    /* HOME v27 · 숫자 대시보드보다 생각을 먼저 만나는 라운지 */
+    .home-lounge-head{margin-top:8px;margin-bottom:2px}
+    .home-lounge-head h2{font-size:1.48rem;letter-spacing:-.035em}
+    .home-lounge-head p{max-width:560px;line-height:1.55}
+    .home-lounge-feature{margin-top:24px}
+    .home-lounge-feature .section-head h2{letter-spacing:-.025em}
+    .home-overview-section{margin-top:34px}
+    .compact-head{margin-bottom:9px}
+    .home-overview-shell{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:10px 11px 9px;box-shadow:0 2px 10px rgba(40,44,32,.035)}
+    .home-overview-shell .recent-summary-grid{gap:0}
+    .home-overview-shell .recent-summary-item{background:transparent;box-shadow:none;border-radius:12px;padding:10px 11px;min-width:0}
+    .home-overview-shell .recent-summary-item+.recent-summary-item{border-left:1px solid var(--line)}
+    .home-overview-shell .recent-summary-item:hover{background:#f7f8f3}
+    .home-overview-shell .recent-summary-item small{font-size:.67rem;line-height:1.35;min-height:1.8em}
+    .home-total-strip{display:flex;align-items:center;justify-content:flex-start;gap:7px;flex-wrap:wrap;margin-top:7px;padding:10px 5px 2px;border-top:1px dashed var(--line);color:var(--muted)}
+    .home-total-label{font-size:.63rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#8b9189;margin-right:2px}
+    .home-total-link{border:0;background:transparent;padding:4px 2px;color:var(--muted);font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:3px;border-radius:7px}
+    .home-total-link:hover{color:var(--accent);background:#f6f8f3}
+    .home-total-link b{font-family:var(--serif);font-size:.82rem;color:#495048}
+    .home-total-link span{font-size:.67rem;font-weight:650}
+    .home-total-dot{font-size:.68rem;color:#b6bab2}
+    .home-projects-section{margin-top:30px;padding-bottom:8px}
+    @media(max-width:520px){
+      .home-lounge-head{margin-bottom:0}
+      .home-lounge-feature{margin-top:20px}
+      .home-overview-section{margin-top:28px}
+      .home-overview-shell{padding:8px 8px 7px}
+      .home-overview-shell .recent-summary-item{padding:9px 7px}
+      .home-overview-shell .recent-summary-item small{font-size:.62rem}
+      .home-overview-shell .recent-summary-item strong{font-size:1.2rem}
+      .home-overview-shell .recent-summary-item>span{font-size:.61rem;margin-left:2px}
+      .home-total-strip{gap:5px;padding-left:3px;padding-right:3px}
+      .home-total-link span{font-size:.62rem}
+      .home-total-link b{font-size:.76rem}
+    }
 
     .home-minimal{
       /* 높이는 '화면에서 .app 위 여백만 뺀 값' = 정확히 한 판.
@@ -429,9 +466,10 @@
     .slot-thought-export .btn{font-size:.73rem}
     .gardener-box.persisted{margin-top:10px}
     .gardener-box .g-actions{margin-top:9px}
-    .ai-setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
-    .ai-setting-row>div{min-width:0}
+    .ai-setting-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+    .ai-setting-row>div{min-width:0;flex:1}
     .ai-setting-row b{display:block;font-size:.84rem}
+    .ai-setting-row>.btn{flex:0 0 auto;min-width:88px;white-space:nowrap}
     .ai-progress{margin-top:9px;font-size:.72rem;line-height:1.5;color:var(--muted)}
     .ai-usage-panel{margin-top:10px;padding:12px 14px;border:1px solid var(--line);border-radius:13px;background:#fffdf7}
     .ai-usage-grid{display:grid;grid-template-columns:1fr auto;gap:7px 14px;font-size:.78rem;align-items:center}
@@ -512,15 +550,56 @@
     .modal-danger .text-btn{font-size:.78rem;padding:7px 14px}
 
     .settings-card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-top:11px;background:var(--panel)}
-    .setting-section{border:1px solid var(--line);border-radius:15px;background:var(--panel);margin-top:9px;overflow:hidden}
-    .setting-section>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:15px 16px;cursor:pointer;font-weight:800;font-size:.9rem}
+    .settings-group-label{margin:20px 4px 7px;color:#8a9189;font-size:.62rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+    .modal-head + .settings-group-label{margin-top:2px}
+    .setting-section{border:1px solid #dedfd6;border-radius:17px;background:var(--panel);margin-top:8px;overflow:hidden;box-shadow:0 3px 12px rgba(42,49,39,.025)}
+    .setting-section>summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:54px;padding:14px 16px;cursor:pointer;font-weight:820;font-size:.88rem;color:#343a32;transition:background .14s}
     .setting-section>summary::-webkit-details-marker{display:none}
-    .setting-section>summary:after{content:"⌄";color:var(--muted);font-size:.9rem;margin-left:2px;transition:transform .16s}
-    .setting-section[open]>summary:after{transform:rotate(180deg)}
-    .setting-section[open]>summary{border-bottom:1px solid var(--line);background:#fffefb}
-    .setting-body{padding:14px 16px 16px}
-    .setting-state{margin-left:auto;font-size:.68rem;font-weight:700;color:var(--muted)}
+    .setting-section>summary>span:first-child{flex:1;min-width:0}
+    .setting-section>summary:after{content:"";flex:0 0 auto;width:8px;height:8px;margin-left:6px;border-right:2px solid #8b938a;border-bottom:2px solid #8b938a;transform:rotate(45deg) translateY(-2px);transform-origin:center;transition:transform .18s ease}
+    .setting-section[open]>summary:after{transform:rotate(225deg) translate(-1px,-1px)}
+    .setting-section>summary:hover{background:#fbfcf8}
+    .setting-section[open]>summary{border-bottom:1px solid var(--line);background:#fbfcf8}
+    .setting-body{padding:16px}
+    .setting-state{flex:0 0 auto;margin-left:0;padding:4px 8px;border-radius:999px;background:#f1f2ec;font-size:.64rem;font-weight:800;color:#7a8279;white-space:nowrap}
     .setting-danger{margin-top:16px;padding-top:13px;border-top:1px dashed #dec9c4}
+    .setting-feature-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:2px 0}
+    .setting-feature-row .btn{min-width:88px;white-space:nowrap;flex:0 0 auto}
+    .setting-feature-title{display:block;font-size:.84rem;font-weight:850;color:#343b33}
+    .setting-feature-copy{margin-top:4px;color:var(--muted);font-size:.71rem;line-height:1.5}
+    .setting-toggle{min-width:88px!important;padding:9px 16px!important;border-radius:999px!important;white-space:nowrap!important;text-align:center}
+    .account-profile-card,.sync-status-card,.usage-card,.setting-tool-card{border:1px solid #e0e2d9;border-radius:14px;background:#fffefa}
+    .account-profile-card{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 14px}
+    .account-cloud-icon{width:42px;height:42px;border-radius:13px;background:#eef5ef;display:grid;place-items:center;font-size:1.14rem}
+    .account-profile-card .helper{margin-top:3px}
+    .account-profile-card .btn{white-space:nowrap}
+    .sync-status-card{display:grid;grid-template-columns:36px minmax(0,1fr);gap:11px;margin-top:10px;padding:12px 14px;background:#f8faf6}
+    .sync-status-icon{width:36px;height:36px;border-radius:11px;background:#edf3ed;display:grid;place-items:center;font-size:1rem}
+    .sync-status-label{display:block;margin-bottom:3px;color:#899087;font-size:.61rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .sync-status-card strong{display:flex;align-items:center;gap:6px;font-size:.79rem;color:#3f5245}
+    .sync-status-card .helper{margin-top:3px}
+    .account-quiet-actions{display:flex;justify-content:flex-end;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line)}
+    .account-quiet-actions .text-btn{color:#737a72;font-size:.72rem}
+    .usage-card{margin-top:11px;padding:14px}
+    .usage-card:first-of-type{margin-top:0}
+    .usage-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:11px}
+    .usage-card-kicker{display:block;color:var(--accent);font-size:.61rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+    .usage-card-title{display:block;margin-top:3px;font-size:.87rem;font-weight:900;color:#354139}
+    .usage-card-sub{display:block;margin-top:3px;color:var(--muted);font-size:.65rem;line-height:1.45}
+    .usage-card .ai-usage-panel{margin-top:0;padding:0;border:0;border-radius:0;background:transparent}
+    .usage-card .official-usage-box{margin-top:0;padding-top:0;border-top:0}
+    .usage-card .official-usage-head{margin-bottom:0}
+    .usage-refresh{padding:7px 10px!important;font-size:.69rem!important;white-space:nowrap}
+    .setting-tool-card{margin-top:11px;padding:13px 14px;background:#fafaf6}
+    .setting-tool-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+    .setting-tool-head b{font-size:.79rem;color:#465448}
+    .setting-tool-head .btn{white-space:nowrap}
+    @media(max-width:520px){
+      .account-profile-card{grid-template-columns:38px minmax(0,1fr);gap:10px}.account-profile-card>.btn{grid-column:1/-1;width:100%}
+      .setting-feature-row{grid-template-columns:minmax(0,1fr) auto;gap:10px}.setting-toggle{min-width:82px!important}
+      .usage-card-head{align-items:center}.usage-card-head .btn{flex:0 0 auto}
+      .setting-tool-head{display:grid;grid-template-columns:1fr}.setting-tool-head .btn{width:100%}
+    }
     .thread-index-item{display:flex;align-items:center;gap:12px;width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;padding:15px 4px;text-align:left;cursor:pointer}
     .thread-index-item:last-child{border-bottom:0}
     .thread-index-item:hover .thread-index-title{color:var(--accent)}
@@ -696,54 +775,51 @@
   </section>
 
   <section class="view" data-view="home">
-    <div class="section-head home-dashboard-head">
+    <div class="section-head home-dashboard-head home-lounge-head">
       <div>
-        <div class="eyebrow">HOME</div>
-        <h2 style="margin-top:7px">지금 내 생각의 상태</h2>
-        <p>기록은 앞에서 가볍게, 정리와 흐름은 여기서 봅니다.</p>
+        <div class="eyebrow">HOME · LOUNGE</div>
+        <h2 style="margin-top:7px">생각의 라운지</h2>
+        <p>쌓인 숫자보다, 지금 다시 이어볼 생각을 먼저 꺼내봅니다.</p>
       </div>
     </div>
 
-    <div class="dashboard-metrics">
-      <button class="dashboard-stat" data-go="fragments" type="button">
-        <span>생각 조각</span><strong id="homeFragmentCount">0</strong><small>모두 보기</small>
-      </button>
-      <button class="dashboard-stat" data-go="garden" type="button">
-        <span>Thread</span><strong id="homeThreadCount">0</strong><small>자라는 생각</small>
-      </button>
-      <button class="dashboard-stat" data-go="studio" type="button">
-        <span>Studio</span><strong id="homeProjectCount">0</strong><small>만드는 중</small>
-      </button>
-      <button class="dashboard-stat" data-go="library" type="button">
-        <span>Library</span><strong id="homeSourceCount">0</strong><small>작품과 자료</small>
-      </button>
-    </div>
-
-    <div class="section">
-      <div class="section-head">
-        <div><h2>최근 7일</h2><p>최근에 어떤 생각을 많이 남겼는지 가볍게 봅니다.</p></div>
-      </div>
-      <div id="homeRecentSummary"></div>
-    </div>
-
-    <div class="section hidden" id="weeklyMirrorSection">
+    <div class="section hidden home-lounge-feature" id="weeklyMirrorSection">
       <div class="section-head">
         <div><h2>🌿 이번 주 텃밭</h2><p>이번 주의 나를 비추는 거울. 성적표가 아닙니다.</p></div>
       </div>
       <div id="weeklyMirror"></div>
     </div>
 
-    <div class="section">
+    <div class="section home-lounge-feature">
       <div class="section-head">
-        <div><h2>다시, 만나다</h2><p>7일 이상 지난 생각을 무작위로 다시 꺼내옵니다.</p></div>
+        <div><h2>다시, 만나다</h2><p>한동안 떨어져 있던 생각 하나를 오늘의 나에게 다시 건넵니다.</p></div>
         <button class="btn hidden" id="resurfaceNext" data-resurface-next type="button">🔀 다른 조각</button>
       </div>
       <div id="resurfaceBox"></div>
     </div>
 
-    <div class="section">
+    <div class="section home-overview-section">
+      <div class="section-head compact-head">
+        <div><h2>요즘의 텃밭</h2><p>최근 7일을 먼저 보고, 누적은 작게만 남깁니다.</p></div>
+      </div>
+      <div class="home-overview-shell">
+        <div id="homeRecentSummary"></div>
+        <div class="home-total-strip" aria-label="전체 누적">
+          <span class="home-total-label">전체</span>
+          <button class="home-total-link" data-go="fragments" type="button"><b id="homeFragmentCount">0</b><span>생각</span></button>
+          <span class="home-total-dot">·</span>
+          <button class="home-total-link" data-go="garden" type="button"><b id="homeThreadCount">0</b><span>Thread</span></button>
+          <span class="home-total-dot">·</span>
+          <button class="home-total-link" data-go="studio" type="button"><b id="homeProjectCount">0</b><span>Studio</span></button>
+          <span class="home-total-dot">·</span>
+          <button class="home-total-link" data-go="library" type="button"><b id="homeSourceCount">0</b><span>Library</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section home-projects-section">
       <div class="section-head">
-        <div><h2>최근 Studio</h2><p>다시 이어서 만들 수 있는 작업.</p></div>
+        <div><h2>이어 쓰는 작업</h2><p>지금 다시 들어갈 수 있는 Studio 작업.</p></div>
       </div>
       <div id="homeProjects"></div>
     </div>
@@ -1186,98 +1262,32 @@
 </dialog>
 
 <dialog id="settingsDialog">
-  <div class="modal">
+  <div class="modal settings-modal">
     <div class="modal-head"><div><div class="eyebrow">SETTINGS</div><h2>설정</h2></div><button class="close-btn" data-close="settingsDialog" type="button">✕</button></div>
 
+    <div class="settings-group-label">계정</div>
     <details class="setting-section">
       <summary><span>👤 계정 및 동기화</span><span class="setting-state" id="accountSettingState"></span></summary>
       <div class="setting-body">
-        <div class="helper" id="accountText">계정 상태를 확인 중입니다.</div>
-        <div class="actions"><button class="btn primary" id="googleAccountBtn" type="button">Google 계정 연결</button><button class="btn" id="signOutBtn" type="button">로그아웃</button></div>
-        <div style="margin-top:14px"><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
-      </div>
-    </details>
-
-    <details class="setting-section">
-      <summary><span>🌿 AI 정원사</span><span class="setting-state" id="aiSettingState"></span></summary>
-      <div class="setting-body">
-        <div class="ai-setting-row" style="margin-top:0;padding-top:0;border-top:0">
-          <div><b>Studio 정원사</b><div class="helper">원할 때 직접 불러서 다음 빈 칸을 시작할 질문 하나를 받습니다.</div></div>
-          <button class="btn" id="studioGardenerToggle" type="button">켜기</button>
+        <div class="account-profile-card">
+          <div class="account-cloud-icon">👤</div>
+          <div><span class="setting-feature-title">Google 계정</span><div class="helper" id="accountText">계정 상태를 확인 중입니다.</div></div>
+          <button class="btn primary" id="googleAccountBtn" type="button">Google 계정 연결</button>
         </div>
-        <div class="helper" id="studioGardenerHint" style="margin-top:9px"></div>
-      </div>
-    </details>
-
-    <details class="setting-section">
-      <summary><span>📊 AI 사용량</span></summary>
-      <div class="setting-body">
-        <div class="helper">정원사, Blooming Interview, 의미 검색에 사용된 AI 호출과 비용을 한곳에서 확인합니다.</div>
-        <div class="actions" style="margin-top:12px"><button class="btn" id="studioUsageToggle" type="button">오늘 AI 사용량 보기</button></div>
-        <div class="ai-usage-panel hidden" id="studioUsagePanel">
-          <div class="ai-usage-grid" id="studioUsageGrid">
-            <span class="ai-usage-section-title">🌿 정원사 질문</span>
-            <span>질문 사용</span><span class="value">—</span>
-            <span>남은 질문</span><span class="value">—</span>
-            <span>입력 / 출력</span><span class="value">—</span>
-            <span>추정 비용</span><span class="value">—</span>
-            <span class="ai-usage-section-title">🧠 의미 검색 · 임베딩</span>
-            <span>생각 색인</span><span class="value">—</span>
-            <span>Studio 재료 검색</span><span class="value">—</span>
-            <span>추정 비용</span><span class="value">—</span>
-            <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>—</strong></span>
-          </div>
-          <div class="actions" style="margin-top:11px">
-            <button class="btn soft" id="studioLimitPlus10" type="button">오늘 한도 +10회</button>
-          </div>
-          <div class="ai-usage-note" id="studioUsageNote">실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.</div>
-
-          <div class="official-usage-box" id="openAiOfficialUsageBox">
-            <div class="official-usage-head">
-              <div>
-                <strong>🧾 OpenAI 공식 사용량</strong>
-                <small>OpenAI Usage / Costs API · UTC 기준</small>
-              </div>
-              <button class="btn soft" id="openAiOfficialRefresh" type="button">공식 사용량 새로고침</button>
-            </div>
-            <div class="official-usage-body" id="openAiOfficialUsageBody">
-              <div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>
-            </div>
-          </div>
+        <div class="sync-status-card">
+          <div class="sync-status-icon">☁️</div>
+          <div><span class="sync-status-label">저장 · 동기화</span><strong id="storageStatus"><span class="status-dot warn"></span>연결 확인 중</strong><div class="helper" id="storageText">Firebase 연결을 확인하고 있습니다.</div></div>
         </div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line)">
-          <b>🧠 의미 검색 색인</b>
-          <div class="helper" style="margin-top:5px">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다. 기존 생각에 색인이 없다면 한 번에 보완할 수 있습니다.</div>
-          <div class="actions" style="margin-top:10px"><button class="btn" id="backfillEmbeddings" type="button">기존 생각 의미 색인 만들기</button></div>
-          <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
-        </div>
+        <div class="account-quiet-actions"><button class="text-btn" id="signOutBtn" type="button">로그아웃</button></div>
       </div>
     </details>
 
-    <details class="setting-section">
-      <summary><span>💾 데이터 및 백업</span></summary>
-      <div class="setting-body">
-        <div class="actions"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div>
-        <div class="setting-danger"><div class="helper">완전 초기화는 모든 생각·Library·Thread·Studio 데이터를 지웁니다.</div><button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button></div>
-      </div>
-    </details>
-
-    <details class="setting-section">
-      <summary><span>🔎 외부 검색 서비스</span><span class="setting-state" id="apiSettingState"></span></summary>
-      <div class="setting-body">
-        <div class="helper">알라딘은 연결되어 있습니다. 영상 검색에 필요한 키만 관리합니다.</div>
-        <div class="field"><label for="tmdbKeyInput">TMDB API Token / Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
-        <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
-        <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
-        <div class="api-status" id="apiStatus"></div>
-      </div>
-    </details>
-
+    <div class="settings-group-label">생각 확장</div>
     <details class="setting-section">
       <summary><span>🌸 Blooming Question</span><span class="setting-state" id="sparkSettingState"></span></summary>
       <div class="setting-body">
         <div class="helper">첫 화면에 하루 한 번 질문을 띄웁니다. 기본 질문은 <b>700개</b>입니다. 아직 만나지 않은 질문을 가장 우선하며, 예전에 본 질문은 답변 여부와 관계없이 <b>100~130일 이상</b> 쉬게 합니다. 기본 700개가 남아 있는 동안 재등장 질문은 <b>최소 30일 간격</b>으로만 아주 드물게 섞입니다.</div>
-        <div class="row2" style="margin-top:10px"><div><span class="field-lbl">첫 화면에 Blooming Question 표시</span><div class="helper" style="margin-top:4px">필요할 때 꺼둘 수 있습니다. 질문 기록과 내가 심은 질문은 지워지지 않습니다.</div></div><div style="display:flex;align-items:flex-end"><button class="btn" id="sparkToggle" type="button" style="width:100%">끄기</button></div></div>
+        <div class="setting-feature-row" style="margin-top:13px"><div><span class="setting-feature-title">첫 화면에 Blooming Question 표시</span><div class="setting-feature-copy">필요할 때 꺼둘 수 있습니다. 질문 기록과 내가 심은 질문은 지워지지 않습니다.</div></div><button class="btn setting-toggle" id="sparkToggle" type="button">끄기</button></div>
         <div class="helper" id="sparkHint" style="margin-top:9px"></div>
         <div class="blooming-custom-wrap">
           <div class="blooming-custom-head"><b>🌱 나를 위한 질문 심기</b><span class="blooming-custom-count" id="customBloomingCount"></span></div>
@@ -1293,8 +1303,75 @@
       <summary><span>🎙️ Blooming Interview</span><span class="setting-state" id="bloomingInterviewSettingState"></span></summary>
       <div class="setting-body">
         <div class="helper">가끔 평범한 생각을 저장하는 바로 그 순간, 인터뷰어가 불쑥 나타납니다. 먼저 “잠깐만요!” 하고 물어본 뒤, <b>내가 응할 때만 AI가 방금 쓴 생각을 읽고 질문 하나</b>를 만듭니다. 답하면 그 답은 새 Fragment가 되고 원래 생각과 자동으로 이어집니다.</div>
-        <div class="row2" style="margin-top:10px"><div><span class="field-lbl">불쑥 찾아오는 인터뷰</span><div class="helper" style="margin-top:4px">보통 36~60시간 정도 거리를 두며, 최근 7일에는 최대 3번까지만 나타납니다. 지나쳐도 다시 바로 쫓아오지 않습니다.</div></div><div style="display:flex;align-items:flex-end"><button class="btn" id="bloomingInterviewToggle" type="button" style="width:100%">끄기</button></div></div>
+        <div class="setting-feature-row" style="margin-top:13px"><div><span class="setting-feature-title">불쑥 찾아오는 인터뷰</span><div class="setting-feature-copy">보통 36~60시간 정도 거리를 두며, 최근 7일에는 최대 3번까지만 나타납니다. 지나쳐도 다시 바로 쫓아오지 않습니다.</div></div><button class="btn setting-toggle" id="bloomingInterviewToggle" type="button">끄기</button></div>
         <div class="helper" id="bloomingInterviewHint" style="margin-top:9px"></div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>🌿 AI 정원사</span><span class="setting-state" id="aiSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="setting-feature-row">
+          <div><span class="setting-feature-title">Studio 정원사</span><div class="setting-feature-copy">원할 때 직접 불러서 현재 문항을 더 깊게 생각할 질문 하나를 받습니다.</div></div>
+          <button class="btn setting-toggle" id="studioGardenerToggle" type="button">켜기</button>
+        </div>
+        <div class="helper" id="studioGardenerHint" style="margin-top:10px"></div>
+      </div>
+    </details>
+
+    <div class="settings-group-label">AI · 연결</div>
+    <details class="setting-section" id="aiUsageSection">
+      <summary><span>📊 AI 사용량</span></summary>
+      <div class="setting-body">
+        <div class="helper">앱이 기록한 오늘의 사용량과 OpenAI 공식 집계를 나눠서 확인합니다.</div>
+
+        <section class="usage-card" style="margin-top:13px">
+          <div class="usage-card-head">
+            <div><span class="usage-card-kicker">오늘</span><span class="usage-card-title">오늘 AI 사용량</span><span class="usage-card-sub">앱 기록 · KST 기준</span></div>
+            <button class="btn soft usage-refresh" id="studioUsageRefresh" type="button">새로고침</button>
+          </div>
+          <div class="ai-usage-panel" id="studioUsagePanel">
+            <div class="ai-usage-grid" id="studioUsageGrid"><span>사용량</span><span class="value">메뉴를 열면 불러옵니다.</span></div>
+            <div class="actions" style="margin-top:11px"><button class="btn soft" id="studioLimitPlus10" type="button">오늘 한도 +10회</button></div>
+            <div class="ai-usage-note" id="studioUsageNote">실제 청구액이 아니라 OpenAI가 응답한 실제 토큰 사용량에 현재 모델 단가를 곱한 추정값입니다.</div>
+          </div>
+        </section>
+
+        <section class="usage-card">
+          <div class="usage-card-head">
+            <div><span class="usage-card-kicker">공식 집계</span><span class="usage-card-title">OpenAI 공식 사용량</span><span class="usage-card-sub">OpenAI Usage / Costs API · UTC 기준</span></div>
+            <button class="btn soft usage-refresh" id="openAiOfficialRefresh" type="button">새로고침</button>
+          </div>
+          <div class="official-usage-box" id="openAiOfficialUsageBox">
+            <div class="official-usage-body" id="openAiOfficialUsageBody"><div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div></div>
+          </div>
+        </section>
+
+        <div class="setting-tool-card">
+          <div class="setting-tool-head"><div><b>🧠 AI 데이터 관리</b><div class="helper" style="margin-top:4px">기존 생각 중 의미 색인이 없는 조각만 한 번에 보완합니다. 새 생각은 자동으로 색인됩니다.</div></div><button class="btn" id="backfillEmbeddings" type="button">의미 색인 만들기</button></div>
+          <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 자동으로 의미 색인이 만들어집니다.</div>
+        </div>
+      </div>
+    </details>
+
+    <details class="setting-section">
+      <summary><span>🔎 외부 검색 서비스</span><span class="setting-state" id="apiSettingState"></span></summary>
+      <div class="setting-body">
+        <div class="helper">알라딘은 연결되어 있습니다. 영상 검색에 필요한 키만 관리합니다.</div>
+        <div class="field"><label for="tmdbKeyInput">TMDB API Token / Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
+        <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
+        <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
+        <div class="api-status" id="apiStatus"></div>
+      </div>
+    </details>
+
+    <div class="settings-group-label">데이터</div>
+    <details class="setting-section">
+      <summary><span>💾 데이터 및 백업</span></summary>
+      <div class="setting-body">
+        <div class="helper" style="margin-top:0">내 생각 데이터를 파일로 보관하거나 다른 기기에서 가져올 수 있습니다.</div>
+        <div class="actions" style="margin-top:11px"><button class="btn" id="exportData" type="button">JSON 내보내기</button><label class="btn" for="importData">가져오기</label><input class="hidden" id="importData" type="file" accept="application/json" /></div>
+        <div class="setting-danger"><div class="helper">완전 초기화는 모든 생각·Library·Thread·Studio 데이터를 지웁니다.</div><button class="btn danger block" id="resetEverything" type="button">모든 데이터 완전 초기화</button></div>
       </div>
     </details>
   </div>
@@ -1303,7 +1380,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v25 · Settings cleanup + Blooming Interview polish */
+/* Thought Garden v26 · Settings UI refinement + Blooming Interview polish */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -1347,22 +1424,22 @@ function toast(msg){const e=$("toast");e.textContent=msg;e.classList.add("show")
 function getApiKeys(){try{return JSON.parse(localStorage.getItem(API_KEY_STORE)||"{}")}catch{return {}}}
 function renderAccountStatus(){
   const u=state.firebase.user;
-  const text=$("accountText"),btn=$("googleAccountBtn"),out=$("signOutBtn");
+  const text=$("accountText"),btn=$("googleAccountBtn"),out=$("signOutBtn"),quiet=out?.closest(".account-quiet-actions");
   if(!text||!btn||!out)return;
   const summary=$("accountSettingState");
   if(!u){
     if(summary)summary.textContent="연결 안 됨";
     text.innerHTML="아직 Google 계정에 연결되지 않았습니다. 이 기기에서만 임시로 사용할 수 있습니다.";
-    btn.textContent="Google로 로그인";btn.classList.remove("hidden");out.classList.add("hidden");
+    btn.textContent="Google로 로그인";btn.classList.remove("hidden");out.classList.add("hidden");quiet?.classList.add("hidden");
   }else if(u.isAnonymous){
     if(summary)summary.textContent="익명";
-    text.innerHTML="현재는 <b>익명 계정</b>입니다. 지금 Google 계정을 연결하면 기존 생각을 그대로 유지하면서 멀티기기 계정으로 바뀝니다.";
-    btn.textContent="기존 데이터에 Google 계정 연결";btn.classList.remove("hidden");out.classList.add("hidden");
+    text.innerHTML="현재는 <b>익명 계정</b>입니다. Google 계정을 연결하면 지금까지의 생각을 그대로 유지하면서 여러 기기에서 이어볼 수 있습니다.";
+    btn.textContent="Google 계정 연결";btn.classList.remove("hidden");out.classList.add("hidden");quiet?.classList.add("hidden");
   }else{
     if(summary)summary.textContent="Google 연결됨";
     const name=esc(u.displayName||u.email||"Google 사용자");
-    text.innerHTML=`동기화 계정 <span class="account-name">✓ ${name}</span><br>다른 기기에서도 같은 Google 계정으로 로그인하면 같은 데이터를 불러옵니다.`;
-    btn.textContent="Google 계정 연결됨";btn.classList.add("hidden");out.classList.remove("hidden");
+    text.innerHTML=`<span class="account-name">✓ ${name}</span><br>이 계정으로 생각과 설정을 이어서 사용합니다.`;
+    btn.textContent="Google 계정 연결됨";btn.classList.add("hidden");out.classList.remove("hidden");quiet?.classList.remove("hidden");
   }
 }
 async function saveCloudApiKeys(keys){
@@ -2205,11 +2282,11 @@ function setFirebaseStatus(ok,error=""){
   if(!$("storageStatus"))return;
   if(ok){
     const u=state.firebase.user;
-    $("storageStatus").innerHTML='<span class="status-dot ok"></span>클라우드 동기화 모드';
-    $("storageText").textContent=u?.isAnonymous?"현재 기기의 익명 계정에 저장 중입니다. Google 계정을 연결하면 멀티기기 동기화가 됩니다.":"Google 계정 기준으로 Firestore/Storage에 동기화됩니다.";
+    $("storageStatus").innerHTML=`<span class="status-dot ok"></span>${u?.isAnonymous?"이 기기에 임시 저장 중":"클라우드 동기화 중"}`;
+    $("storageText").textContent=u?.isAnonymous?"현재 기기의 익명 계정에 안전하게 저장 중입니다. Google 계정을 연결하면 같은 데이터를 여러 기기에서 이어볼 수 있습니다.":"Google 계정을 기준으로 생각과 첨부 파일을 자동 동기화합니다.";
   }else{
-    $("storageStatus").innerHTML='<span class="status-dot warn"></span>로컬 / 로그인 대기';
-    $("storageText").textContent=error?`연결 오류: ${error}`:"Google 로그인 전에는 이 기기의 로컬 데이터만 사용할 수 있습니다.";
+    $("storageStatus").innerHTML='<span class="status-dot warn"></span>이 기기에만 저장 중';
+    $("storageText").textContent=error?`클라우드 연결 확인이 필요합니다: ${error}`:"Google 로그인 전에는 이 기기에서만 데이터를 사용할 수 있습니다.";
   }
 }
 let realtimeUnsub=[];
@@ -2658,14 +2735,14 @@ function renderHome(){
   const freeRecent=recent.filter(f=>!f.sourceId).length;
   const linkedRecent=recent.filter(f=>(f.threadIds||[]).length).length;
   $("homeRecentSummary").innerHTML=`<div class="recent-summary-grid">
-    <button class="recent-summary-item" data-recent="all" type="button"><small>최근 7일 생각</small><strong>${recent.length}</strong></button>
-    <button class="recent-summary-item" data-recent="source" type="button"><small>Library에서 온 조각</small><strong>${sourceRecent}</strong></button>
-    <button class="recent-summary-item" data-recent="thread" type="button"><small>Thread에 연결됨</small><strong>${linkedRecent}</strong></button>
+    <button class="recent-summary-item" data-recent="all" type="button"><small>최근 7일 생각</small><strong>${recent.length}</strong><span>조각</span></button>
+    <button class="recent-summary-item" data-recent="source" type="button"><small>Library에서</small><strong>${sourceRecent}</strong><span>조각</span></button>
+    <button class="recent-summary-item" data-recent="thread" type="button"><small>Thread로 이어짐</small><strong>${linkedRecent}</strong><span>조각</span></button>
   </div>`;
   const working=state.projects.filter(p=>p.status!=="published");
   const published=state.projects.filter(p=>p.status==="published").length;
   $("homeProjects").innerHTML=working.length
-    ? working.slice(0,3).map(projectCard).join("")
+    ? working.slice(0,2).map(projectCard).join("")
     : empty("🏭",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
   renderResurface();
   renderWeeklyMirror();
@@ -4491,8 +4568,7 @@ $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
 $("signOutBtn").addEventListener("click",signOutGarden);
 $("sheetSettings").addEventListener("click",()=>{
   closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();renderBloomingInterviewSettings();
-  $("studioUsagePanel")?.classList.add("hidden");
-  if($("studioUsageToggle"))$("studioUsageToggle").textContent="오늘 AI 사용량 보기";
+  if($("studioUsageGrid"))$("studioUsageGrid").innerHTML='<span>사용량</span><span class="value">메뉴를 열면 불러옵니다.</span>';
   if($("openAiOfficialUsageBody"))$("openAiOfficialUsageBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>`;
   $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
@@ -4593,13 +4669,18 @@ $("studioLimitPlus10").addEventListener("click",async()=>{
     btn.disabled=false;btn.textContent=old;
   }
 });
-$("studioUsageToggle").addEventListener("click",async()=>{
+$("studioUsageRefresh").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 확인할 수 있습니다.");
-  const panel=$("studioUsagePanel"),btn=$("studioUsageToggle");
-  const opening=panel.classList.contains("hidden");
-  panel.classList.toggle("hidden",!opening);
-  btn.textContent=opening?"오늘 AI 사용량 접기":"오늘 AI 사용량 보기";
-  if(opening)await refreshStudioUsage();
+  const btn=$("studioUsageRefresh"),old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";
+  try{await refreshStudioUsage()}finally{btn.disabled=false;btn.textContent=old}
+});
+$("aiUsageSection").addEventListener("toggle",async()=>{
+  if(!$("aiUsageSection").open)return;
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous){
+    const grid=$("studioUsageGrid");if(grid)grid.innerHTML='<span>오늘 사용량</span><span class="value">Google 로그인 필요</span>';
+    return;
+  }
+  await refreshStudioUsage();
 });
 $("studioGardenerToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
