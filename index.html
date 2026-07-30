@@ -3357,20 +3357,14 @@ function threadCard(t,compact=false){
   </button>`;
 }
 function openThread(id){
-  state.pendingFiles.thread=[];state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
+  state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
   $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
   $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button><button class="text-btn danger-text" data-delete-thread="${t.id}" type="button">Thread 삭제</button></div></div>
     <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="meta"><span class="status">생각 ${fs.length}개</span></div><div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
-    <div class="quick-capture" style="margin-top:12px"><div class="eyebrow">생각 이어쓰기</div>
-      <div class="field"><textarea class="textarea" id="threadThoughtInput" placeholder="이 생각에 지금 한 줄을 더한다면?"></textarea></div>
-      <div class="attachment-tools"><label class="btn file-pick">📎 사진·음성·영상<input id="threadFiles" type="file" accept="image/*,audio/*,video/*" multiple></label></div>
-      <div class="selected-files" id="threadFileList"></div>
-      <div style="text-align:right;margin-top:8px"><button class="btn primary" data-save-thread-thought="${t.id}" type="button">한 줄 추가</button></div>
-    </div>
-    <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>정답보다, 내가 어떻게 달라졌는지를 봅니다.</p></div></div>
-    <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true)}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","다른 생각에서 이 흐름과 닿는 조각을 연결해보세요.")}</div></div>
-    <div class="thread-suggest-section hidden" id="threadSuggestSection"><div class="section-head"><div><h2>🌱 이 흐름과 닮은 미연결 생각</h2><p>AI가 연결을 결정하지 않고, 살펴볼 후보만 건넵니다.</p></div></div><div id="threadSuggestions"></div></div>`;
-  setTimeout(()=>{$("threadFiles")?.addEventListener("change",e=>setPendingFiles("thread",e.target.files));renderPendingFiles("thread");loadThreadSuggestions(t.id)},0);
+    <div class="thread-suggest-section hidden" id="threadSuggestSection"><div class="section-head"><div><h2>🌱 추천 생각</h2><p>이 Thread와 닿아 있을 수 있는 생각을 먼저 살펴봅니다.</p></div></div><div id="threadSuggestions"></div></div>
+    <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>각 생각에서 다시 한 갈래를 키워볼 수 있어요.</p></div></div>
+    <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true,{threadId:id,threadChild:true})}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","오른쪽 아래 ＋로 이 Thread의 첫 생각을 남겨보세요.")}</div></div>`;
+  setTimeout(()=>loadThreadSuggestions(t.id),0);
 }
 async function loadThreadSuggestions(tid){
   const sec=$("threadSuggestSection"),box=$("threadSuggestions");if(!sec||!box)return;
@@ -3633,10 +3627,13 @@ async function saveEditFragment(){
   state.editAttachments=[];state.editRemovedAttachments=[];
   $("editFragmentDialog").close();renderAll();toast("수정했습니다.");
 }
-function fragmentCard(f,compact=false){
+function fragmentCard(f,compact=false,opts={}){
   const src=state.sources.find(s=>s.id===f.sourceId),threads=(f.threadIds||[]).map(id=>state.threads.find(t=>t.id===id)).filter(Boolean);
   const label=src?esc(src.title):(f.type==="moment"?"순간":f.type==="decision"?"결정":"생각");
   const icon=src?sourceIcon(src.type):fragIcon(f.type);
+  const primaryAction=opts.threadChild
+    ? `<button class="note-act" data-add-child-thought="${f.id}" data-thread-id="${opts.threadId||""}" type="button">＋ 생각 더하기</button>`
+    : `<button class="note-act" data-link="${f.id}" type="button">연결</button>`;
   return `<article class="note">
     ${continuedFromLine(f)}
     ${f.externalText?`<blockquote class="note-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
@@ -3647,7 +3644,7 @@ function fragmentCard(f,compact=false){
     ${f.choice?`<div class="note-chips"><span class="status">결정 · ${esc(f.choice)}</span></div>`:""}
     ${threads.length?`<div class="note-chips">${threads.map(t=>`<span class="tag">🌱 ${esc(t.title)}</span>`).join("")}</div>`:""}
     <div class="note-foot"><span class="note-meta">${f.starred?'<span class="note-star">★</span>':""}<span class="nm-src">${icon} ${label}</span>${lensBadge(f)}<span class="nm-date">${fmt((f.date||f.createdAt||"").slice(0,10))}</span></span></div>
-    <div class="note-tail"><span class="note-acts"><button class="note-act" data-link="${f.id}" type="button">연결</button><button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
+    <div class="note-tail"><span class="note-acts">${primaryAction}<button class="note-act" data-edit-fragment="${f.id}" type="button">수정</button><button class="note-act danger" data-delete-fragment="${f.id}" type="button">삭제</button></span></div>
   </article>`;
 }
 function archiveBodyForProject(p){
@@ -4148,7 +4145,11 @@ async function saveBloomingReflection(){
 function openCapture(prefill="",ctx=null){
   state.pendingSlot=ctx||null;
   const qb=$("captureQuestion");
-  if(ctx){qb.innerHTML=`<span class="cq-label">${ctx.kind==="continue"?"이 생각에서 이어쓰는 중":"이 질문에 답하는 중"}</span><p class="serif">${ctx.kind==="continue"?"“":""}${esc(ctx.prompt)}${ctx.kind==="continue"?"”":""}</p>`;qb.classList.remove("hidden")}
+  if(ctx){
+    const isChild=ctx.kind==="thread-child"||ctx.kind==="continue";
+    const label=ctx.kind==="thread-child"?"이 생각에서 한 갈래를 더하는 중":ctx.kind==="thread"?"이 Thread에 생각을 더하는 중":ctx.kind==="continue"?"이 생각에서 이어쓰는 중":"이 질문에 답하는 중";
+    qb.innerHTML=`<span class="cq-label">${label}</span><p class="serif">${isChild?"“":""}${esc(ctx.prompt)}${isChild?"”":""}</p>`;qb.classList.remove("hidden")
+  }
   else qb.classList.add("hidden");
   $("captureText").value=prefill;
   $("captureExternal").value="";
@@ -4157,7 +4158,7 @@ function openCapture(prefill="",ctx=null){
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
   $("captureDate").value=today();
-  if(!prefill){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
+  if(!prefill&&!ctx){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
   $("captureDialog").showModal();
   setTimeout(growAll,0);
   setTimeout(()=>$("captureText").focus(),60);
@@ -4171,9 +4172,9 @@ async function saveCapture(){
   const f={
     id:uid(),type:"thought",thought,externalText,locator:$("captureLocator").value.trim(),
     context:(ctx&&ctx.kind==="spark")?("Q. "+ctx.prompt):"",
-    ...(ctx&&ctx.kind==="continue"?{continuedFrom:[ctx.fromId]}:{}),
+    ...(ctx&&(ctx.kind==="continue"||ctx.kind==="thread-child")?{continuedFrom:[ctx.fromId]}:{}),
     ...(ctx&&ctx.kind==="spark"?{bloomingQuestionKey:ctx.sparkKey||"",bloomingQuestion:ctx.prompt,bloomingQuestionCategory:ctx.category||"",bloomingAnsweredAt:createdAt}:{}),
-    threadIds:[],attachments:[],date:$("captureDate").value||today(),createdAt,updatedAt:createdAt
+    threadIds:(ctx&&(ctx.kind==="thread"||ctx.kind==="thread-child")&&ctx.threadId)?[ctx.threadId]:[],attachments:[],date:$("captureDate").value||today(),createdAt,updatedAt:createdAt
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id,"capture");
@@ -4188,6 +4189,10 @@ async function saveCapture(){
         await persistSlots(p,slots);
         renderAll();openProject(p.id);toast("작업대에 넣고, 생각으로도 남겼어요. 🌱");return;
       }
+    }
+    if(ctx&&(ctx.kind==="thread"||ctx.kind==="thread-child")&&ctx.threadId){
+      await touchThreadActivity(ctx.threadId);renderAll();openThread(ctx.threadId);
+      toast(ctx.kind==="thread-child"?"이 생각에서 한 갈래가 더 자랐어요. 🌱":"Thread에 생각을 더했어요. 🌱");return;
     }
     renderAll();
     if(ctx?.kind==="spark"&&previousBlooming.length){openBloomingComparison(f,previousBlooming,ctx);return}
@@ -4609,15 +4614,6 @@ function openLinkDialogForFragments(ids){
 async function linkFragment(fid,tid){
   const ids=state.pendingLinkFragmentIds?.length?state.pendingLinkFragmentIds.slice():[fid],found=ids.map(id=>state.fragments.find(x=>x.id===id)).filter(Boolean);if(!found.length)return;for(const f of found){f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);delete state.threadMatchCache[f.id]}await touchThreadActivity(tid);state.pendingLinkFragmentIds=null;state.pendingLinkFragmentId=null;$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast(found.length>1?`${found.length}개의 생각을 Thread에 연결했습니다. 🌱`:"Thread에 연결했습니다.");
 }
-async function addThreadThought(tid){
-  const el=$("threadThoughtInput"),text=el?.value.trim();
-  if(!text&&!state.pendingFiles.thread.length)return toast("한 줄이나 미디어 하나를 남겨주세요.");
-  const f={id:uid(),type:"thought",thought:text,threadIds:[tid],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  try{
-    if(state.pendingFiles.thread.length)f.attachments=await uploadFiles(state.pendingFiles.thread,f.id,"thread");
-    state.fragments.unshift(f);await persist("fragments",f);await touchThreadActivity(tid);requestFragmentEmbedding(f.id);state.pendingFiles.thread=[];openThread(tid);renderHome();renderGarden();toast("생각을 한 줄 더 이어갔습니다.");
-  }catch(e){console.error(e);toast(e.message||"파일 저장에 실패했습니다.")}
-}
 function openProjectDialog(threadId=""){
   $("projectId").value="";$("projectTitleInput").value="";$("projectFormat").value="blog";refreshSelects();$("projectThread").value=threadId;$("projectDialog").showModal();
 }
@@ -4973,7 +4969,11 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
   const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
   const dt=e.target.closest("[data-delete-thread]");if(dt)return deleteThread(dt.dataset.deleteThread);
-  const st=e.target.closest("[data-save-thread-thought]");if(st)return addThreadThought(st.dataset.saveThreadThought);
+  const child=e.target.closest("[data-add-child-thought]");if(child){
+    const f=allFragments().find(x=>x.id===child.dataset.addChildThought);if(!f)return;
+    const tid=child.dataset.threadId||state.openThreadId||"";
+    return openCapture("",{kind:"thread-child",fromId:f.id,threadId:tid,prompt:(f.thought||f.text||f.externalText||"").slice(0,180)});
+  }
   const li=e.target.closest("[data-link]");if(li)return openLinkDialog(li.dataset.link);
   const lt=e.target.closest("[data-link-to-thread]");if(lt)return linkFragment($("linkFragmentId").value,lt.dataset.linkToThread);
   const ls=e.target.closest("[data-link-to-source]");if(ls)return linkFragmentToSource($("sourceLinkFragmentId").value,ls.dataset.linkToSource);
@@ -5038,7 +5038,13 @@ ${archiveBodyForProject(p)}`,"완성된 글 전체를 복사했어요. ✍️")}
   const saveSlots=e.target.closest("[data-save-all-slots]");if(saveSlots)return saveAllSlots(saveSlots.dataset.saveAllSlots);
   const dp=e.target.closest("[data-delete-project]");if(dp)return deleteProject(dp.dataset.deleteProject);
 });
-$("fab").addEventListener("click",()=>openCapture());$("homeCapture").addEventListener("click",()=>openCapture());
+$("fab").addEventListener("click",()=>{
+  if(state.view==="garden"&&state.openThreadId){
+    const t=state.threads.find(x=>x.id===state.openThreadId);
+    return openCapture("",{kind:"thread",threadId:state.openThreadId,prompt:t?.title||"이 Thread"});
+  }
+  openCapture();
+});$("homeCapture").addEventListener("click",()=>openCapture());
 $("menuTrigger").addEventListener("click",toggleMenu);
 $("googleAccountBtn").addEventListener("click",beginGoogleAuth);
 $("accountDialogGoogleBtn").addEventListener("click",beginGoogleAuth);
