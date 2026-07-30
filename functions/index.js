@@ -22,7 +22,6 @@ const BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES = 36;
 const BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT = 6;
 const BETWEEN_THOUGHTS_CURATION_PAIR_COUNT = 3;
 const BETWEEN_THOUGHTS_CURATION_CACHE_MS = 3 * 24 * 60 * 60 * 1000;
-const STUDIO_PATH_DAILY_LIMIT = 6;
 const STUDIO_PATH_MAX_THREAD_FRAGMENTS = 36;
 const STUDIO_PATH_SCOUT_COUNT = 5;
 const STUDIO_PATH_RESULT_COUNT = 3;
@@ -615,7 +614,12 @@ async function requestStudioQuestion(context) {
     "질문은 targetSlotTitle/targetSlotPurpose에 실제로 도움이 되어야 하지만, 문항 이름을 기계적으로 바꿔 말한 질문이어서는 안 된다.",
     "칭찬, 요약, 평가, 교훈, 진단, 처방, 결론 제시는 하지 않는다.",
     "사용자가 제공하지 않은 사실을 만들지 않는다.",
-    "질문은 짧고 자연스럽게, 가능하면 80자 안팎으로 쓴다.",
+    "질문은 한 번 읽고 바로 뜻이 잡히는 일상적인 한국어로 쓴다.",
+    "한 질문에는 한 가지만 묻는다. 두 질문을 '그리고', '또는', 쉼표로 이어 붙이지 않는다.",
+    "은유적 표현, 시적인 문장, 추상적인 명사 나열, 개념을 작은따옴표로 감싸 새로 정의하는 방식을 피한다.",
+    "'어떤 긴장 속에서 드러나는가', '무엇을 붙잡고 싶은가', '어떤 의미로 남는가'처럼 바로 답하기 어려운 문어체를 쓰지 않는다.",
+    "가능하면 '언제였어?', '무슨 일이 있었어?', '그때 무엇을 했어?', '왜 그렇게 생각했어?'처럼 실제 장면이나 행동이 떠오르는 질문으로 쓴다.",
+    "사용자가 쓴 단어를 우선 사용하고, 질문은 60자 안팎이며 최대 90자를 넘지 않는다.",
     "같은 종류의 '왜?' 질문만 반복하지 말고 concrete, why, counter, emotion, change, implication 중 가장 유용한 한 유형을 고른다.",
     "내용이 심하게 불안하거나 위험한 상황을 암시하면 위험한 사고를 더 파고들게 하지 말고, 지금의 안전·도움·지지로 시선을 돌리는 부드러운 질문을 고른다.",
   ].join("\n");
@@ -685,7 +689,7 @@ async function requestStudioQuestion(context) {
     throw new HttpsError("internal", "Studio 정원사 질문 형식이 올바르지 않습니다.");
   }
 
-  const question = String(parsed?.question || "").trim().slice(0, 180);
+  const question = String(parsed?.question || "").trim().slice(0, 110);
   const type = String(parsed?.type || "").trim();
 
   if (!question) {
@@ -897,6 +901,7 @@ exports.studioGardenerQuestion = onCall(
         "currentDraft가 있다면 같은 문항 안에서 아직 말하지 않은 구체성·반례·긴장·의미를 묻는다. 이미 적힌 문장을 확인시키는 질문은 하지 않는다.",
         "반론 문항이라면 앞에서 원인·어려움을 이미 다뤘을 때 '다른 이유가 더 있나/빠뜨린 이유가 있나'를 묻지 않는다. 대신 반대 주장·반례·예외·대가·대안 해석 중 하나를 연다.",
         "previousGardenerQuestion이 있으면 그 질문과 같은 축을 반복하지 않는다.",
+        "어려운 개념어보다 사용자가 실제로 쓴 표현을 사용한다. 질문을 읽자마자 어떤 경험을 떠올려 답해야 하는지 알 수 있어야 한다.",
         "질문 하나만 반환한다.",
       ],
     });
@@ -1405,23 +1410,17 @@ async function reserveBetweenThoughtsCurationQuota(uid) {
   });
 }
 
-async function reserveBetweenThoughtProfiles(uid, count) {
+async function assertBetweenThoughtProfilesQuota(uid, count) {
   const n = Math.max(0, Math.min(BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT, Number(count || 0)));
   if (!n) return 0;
   const ref = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists ? snap.data() || {} : {};
-    const used = Math.max(0, Number(data.betweenThoughtsProfileGenerations || 0));
-    if (used + n > BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT) {
-      throw new HttpsError("resource-exhausted", "오늘 만들 수 있는 생각 프로필 수를 넘었어요. 내일 이어서 정리할게요.");
-    }
-    tx.set(ref, {
-      betweenThoughtsProfileGenerations: used + n,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    return used + n;
-  });
+  const snap = await ref.get();
+  const data = snap.exists ? snap.data() || {} : {};
+  const used = Math.max(0, Number(data.betweenThoughtsProfileGenerations || 0));
+  if (used + n > BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT) {
+    throw new HttpsError("resource-exhausted", "오늘 만들 수 있는 생각 프로필 수를 넘었어요. 내일 이어서 정리할게요.");
+  }
+  return used;
 }
 
 function betweenThoughtFullRecord(id, data, source) {
@@ -1578,7 +1577,8 @@ async function requestBetweenThoughtProfiles(records) {
   };
 }
 
-async function ensureBetweenThoughtProfiles(uid, userRef, records) {
+async function ensureBetweenThoughtProfiles(uid, userRef, records, options = {}) {
+  const usageScope = options.usageScope === "studioPath" ? "studioPath" : "betweenThoughts";
   const profileCol = userRef.collection("aiBetweenThoughtProfiles");
   const snaps = await Promise.all(records.map((r) => profileCol.doc(r.id).get()));
   const resultMap = new Map();
@@ -1595,7 +1595,11 @@ async function ensureBetweenThoughtProfiles(uid, userRef, records) {
 
   let usage = { count: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
   if (stale.length) {
-    await reserveBetweenThoughtProfiles(uid, stale.length);
+    // 두 생각 사이에서 새 프로필을 만들 때만 전용 일일 한도를 확인한다.
+    // Studio의 글의 갈래 찾기는 자체 기능으로 집계하며, 이 한도를 중복 소비하지 않는다.
+    if (usageScope === "betweenThoughts") {
+      await assertBetweenThoughtProfilesQuota(uid, stale.length);
+    }
     const generated = await requestBetweenThoughtProfiles(stale.map((x) => x.record));
     const generatedMap = new Map(generated.profiles.map((p) => [p.id, p]));
     const batch = db.batch();
@@ -1614,13 +1618,16 @@ async function ensureBetweenThoughtProfiles(uid, userRef, records) {
     }
     const count = [...stale].filter((x) => generatedMap.has(x.record.id)).length;
     if (count) {
-      batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
-        betweenThoughtsProfileInputTokens: FieldValue.increment(generated.inputTokens),
-        betweenThoughtsProfileCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
-        betweenThoughtsProfileOutputTokens: FieldValue.increment(generated.outputTokens),
-        betweenThoughtsProfileModel: BETWEEN_THOUGHTS_MODEL,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      if (usageScope === "betweenThoughts") {
+        batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
+          betweenThoughtsProfileGenerations: FieldValue.increment(count),
+          betweenThoughtsProfileInputTokens: FieldValue.increment(generated.inputTokens),
+          betweenThoughtsProfileCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
+          betweenThoughtsProfileOutputTokens: FieldValue.increment(generated.outputTokens),
+          betweenThoughtsProfileModel: BETWEEN_THOUGHTS_MODEL,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
       await batch.commit();
       usage = { count, inputTokens: generated.inputTokens, cachedInputTokens: generated.cachedInputTokens, outputTokens: generated.outputTokens };
     }
@@ -1930,7 +1937,7 @@ exports.betweenThoughtsCurate = onCall(
     }
 
     await reserveBetweenThoughtsCurationQuota(uid);
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records, { usageScope: "studioPath" });
     const profileCandidates = records.map((r) => compactBetweenThoughtProfile(r.id, ensured.profiles.get(r.id), r.date)).filter((x) => x.core);
     if (profileCandidates.length < 2) return { ok: true, items: [], reason: "not-enough-profile-context" };
 
@@ -1940,9 +1947,11 @@ exports.betweenThoughtsCurate = onCall(
 
     const generatedAtMs = Date.now();
     const curationId = sha256(`${uid}:${generatedAtMs}:${deep.items.map((x) => x.fragmentIds.join("|")).join(",")}`).slice(0, 40);
-    const totalInputTokens = scout.inputTokens + deep.inputTokens;
-    const totalCachedInputTokens = scout.cachedInputTokens + deep.cachedInputTokens;
-    const totalOutputTokens = scout.outputTokens + deep.outputTokens;
+    // 갈래 찾기에 필요해 새로 만든 프로필 토큰도 갈래 찾기 사용량으로만 합산한다.
+    // 두 생각 사이의 프로필 생성 횟수와 중복 집계하지 않는다.
+    const totalInputTokens = ensured.usage.inputTokens + scout.inputTokens + deep.inputTokens;
+    const totalCachedInputTokens = ensured.usage.cachedInputTokens + scout.cachedInputTokens + deep.cachedInputTokens;
+    const totalOutputTokens = ensured.usage.outputTokens + scout.outputTokens + deep.outputTokens;
     const usageRef = userRef.collection("aiUsage").doc(koreaDateKey());
     const batch = db.batch();
     batch.set(currentRef, {
@@ -1988,20 +1997,6 @@ exports.betweenThoughtsCurate = onCall(
     };
   }
 );
-
-async function reserveStudioPathQuota(uid) {
-  const ref = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists ? snap.data() || {} : {};
-    const used = Math.max(0, Number(data.studioPathDiscoveries || 0));
-    if (used >= STUDIO_PATH_DAILY_LIMIT) {
-      throw new HttpsError("resource-exhausted", "글의 갈래 찾기는 오늘 여기까지 사용할 수 있어요.");
-    }
-    tx.set(ref, { studioPathDiscoveries: used + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    return used + 1;
-  });
-}
 
 function selectStudioPathRows(rows, maxCount) {
   if (rows.length <= maxCount) return rows;
@@ -2245,7 +2240,6 @@ exports.studioThreadPaths = onCall(
       return { ok: true, cached: true, items: cache.items, model: String(cache.model || STUDIO_GARDENER_MODEL) };
     }
 
-    await reserveStudioPathQuota(uid);
     const selectedRows = selectStudioPathRows(allRows, STUDIO_PATH_MAX_THREAD_FRAGMENTS);
     const selectedIds = new Set(selectedRows.map((x) => x.id));
     const sourceIds = [...new Set(selectedRows.map((x) => String(x.data.sourceId || "")).filter(Boolean))];
@@ -2254,7 +2248,7 @@ exports.studioThreadPaths = onCall(
     sourceSnaps.forEach((snap, i) => { if (snap.exists) sourceMap.set(sourceIds[i], snap.data() || {}); });
     const records = selectedRows.map((x) => betweenThoughtFullRecord(x.id, x.data, sourceMap.get(String(x.data.sourceId || "")) || null));
     const recordMap = new Map(records.map((x) => [x.id, x]));
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records, { usageScope: "studioPath" });
     const childCount = new Map();
     selectedRows.forEach((x) => (Array.isArray(x.data.continuedFrom) ? x.data.continuedFrom : []).forEach((pid) => {
       const id = String(pid); if (selectedIds.has(id)) childCount.set(id, (childCount.get(id) || 0) + 1);
@@ -2273,9 +2267,11 @@ exports.studioThreadPaths = onCall(
     const scout = await requestStudioPathScout(thread, profiles);
     let deep = { paths: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
     if (scout.candidates.length) deep = await requestStudioPathDeep(thread, scout.candidates, recordMap);
-    const totalInputTokens = scout.inputTokens + deep.inputTokens;
-    const totalCachedInputTokens = scout.cachedInputTokens + deep.cachedInputTokens;
-    const totalOutputTokens = scout.outputTokens + deep.outputTokens;
+    // 갈래 찾기에 필요해 새로 만든 프로필 토큰도 갈래 찾기 사용량으로만 합산한다.
+    // 두 생각 사이의 프로필 생성 횟수와 중복 집계하지 않는다.
+    const totalInputTokens = ensured.usage.inputTokens + scout.inputTokens + deep.inputTokens;
+    const totalCachedInputTokens = ensured.usage.cachedInputTokens + scout.cachedInputTokens + deep.cachedInputTokens;
+    const totalOutputTokens = ensured.usage.outputTokens + scout.outputTokens + deep.outputTokens;
     const usageRef = userRef.collection("aiUsage").doc(koreaDateKey());
     const batch = db.batch();
     batch.set(cacheRef, {
@@ -2284,6 +2280,9 @@ exports.studioThreadPaths = onCall(
       generatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     batch.set(usageRef, {
+      // 캐시 결과를 다시 보는 경우에는 이 블록에 도달하지 않는다.
+      // 프로필 생성과 후보 검토까지 성공적으로 끝난 새 분석만 1회로 센다.
+      studioPathCompletedAnalyses: FieldValue.increment(1),
       studioPathInputTokens: FieldValue.increment(totalInputTokens),
       studioPathCachedInputTokens: FieldValue.increment(totalCachedInputTokens),
       studioPathOutputTokens: FieldValue.increment(totalOutputTokens),
@@ -2364,7 +2363,7 @@ exports.studioGardenerUsage = onCall(
     );
     const betweenThoughtsEstimatedCostUsd = betweenThoughtsCurationEstimatedCostUsd + betweenThoughtsProfileEstimatedCostUsd;
 
-    const studioPathDiscoveries = Math.max(0, Number(data.studioPathDiscoveries || 0));
+    const studioPathDiscoveries = Math.max(0, Number(data.studioPathCompletedAnalyses || 0));
     const studioPathInputTokens = Math.max(0, Number(data.studioPathInputTokens || 0));
     const studioPathCachedInputTokens = Math.max(0, Number(data.studioPathCachedInputTokens || 0));
     const studioPathOutputTokens = Math.max(0, Number(data.studioPathOutputTokens || 0));
@@ -2409,6 +2408,7 @@ exports.studioGardenerUsage = onCall(
       betweenThoughtsProfileEstimatedCostUsd: Number(betweenThoughtsProfileEstimatedCostUsd.toFixed(8)),
       betweenThoughtsEstimatedCostUsd: Number(betweenThoughtsEstimatedCostUsd.toFixed(8)),
       studioPathDiscoveries,
+      studioPathCompletedAnalyses: studioPathDiscoveries,
       studioPathInputTokens,
       studioPathCachedInputTokens,
       studioPathOutputTokens,
@@ -3124,8 +3124,6 @@ exports.openAiOfficialUsage = onCall(
     }
 
     const r = utcRangeInfo();
-
-    // Usage API는 현재 시각까지의 진행 중 사용량을 조회한다.
     const usageQuery = {
       start_time: r.monthStartSec,
       end_time: r.nowSec,
@@ -3133,10 +3131,6 @@ exports.openAiOfficialUsage = onCall(
       limit: 31,
       project_ids: [projectId],
     };
-
-    // Costs API의 1일 버킷은 [UTC 자정, 다음 UTC 자정) 범위다.
-    // end_time을 현재 시각으로 보내면 진행 중인 오늘 버킷이 빠질 수 있으므로,
-    // 비용 조회에만 다음 UTC 자정을 exclusive end_time으로 사용한다.
     const costQuery = {
       start_time: r.monthStartSec,
       end_time: r.tomorrowStartSec,
@@ -3187,7 +3181,7 @@ exports.openAiOfficialUsage = onCall(
 
     return {
       ok: true,
-      officialUsageVersion: "v48-cost-query-fix",
+      officialUsageVersion: "v49-cumulative",
       timezone: "UTC",
       projectScoped: true,
       currency: monthCost.currency || todayCost.currency || "usd",
