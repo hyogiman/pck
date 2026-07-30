@@ -1627,7 +1627,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v49 · Optional writing paths + reliable loading */
+/* Thought Garden v50 · Account-synced Blooming Question */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -1650,6 +1650,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   unnamedStemIds:[],
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
+  bloomingCloudDay:null,bloomingCloudSyncPromise:null,
   studioPath:{threadId:null,items:[],loading:false,cached:false,model:"",pendingProject:null},
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
   betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false}};
@@ -1957,6 +1958,8 @@ function bloomingHistory(){
   }catch(e){return {}}
 }
 function saveBloomingHistory(h){try{localStorage.setItem(BLOOMING_HISTORY_KEY,JSON.stringify(h||{}))}catch(e){}}
+function normalizeBloomingHistory(raw){return raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{}}
+function normalizeSparkCloudState(raw){return raw&&typeof raw==="object"&&!Array.isArray(raw)?{...raw}:{}}
 function bloomingHistoryRow(key){return bloomingHistory()?.[key]||null}
 function bloomingRepeatIsEligible(key,at=new Date()){
   const row=bloomingHistoryRow(key);if(!row?.lastShownAt||!row?.nextEligibleAt)return false;
@@ -2332,7 +2335,8 @@ async function activateFirebaseUser(user,{pushLocalKeys=false}={}){
   await loadCloudBloomingInterviewSettings();
   await loadCloudCustomBlooming();
   ensurePersonalBloomSchedule();
-  renderApiSettings();renderAccountStatus();renderAiSettings();renderBloomingInterviewSettings();renderCustomBloomingSettings();
+  await syncCloudBloomingQuestion();
+  renderApiSettings();renderAccountStatus();renderAiSettings();renderBloomingInterviewSettings();renderCustomBloomingSettings();renderSpark();
   if($("accountDialog")?.open)$("accountDialog").close();
 }
 async function beginGoogleAuth(){
@@ -2514,6 +2518,9 @@ async function signOutGarden(){
   localStorage.removeItem(STORAGE_KEY);
   localStorage.removeItem(API_KEY_STORE);
   localStorage.removeItem(BLOOMING_CUSTOM_KEY);
+  localStorage.removeItem(BLOOMING_HISTORY_KEY);
+  localStorage.removeItem("tg_spark");
+  state.bloomingCloudDay=null;state.bloomingCloudSyncPromise=null;
   state.sources=[];state.fragments=[];state.trash=[];state.threads=[];state.projects=[];
   state.firebase.user=null;state.firebase.uid=null;state.firebase.connected=false;
   setFirebaseStatus(false);renderAll();renderAccountStatus();$("settingsDialog").close();showAccountDialog("signin");
@@ -2869,15 +2876,136 @@ const SPARKS=[{c:"일상",q:"오늘 하루 중 가장 조용했던 순간은 언
    5) 기본 700개를 모두 한 번 만난 뒤에는 숙성이 끝난 과거 질문들이 자연스럽게 다음 순환을 만든다. ── */
 function sparkState(){try{return JSON.parse(localStorage.getItem("tg_spark")||"{}")}catch(e){return {}}}
 function saveSparkState(v){try{localStorage.setItem("tg_spark",JSON.stringify(v))}catch(e){}}
-function sparkByKey(key){
+function sparkByKeyFrom(key,customRows=[]){
   if(!key)return null;
   if(key.startsWith("b:")){
     const i=Number(key.slice(2));return SPARKS[i]?{...SPARKS[i],mine:false,key}:null;
   }
   if(key.startsWith("u:")){
-    const id=key.slice(2),x=customBloomingQuestions().find(r=>r.id===id);return x?{c:"내 질문",q:x.q,mine:true,key}:null;
+    const id=key.slice(2),x=(customRows||[]).find(r=>r.id===id);return x?{c:"내 질문",q:x.q,mine:true,key}:null;
   }
   return null;
+}
+function sparkByKey(key){return sparkByKeyFrom(key,customBloomingQuestions())}
+function bloomingRepeatIsEligibleFrom(history,key,at=new Date()){
+  const row=normalizeBloomingHistory(history)?.[key];if(!row?.lastShownAt||!row?.nextEligibleAt)return false;
+  const due=new Date(row.nextEligibleAt);return !Number.isNaN(due.getTime())&&due.getTime()<=at.getTime();
+}
+function pickBuiltinSparkFrom(st,history){
+  let seen=Array.isArray(st?.seenBuiltin)?st.seenBuiltin:[];
+  if(!seen.length&&Array.isArray(st?.seen))seen=st.seen.filter(Number.isInteger).map(i=>`b:${i}`);
+  let pool=SPARKS.map((_,i)=>`b:${i}`).filter(k=>!seen.includes(k));
+  if(!pool.length){seen=[];pool=SPARKS.map((_,i)=>`b:${i}`).filter(k=>!normalizeBloomingHistory(history)[k]||bloomingRepeatIsEligibleFrom(history,k));}
+  if(!pool.length)pool=SPARKS.map((_,i)=>`b:${i}`).filter(k=>bloomingRepeatIsEligibleFrom(history,k));
+  if(!pool.length)return null;
+  const key=pool[Math.floor(Math.random()*pool.length)];
+  return {key,seenBuiltin:[...seen,key]};
+}
+function pickFirstMaturePersonalSparkFrom(st,freshRemain,customRows){
+  const eligible=(customRows||[]).filter(x=>!x.lastShownAt&&customBloomingIsEligible(x));
+  if(!eligible.length||!personalQuestionGapReady(st))return null;
+  if(freshRemain&&Math.random()>=0.18)return null;
+  const x=eligible[Math.floor(Math.random()*eligible.length)];
+  return {key:`u:${x.id}`};
+}
+function pickMatureRepeatSparkFrom(st,freshRemain,history,customRows){
+  const h=normalizeBloomingHistory(history);
+  let eligible=Object.keys(h).filter(k=>sparkByKeyFrom(k,customRows)&&bloomingRepeatIsEligibleFrom(h,k));
+  if(!personalQuestionGapReady(st))eligible=eligible.filter(k=>!k.startsWith("u:"));
+  if(!eligible.length)return null;
+  if(freshRemain&&daysSinceSparkStateDate(st?.lastRepeatDay)<30)return null;
+  if(freshRemain&&Math.random()>=0.35)return null;
+  eligible.sort((a,b)=>String(h[a]?.nextEligibleAt||"").localeCompare(String(h[b]?.nextEligibleAt||"")));
+  const pool=eligible.slice(0,30);
+  return {key:pool[Math.floor(Math.random()*pool.length)]};
+}
+function markBloomingShownDraft(key,history,customRows){
+  const h={...normalizeBloomingHistory(history)},rows=(customRows||[]).map(x=>({...x}));
+  if(!key)return {history:h,customRows:rows};
+  const prev=h[key]||{},now=new Date(),shownAt=now.toISOString();
+  if((prev.lastShownAt||"").slice(0,10)===today())return {history:h,customRows:rows};
+  const nextEligibleAt=addBloomingDays(now,randomBloomingRepeatDays());
+  h[key]={...prev,lastShownAt:shownAt,nextEligibleAt,showCount:Number(prev.showCount||0)+1};
+  if(key.startsWith("u:")){
+    const i=rows.findIndex(x=>x.id===key.slice(2));
+    if(i>=0&&(rows[i].lastShownAt||"").slice(0,10)!==today())rows[i]={...rows[i],lastShownAt:shownAt,nextEligibleAt};
+  }
+  return {history:h,customRows:rows};
+}
+function buildTodayBloomingSnapshot(baseState,baseHistory,customRows){
+  const st=normalizeSparkCloudState(baseState),history=normalizeBloomingHistory(baseHistory),rows=(customRows||[]).map(normalizeCustomBloomingRow).filter(Boolean);
+  const existing=st.day===today()?sparkByKeyFrom(st.key,rows):null;
+  if(existing){
+    const marked=markBloomingShownDraft(existing.key,history,rows);
+    return {state:st,history:marked.history,customRows:marked.customRows,key:existing.key};
+  }
+  const next={...st,day:today()},freshRemain=unseenBuiltinCount(st)>0;
+  const personal=pickFirstMaturePersonalSparkFrom(st,freshRemain,rows);
+  const repeat=personal?null:pickMatureRepeatSparkFrom(st,freshRemain,history,rows);
+  let chosen=personal||repeat;
+  if(chosen){
+    next.key=chosen.key;delete next.i;delete next.seen;
+    if(chosen.key.startsWith("u:"))markNextPersonalQuestionWindow(next);
+    if(repeat)next.lastRepeatDay=today();
+  }else{
+    const b=pickBuiltinSparkFrom(st,history);
+    if(b){next.key=b.key;next.seenBuiltin=b.seenBuiltin;delete next.i;delete next.seen;chosen={key:b.key};}
+    else{
+      const fallbackRepeat=pickMatureRepeatSparkFrom(st,false,history,rows);
+      const fallbackPersonal=fallbackRepeat?null:pickFirstMaturePersonalSparkFrom(st,false,rows);
+      chosen=fallbackRepeat||fallbackPersonal;
+      if(!chosen)return null;
+      next.key=chosen.key;delete next.i;delete next.seen;
+      if(fallbackRepeat)next.lastRepeatDay=today();
+      if(chosen.key.startsWith("u:"))markNextPersonalQuestionWindow(next);
+    }
+  }
+  const marked=markBloomingShownDraft(chosen.key,history,rows);
+  return {state:next,history:marked.history,customRows:marked.customRows,key:chosen.key};
+}
+function googleBloomingAccountReady(){return !!(state.firebase.connected&&state.firebase.uid&&state.firebase.user&&!state.firebase.user.isAnonymous)}
+async function syncCloudBloomingQuestion(){
+  if(!googleBloomingAccountReady())return null;
+  if(state.bloomingCloudSyncPromise)return state.bloomingCloudSyncPromise;
+  const day=today(),{api,db,uid}=state.firebase;
+  state.bloomingCloudSyncPromise=(async()=>{
+    try{
+      const ref=api.doc(db,"users",uid,"settings","private");
+      const resolved=await api.runTransaction(db,async tx=>{
+        const snap=await tx.get(ref),data=snap.exists()?snap.data():{};
+        const hasState=!!(data.bloomingQuestionState&&typeof data.bloomingQuestionState==="object");
+        const hasHistory=!!(data.bloomingQuestionHistory&&typeof data.bloomingQuestionHistory==="object");
+        const hasCustom=Array.isArray(data.customBloomingQuestions);
+        const rows=(hasCustom?data.customBloomingQuestions:customBloomingQuestions()).map(normalizeCustomBloomingRow).filter(Boolean);
+        const cloudState=hasState?normalizeSparkCloudState(data.bloomingQuestionState):sparkState();
+        const cloudHistory=hasHistory?normalizeBloomingHistory(data.bloomingQuestionHistory):bloomingHistory();
+        const built=buildTodayBloomingSnapshot(cloudState,cloudHistory,rows);
+        if(!built)return {state:cloudState,history:cloudHistory,customRows:rows};
+        const current=sparkByKeyFrom(cloudState.key,rows);
+        const alreadyReady=cloudState.day===day&&!!current&&hasState&&hasHistory;
+        if(!alreadyReady){
+          tx.set(ref,{
+            bloomingQuestionState:built.state,
+            bloomingQuestionHistory:built.history,
+            customBloomingQuestions:built.customRows,
+            updatedAtServer:api.serverTimestamp()
+          },{merge:true});
+        }
+        return alreadyReady?{state:cloudState,history:cloudHistory,customRows:rows}:built;
+      });
+      saveSparkState(resolved.state||{});
+      saveBloomingHistory(resolved.history||{});
+      if(Array.isArray(resolved.customRows))saveLocalCustomBlooming(resolved.customRows);
+      state.bloomingCloudDay=day;
+      renderCustomBloomingSettings();
+      return resolved;
+    }catch(e){
+      console.warn("Blooming Question cloud sync skipped",e);
+      state.bloomingCloudDay=day;
+      return null;
+    }finally{state.bloomingCloudSyncPromise=null}
+  })();
+  return state.bloomingCloudSyncPromise;
 }
 function pickBuiltinSpark(st){
   let seen=Array.isArray(st.seenBuiltin)?st.seenBuiltin:[];
@@ -2979,6 +3107,11 @@ function setSparkFolded(v){try{v?localStorage.setItem("tg_spark_fold",today()):l
 function renderSpark(){
   const box=$("sparkBox");if(!box)return;
   if(localStorage.getItem("tg_spark_off")==="1"){box.innerHTML="";return}
+  if(googleBloomingAccountReady()&&state.bloomingCloudDay!==today()){
+    box.innerHTML=`<div class="spark-card"><div class="spark-head"><span class="spark-label">🌸 Blooming Question</span></div><p class="helper" style="margin:14px 0 2px">오늘의 질문을 불러오고 있어요…</p></div>`;
+    syncCloudBloomingQuestion().then(()=>renderSpark());
+    return;
+  }
   const sp=todaySpark(false);if(!sp){box.innerHTML="";return}
   const folded=isSparkFolded();
   box.innerHTML=`<div class="spark-card ${folded?"folded":""}">
@@ -5014,7 +5147,8 @@ async function resetEverything(){
   localStorage.removeItem(BLOOMING_CUSTOM_KEY);localStorage.removeItem(BLOOMING_HISTORY_KEY);localStorage.removeItem("tg_spark");localStorage.removeItem(BLOOMING_INTERVIEW_STATE_KEY);
   if(state.firebase.connected&&state.firebase.uid){
     const {api,db,uid}=state.firebase;
-    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{customBloomingQuestions:[],bloomingInterviewState:normalizeBloomingInterviewState(null),updatedAtServer:api.serverTimestamp()},{merge:true});
+    await api.setDoc(api.doc(db,"users",uid,"settings","private"),{customBloomingQuestions:[],bloomingInterviewState:normalizeBloomingInterviewState(null),bloomingQuestionState:{},bloomingQuestionHistory:{},updatedAtServer:api.serverTimestamp()},{merge:true});
+    state.bloomingCloudDay=null;
   }
   renderAll();setView("capture");$("settingsDialog").close();toast("모든 데이터를 초기화했습니다.");
 }
