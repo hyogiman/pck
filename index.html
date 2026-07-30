@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v41 · View Concept Copy -->
+<!-- Thought Garden internal build: v45 · Optional Writing Paths -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -799,6 +799,45 @@
     .link-recommend-sub{font-size:.64rem;color:var(--muted);margin-top:3px}
     .link-thread-all-label{margin:14px 2px 2px;font-size:.63rem;font-weight:850;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}
     .link-recommend-loading{display:flex;align-items:center;gap:9px;color:#66806e;font-size:.7rem;padding:2px 1px}
+    .studio-path-entry{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:-3px 0 17px;padding:13px 14px;border:1px dashed #cbdccf;border-radius:15px;background:linear-gradient(145deg,rgba(250,252,248,.92),rgba(238,246,239,.75))}
+    .studio-path-entry-copy{min-width:0;display:grid;gap:3px}
+    .studio-path-entry-copy strong{font-size:.76rem;color:#365f47}
+    .studio-path-entry-copy small{font-size:.65rem;line-height:1.45;color:var(--muted)}
+    .studio-path-entry .btn{flex:0 0 auto;white-space:nowrap}
+    .studio-path-modal{max-width:760px}
+    .studio-path-thread-list{display:grid;gap:8px;margin-top:10px}
+    .studio-path-thread{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:13px;background:#fffefa;text-align:left;cursor:pointer}
+    .studio-path-thread:hover{border-color:#b9cfbe;background:#f8fbf7}
+    .studio-path-thread-main{min-width:0;display:grid;gap:4px}
+    .studio-path-thread-main strong{font-family:var(--serif);font-size:.9rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .studio-path-thread-main small{font-size:.63rem;color:var(--muted)}
+    .studio-path-thread-count{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:999px;background:var(--accent3);color:var(--accent);font-size:.65rem;font-weight:850}
+    .studio-path-loading{display:grid;place-items:center;text-align:center;gap:12px;min-height:210px;padding:28px 12px}
+    .studio-path-loading .ai-dot{width:9px;height:9px;border-radius:999px;background:var(--accent);animation:aiPulse 1.25s ease-out infinite}
+    .studio-path-loading strong{font-family:var(--serif);font-size:1.02rem;color:#365e46}
+    .studio-path-loading p{max-width:440px;margin:0;color:var(--muted);font-size:.7rem;line-height:1.6}
+    .studio-path-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+    .studio-path-result-head h3{margin:0;font-family:var(--serif);font-size:1.05rem}
+    .studio-path-result-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem;line-height:1.5}
+    .studio-path-list{display:grid;gap:12px}
+    .studio-path-card{border:1px solid #d6e2d8;border-radius:17px;background:linear-gradient(145deg,#fffefa,#f7faf6);padding:15px;box-shadow:0 4px 15px rgba(52,77,57,.045)}
+    .studio-path-shape{display:inline-flex;padding:4px 8px;border-radius:999px;background:#e5f0e7;color:#35664a;font-size:.59rem;font-weight:900;letter-spacing:.02em}
+    .studio-path-card h3{margin:9px 0 6px;font-family:var(--serif);font-size:1.04rem;line-height:1.45;color:var(--ink)}
+    .studio-path-summary{margin:0;color:#56645b;font-size:.72rem;line-height:1.6}
+    .studio-path-question{margin:11px 0 0;padding:10px 12px;border-left:3px solid #91b59a;border-radius:0 10px 10px 0;background:#f0f6f1;font-family:var(--serif);font-size:.78rem;line-height:1.55;color:#31563f}
+    .studio-path-thoughts{display:grid;gap:6px;margin-top:11px}
+    .studio-path-thought{padding:8px 10px;border:1px solid #e1e4dc;border-radius:10px;background:rgba(255,255,255,.72);font-family:var(--serif);font-size:.7rem;line-height:1.45;color:#4a514b;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .studio-path-card .actions{margin-top:12px}
+    .studio-start-path{margin:13px 0 18px;padding:15px;border:1px solid #cee0d2;border-radius:16px;background:linear-gradient(145deg,#fbfdf9,#eef6ef)}
+    .studio-start-path-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .studio-start-path-label{font-size:.61rem;font-weight:900;letter-spacing:.07em;color:#477258}
+    .studio-start-path h3{margin:8px 0 5px;font-family:var(--serif);font-size:1rem}
+    .studio-start-path>p{margin:0;color:#5b675f;font-size:.7rem;line-height:1.55}
+    .studio-start-path details{margin-top:11px}
+    .studio-start-path summary{cursor:pointer;color:#446c52;font-size:.68rem;font-weight:850}
+    .studio-start-path-items{display:grid;gap:7px;margin-top:9px}
+    .studio-start-path-item{padding:9px 10px;border:1px solid #dfe5dc;border-radius:10px;background:rgba(255,255,255,.76);font-family:var(--serif);font-size:.72rem;line-height:1.55;white-space:pre-wrap}
+    @media(max-width:560px){.studio-path-entry{align-items:flex-start;flex-direction:column}.studio-path-entry .btn{width:100%}.studio-path-result-head{flex-direction:column}.studio-path-result-head .btn{width:100%}}
     .status-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:#aaa}
     .status-dot.ok{background:#4e8060}.status-dot.warn{background:#b28338}
     code.inline{background:var(--panel2);padding:2px 6px;border-radius:6px;font-size:.8rem;font-family:ui-monospace,Menlo,monospace}
@@ -957,7 +996,7 @@
 
     <div class="section home-projects-section">
       <div class="section-head home-simple-head">
-        <div><h2>🏭 이어 쓰는 작업</h2></div>
+        <div><h2>📝 이어 쓰는 작업</h2></div>
       </div>
       <div id="homeProjects"></div>
     </div>
@@ -1040,7 +1079,11 @@
 
   <section class="view" data-view="studio">
     <div id="studioIndex">
-      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각을 한 편의 글로 키우는 작업대.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
+      <div class="section-head"><div><h2>📝 Studio</h2><p>생각을 한 편의 글로 키우는 작업대.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
+      <div class="studio-path-entry">
+        <span class="studio-path-entry-copy"><strong>무엇을 쓸지 막막할 때만</strong><small>Thread 안에서 글을 시작해볼 만한 갈래를 원문까지 다시 읽어 찾아봅니다.</small></span>
+        <button class="btn soft" id="studioFindPath" type="button">🌿 글의 갈래 찾기</button>
+      </div>
       <div id="projectList"></div>
     </div>
     <div id="projectDetail" class="hidden"></div>
@@ -1062,7 +1105,7 @@
     <button class="sheet-nav" data-view-target="fragments" type="button"><span>💭</span><b>생각 조각</b></button>
     <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
-    <button class="sheet-nav" data-view-target="studio" type="button"><span>🏭</span><b>Studio</b></button>
+    <button class="sheet-nav" data-view-target="studio" type="button"><span>📝</span><b>Studio</b></button>
     <button class="sheet-nav" id="sheetSearch" type="button"><span>🔍</span><b>검색</b></button>
     <button class="sheet-nav" id="sheetTrash" type="button"><span>🗑</span><b>휴지통</b></button>
     <button class="sheet-nav" id="sheetSettings" type="button"><span>⚙️</span><b>설정</b></button>
@@ -1395,6 +1438,13 @@
   </div>
 </dialog>
 
+<dialog id="studioPathDialog">
+  <div class="modal studio-path-modal">
+    <div class="modal-head"><div><div class="eyebrow">OPTIONAL AI GUIDE</div><h2 id="studioPathDialogTitle">글의 갈래 찾기</h2></div><button class="close-btn" data-close="studioPathDialog" type="button">✕</button></div>
+    <div id="studioPathDialogBody"></div>
+  </div>
+</dialog>
+
 <dialog id="listDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow">RECENT</div><h2 id="listDialogTitle">생각 목록</h2></div><button class="close-btn" data-close="listDialog" type="button">✕</button></div>
@@ -1572,7 +1622,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v35 · Between→Thread handoff + Compact Lounge + Garden Discovery */
+/* Thought Garden v45 · Optional writing paths + Studio navigation */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -1595,6 +1645,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   unnamedStemIds:[],
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
+  studioPath:{threadId:null,items:[],loading:false,cached:false,model:"",pendingProject:null},
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
   betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
@@ -1995,8 +2046,9 @@ function renderStudioUsage(data){
   const betweenCount=Number(data?.betweenThoughtsQuestions||0),betweenCurations=Number(data?.betweenThoughtsCurations||0),betweenPrepared=Number(data?.betweenThoughtsPreparedPairs||betweenCount),betweenInput=Number(data?.betweenThoughtsInputTokens||0),betweenCached=Number(data?.betweenThoughtsCachedInputTokens||0),betweenOutput=Number(data?.betweenThoughtsOutputTokens||0);
   const betweenProfiles=Number(data?.betweenThoughtsProfileGenerations||0),betweenProfileInput=Number(data?.betweenThoughtsProfileInputTokens||0),betweenProfileCached=Number(data?.betweenThoughtsProfileCachedInputTokens||0),betweenProfileOutput=Number(data?.betweenThoughtsProfileOutputTokens||0);
   const betweenCost=Number(data?.betweenThoughtsEstimatedCostUsd||0);
+  const pathCount=Number(data?.studioPathDiscoveries||0),pathInput=Number(data?.studioPathInputTokens||0),pathCached=Number(data?.studioPathCachedInputTokens||0),pathOutput=Number(data?.studioPathOutputTokens||0),pathCost=Number(data?.studioPathEstimatedCostUsd||0);
   const embeddingCost=Number(data?.embeddingEstimatedCostUsd||0);
-  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+betweenCost+embeddingCost));
+  const totalCost=Number(data?.totalEstimatedCostUsd??(gardenerCost+interviewCost+betweenCost+pathCost+embeddingCost));
 
   grid.innerHTML=`
     <span class="ai-usage-section-title">🌿 정원사 질문 · GPT-5.4 mini</span>
@@ -2022,6 +2074,12 @@ function renderStudioUsage(data){
     <span>프로필 출력</span><span class="value">${betweenProfileOutput.toLocaleString("ko-KR")}</span>
     <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(betweenCost)}</span>
 
+    <span class="ai-usage-section-title">🌿 글의 갈래 찾기 · GPT-5.4 mini</span>
+    <span>새로 찾기</span><span class="value">${pathCount}회</span>
+    <span>입력 토큰</span><span class="value">${pathInput.toLocaleString("ko-KR")}</span>
+    <span>출력 토큰</span><span class="value">${pathOutput.toLocaleString("ko-KR")}</span>
+    <span>추정 비용</span><span class="value">약 ${formatUsdEstimate(pathCost)}</span>
+
     <span class="ai-usage-section-title">🧠 의미 검색 · text-embedding-3-small</span>
     <span>생각 색인</span><span class="value">${fragmentTokens.toLocaleString("ko-KR")} tokens${fragmentCount?` · ${fragmentCount}건`:""}</span>
     <span>Studio 재료 검색</span><span class="value">${materialTokens.toLocaleString("ko-KR")} tokens${materialCount?` · ${materialCount}건`:""}</span>
@@ -2030,7 +2088,7 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
 
-  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 큐레이션 입력 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenProfileCached?`<br>생각 프로필 입력 중 ${betweenProfileCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 Fragment가 새로 생기거나 수정될 때 짧은 생각 프로필을 한 번 만들고 재사용합니다. 큐레이션 때는 여러 프로필을 먼저 훑은 뒤, 가능성이 높은 조합만 원문·출처·인용까지 다시 읽습니다. 준비된 조합은 기본 3일 동안 재사용합니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 큐레이션 입력 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenProfileCached?`<br>생각 프로필 입력 중 ${betweenProfileCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${pathCached?`<br>글의 갈래 찾기 입력 중 ${pathCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 Fragment가 새로 생기거나 수정될 때 짧은 생각 프로필을 한 번 만들고 재사용합니다. 큐레이션 때는 여러 프로필을 먼저 훑은 뒤, 가능성이 높은 조합만 원문·출처·인용까지 다시 읽습니다. 준비된 조합은 기본 3일 동안 재사용합니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
 
   const plus=$("studioLimitPlus10");
   if(plus){
@@ -3074,7 +3132,7 @@ function renderHome(){
   const published=state.projects.filter(p=>p.status==="published").length;
   $("homeProjects").innerHTML=working.length
     ? working.slice(0,2).map(projectCard).join("")
-    : empty("🏭",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
+    : empty("📝",published?`진행 중인 작업이 없어요.`:"진행 중인 Studio가 없어요.",published?`지금까지 ${published}편을 내보냈어요. 다음 글을 시작해볼까요?`:"Garden의 Thread가 익숙해진 뒤 천천히 시작해도 됩니다.");
   renderResurface();
   renderBetweenThoughts();
 }
@@ -3360,7 +3418,7 @@ function openThread(id){
   state.openThreadId=id;const t=state.threads.find(x=>x.id===id);if(!t)return;
   $("gardenIndex").classList.add("hidden");$("threadDetail").classList.remove("hidden");const fs=threadFragments(id);
   $("threadDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-garden type="button">← Garden</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-thread="${t.id}" type="button">Thread 수정</button><button class="text-btn danger-text" data-delete-thread="${t.id}" type="button">Thread 삭제</button></div></div>
-    <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="meta"><span class="status">생각 ${fs.length}개</span></div><div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">🏭 Studio로 키우기</button></div></div>
+    <div class="card thread-card"><span class="eyebrow">THREAD</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(t.title)}</h2>${t.question?`<div class="body">${esc(t.question)}</div>`:""}<div class="meta"><span class="status">생각 ${fs.length}개</span></div><div class="actions"><button class="btn primary" data-project-from-thread="${t.id}" type="button">📝 Studio로 키우기</button><button class="btn soft" data-find-writing-path="${t.id}" type="button">🌿 글의 갈래 찾기</button></div></div>
     <div class="thread-suggest-section hidden" id="threadSuggestSection"><div class="section-head"><div><h2>🌱 추천 생각</h2><p>이 Thread와 닿아 있을 수 있는 생각을 먼저 살펴봅니다.</p></div></div><div id="threadSuggestions"></div></div>
     <div class="section"><div class="section-head"><div><h2>생각의 변화</h2><p>각 생각에서 다시 한 갈래를 키워볼 수 있어요.</p></div></div>
     <div class="timeline">${fs.length?fs.map(f=>`<div class="timeline-item"><div class="date">${fmt((f.date||f.createdAt||"").slice(0,10))}</div>${fragmentCard(f,true,{threadId:id,threadChild:true})}</div>`).join(""):empty("🌱","아직 연결된 조각이 없어요.","오른쪽 아래 ＋로 이 Thread의 첫 생각을 남겨보세요.")}</div></div>`;
@@ -3402,7 +3460,7 @@ function runSearch(){
   if(frags.length)html+=searchGroup(`💭 생각 ${frags.length}`,frags.slice(0,25).map(f=>`<button class="search-item" data-search-fragment="${f.id}" type="button"><b>${esc((f.thought||f.text||f.externalText||"").slice(0,90))||"(내용 없음)"}</b><small>${esc(fmt((f.date||f.createdAt||"").slice(0,10)))}${f.locator?" · "+esc(f.locator):""}</small></button>`).join(""));
   if(srcs.length)html+=searchGroup(`📚 서재 ${srcs.length}`,srcs.map(s=>`<button class="search-item" data-search-source="${s.id}" type="button"><b>${esc(s.title)}</b><small>${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</small></button>`).join(""));
   if(ths.length)html+=searchGroup(`🌱 Thread ${ths.length}`,ths.map(t=>`<button class="search-item" data-search-thread="${t.id}" type="button"><b>${esc(t.title)}</b>${t.question?`<small>${esc(t.question)}</small>`:""}</button>`).join(""));
-  if(prjs.length)html+=searchGroup(`🏭 Studio ${prjs.length}`,prjs.map(p=>`<button class="search-item" data-search-project="${p.id}" type="button"><b>${esc(p.title)}</b></button>`).join(""));
+  if(prjs.length)html+=searchGroup(`📝 Studio ${prjs.length}`,prjs.map(p=>`<button class="search-item" data-search-project="${p.id}" type="button"><b>${esc(p.title)}</b></button>`).join(""));
   box.innerHTML=html;
 }
 const LENSES=[
@@ -3669,7 +3727,7 @@ function renderStudio(){
   const totalChars=done.reduce((sum,p)=>sum+archiveCharCount(p),0);
   $("projectList").innerHTML=(working.length
       ? working.map(projectCard).join("")
-      : empty("🏭",done.length?"진행 중인 작업이 없어요.":"아직 Studio 작업이 없어요.",done.length?"글방에 글이 쌓이고 있어요. 다음 글을 시작해볼까요?":"Thread 하나를 골라 작업대로 보내보세요."))
+      : empty("📝",done.length?"진행 중인 작업이 없어요.":"아직 Studio 작업이 없어요.",done.length?"글방에 글이 쌓이고 있어요. 다음 글을 시작해볼까요?":"Thread 하나를 골라 작업대로 보내보세요."))
     +(done.length?`<div class="shelf-done">
         <div class="writing-room-head"><div class="shelf-done-head">📚 나의 글방 <b>${done.length}편</b></div><div class="writing-room-total">총 ${totalChars.toLocaleString("ko-KR")}자</div></div>
         ${shown.map(projectCard).join("")}
@@ -3721,7 +3779,7 @@ function projectCard(p){
       <div class="archive-meta"><span><b>${chars.toLocaleString("ko-KR")}</b>자</span>${t?`<span>🌱 ${esc(t.title)}</span>`:""}</div>
     </article>`;
   }
-  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">🏭 ${FORMAT_LABEL[p.format]||"글 작업"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
+  return `<article class="card click-card" data-open-project="${p.id}"><div class="card-head"><span class="chip">📝 ${FORMAT_LABEL[p.format]||"글 작업"}</span><span class="date">${pct}%</span></div><div class="title">${esc(p.title)}</div>${t?`<div class="source-sub">🌱 ${esc(t.title)}</div>`:""}
     <div class="completion" style="margin-top:12px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${done}/${slots.length}</strong></div>
   </article>`;
 }
@@ -3810,6 +3868,13 @@ function openArchivedProject(p){
     <details class="archive-process"><summary>작업 과정 보기 · ${steps.length}개 문항</summary><div class="archive-process-body">${process||'<div class="helper" style="padding-top:13px">보관된 작업 과정이 없습니다.</div>'}</div></details>
   </div>`;
 }
+function studioStartingPathHTML(p){
+  const ids=Array.isArray(p.startingFragmentIds)?p.startingFragmentIds:[];
+  const frags=ids.map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
+  if(!frags.length)return "";
+  const path=p.startingPath||{};
+  return `<div class="studio-start-path"><div class="studio-start-path-head"><span class="studio-start-path-label">🌿 출발 갈래 · ${esc(studioPathShapeLabel(path.shape))}</span><span class="status">생각 ${frags.length}개</span></div><h3>${esc(path.title||"이 글의 출발 생각")}</h3>${path.summary?`<p>${esc(path.summary)}</p>`:""}${path.guidingQuestion?`<div class="studio-path-question">${esc(path.guidingQuestion)}</div>`:""}<details><summary>출발 생각 원문 보기</summary><div class="studio-start-path-items">${frags.map(f=>`<div class="studio-start-path-item">${esc(studioPathFragmentText(f))}</div>`).join("")}</div></details></div>`;
+}
 function openProject(id){
   state.openProjectId=id;const p=state.projects.find(x=>x.id===id);if(!p)return;
   if(p.status==="published")return openArchivedProject(p);
@@ -3822,6 +3887,7 @@ function openProject(id){
     :`<div class="next-question done"><span class="next-label">모든 칸을 채웠어요</span><p class="serif">이제 글로 내보내면 됩니다.</p></div>`;
   $("projectDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-studio type="button">← Studio</button><button class="text-btn danger-text" data-delete-project="${p.id}" type="button">삭제</button></div>
     <div class="card"><span class="eyebrow">WORKBENCH</span><h2 style="margin:8px 0 5px;letter-spacing:-.04em">${esc(p.title)}</h2>${t?`<div class="source-sub">시작 Thread · ${esc(t.title)}</div>`:""}<div class="completion" style="margin-top:14px"><div class="mini-bar"><span style="width:${pct}%"></span></div><strong>${pct}%</strong></div>${nextLine}</div>
+    ${studioStartingPathHTML(p)}
     <div class="section">
       <section class="workbench-col"><div class="section-head"><div><h2>이야기 구조</h2><p>질문과 재료를 발판 삼아 한 편의 글을 완성합니다.</p></div><span class="save-hint" id="saveHint"></span></div>
       ${slots.map(s=>slotHTML(p,s)).join("")}<button class="btn primary block finish-writing-btn" data-publish="${p.id}" type="button">📚 글로 내보내기</button></section>
@@ -4614,13 +4680,96 @@ function openLinkDialogForFragments(ids){
 async function linkFragment(fid,tid){
   const ids=state.pendingLinkFragmentIds?.length?state.pendingLinkFragmentIds.slice():[fid],found=ids.map(id=>state.fragments.find(x=>x.id===id)).filter(Boolean);if(!found.length)return;for(const f of found){f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);delete state.threadMatchCache[f.id]}await touchThreadActivity(tid);state.pendingLinkFragmentIds=null;state.pendingLinkFragmentId=null;$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast(found.length>1?`${found.length}개의 생각을 Thread에 연결했습니다. 🌱`:"Thread에 연결했습니다.");
 }
-function openProjectDialog(threadId=""){
-  $("projectId").value="";$("projectTitleInput").value="";$("projectFormat").value="blog";refreshSelects();$("projectThread").value=threadId;$("projectDialog").showModal();
+function studioPathShapeLabel(shape){
+  return ({change:"변화",repetition:"반복",tension:"긴장",expansion:"확장",direct:"이어짐",contrast:"대조",meaning:"의미"})[shape]||"글의 갈래";
+}
+function studioPathFragmentText(f){return String(f?.thought||f?.text||f?.externalText||"").trim()}
+function renderStudioPathPicker(){
+  const body=$("studioPathDialogBody");if(!body)return;
+  const threads=state.threads.map(t=>({t,fs:threadFragments(t.id)})).filter(x=>x.fs.length>=2).sort((a,b)=>String(threadActivity(b.t)||"").localeCompare(String(threadActivity(a.t)||"")));
+  $("studioPathDialogTitle").textContent="어느 Thread에서 찾아볼까요?";
+  body.innerHTML=threads.length
+    ? `<p class="helper" style="margin:0 0 10px">AI가 짧은 생각 프로필로 후보를 찾은 뒤, 가능성 있는 생각의 원문만 다시 읽습니다.</p><div class="studio-path-thread-list">${threads.map(({t,fs})=>`<button class="studio-path-thread" data-path-thread="${t.id}" type="button"><span class="studio-path-thread-main"><strong>${esc(t.title)}</strong><small>${t.question?esc(t.question):"연결된 생각에서 출발할 갈래를 찾습니다."}</small></span><span class="studio-path-thread-count">${fs.length}</span></button>`).join("")}</div>`
+    : empty("🌿","갈래를 찾을 Thread가 아직 없어요.","생각이 두 개 이상 연결된 Thread에서 사용할 수 있습니다.");
+}
+function openStudioPathDialog(threadId=""){
+  state.studioPath={threadId:threadId||null,items:[],loading:false,cached:false,model:"",pendingProject:null};
+  if(!$("studioPathDialog").open)$("studioPathDialog").showModal();
+  if(threadId)return findStudioWritingPaths(threadId,false);
+  renderStudioPathPicker();
+}
+function renderStudioPathLoading(threadId){
+  const t=state.threads.find(x=>x.id===threadId),body=$("studioPathDialogBody");
+  $("studioPathDialogTitle").textContent="글의 갈래를 찾는 중";
+  body.innerHTML=`<div class="studio-path-loading"><span class="ai-dot"></span><strong>${esc(t?.title||"Thread")}의 생각을 살펴보고 있어요.</strong><p>생각 프로필로 가능한 줄기를 먼저 좁히고, 후보로 고른 생각의 원문과 출처를 다시 읽어 억지스럽지 않은 출발점만 남깁니다.</p></div>`;
+}
+function renderStudioPathResults(){
+  const body=$("studioPathDialogBody"),tid=state.studioPath.threadId,t=state.threads.find(x=>x.id===tid),items=state.studioPath.items||[];
+  $("studioPathDialogTitle").textContent="이 Thread에서 보이는 갈래";
+  if(!items.length){
+    body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>원문까지 확인했지만 지금 바로 글로 시작할 만큼 선명한 갈래는 찾지 못했어요.</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">다시 살펴보기</button></div>${empty("🌿","뚜렷한 갈래가 아직 없어요.","그대로 닫고 평소처럼 직접 작업대를 만들면 됩니다.")}`;
+    return;
+  }
+  body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>${state.studioPath.cached?"Thread가 달라지지 않아 지난 결과를 다시 보여드려요.":"프로필로 후보를 찾고, 후보 원문을 다시 확인한 결과예요."}</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">↻ 다시 찾기</button></div><div class="studio-path-list">${items.map((path,i)=>{
+    const frags=(path.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
+    return `<article class="studio-path-card"><span class="studio-path-shape">${esc(studioPathShapeLabel(path.shape))} · 출발 생각 ${frags.length}개</span><h3>${esc(path.title)}</h3><p class="studio-path-summary">${esc(path.summary||"")}</p>${path.guidingQuestion?`<div class="studio-path-question">${esc(path.guidingQuestion)}</div>`:""}<div class="studio-path-thoughts">${frags.slice(0,4).map(f=>`<div class="studio-path-thought">${esc(studioPathFragmentText(f))}</div>`).join("")}${frags.length>4?`<div class="helper">그 외 ${frags.length-4}개의 생각</div>`:""}</div><div class="actions"><button class="btn primary" data-start-writing-path="${i}" type="button">이 갈래에서 시작하기</button></div></article>`;
+  }).join("")}</div>`;
+}
+async function findStudioWritingPaths(threadId,forceRefresh=false){
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous){
+    $("studioPathDialogTitle").textContent="Google 로그인이 필요해요";
+    $("studioPathDialogBody").innerHTML=empty("🌿","로그인 후 사용할 수 있어요.","프로필과 원문은 서버에서 안전하게 읽고 갈래 결과만 돌려줍니다.");
+    return;
+  }
+  if(state.studioPath.loading)return;
+  const fs=threadFragments(threadId);
+  if(fs.length<2){$("studioPathDialogBody").innerHTML=empty("🌿","생각이 조금 더 필요해요.","두 개 이상의 생각이 연결된 Thread에서 갈래를 찾을 수 있습니다.");return}
+  state.studioPath.threadId=threadId;state.studioPath.loading=true;renderStudioPathLoading(threadId);
+  try{
+    const res=await callFn("studioThreadPaths",{threadId,forceRefresh});
+    state.studioPath.items=Array.isArray(res?.items)?res.items:[];
+    state.studioPath.cached=!!res?.cached;state.studioPath.model=res?.model||"";
+    renderStudioPathResults();
+  }catch(e){
+    console.warn("Studio writing paths failed",e?.code||e?.message||e);
+    const msg=String(e?.message||"").includes("오늘")?"오늘 사용할 수 있는 갈래 찾기 횟수를 모두 사용했어요.":"갈래를 찾지 못했어요.";
+    $("studioPathDialogTitle").textContent="잠시 멈췄어요";
+    $("studioPathDialogBody").innerHTML=empty("🌿",msg,"기존 Studio 기능은 그대로 사용할 수 있습니다.");
+  }finally{state.studioPath.loading=false}
+}
+function startProjectFromWritingPath(index){
+  const path=state.studioPath.items?.[Number(index)],threadId=state.studioPath.threadId;
+  if(!path||!threadId)return;
+  state.studioPath.pendingProject={
+    threadId,
+    fragmentIds:[...new Set((path.fragmentIds||[]).filter(id=>state.fragments.some(f=>f.id===id)))],
+    title:String(path.title||"").trim(),summary:String(path.summary||"").trim(),
+    guidingQuestion:String(path.guidingQuestion||"").trim(),shape:String(path.shape||"direct")
+  };
+  $("studioPathDialog").close();
+  openProjectDialog(threadId,{title:path.title||"",startingPath:state.studioPath.pendingProject});
+}
+function openProjectDialog(threadId="",options={}){
+  $("projectId").value="";$("projectTitleInput").value=options.title||"";$("projectFormat").value="blog";refreshSelects();$("projectThread").value=threadId;
+  state.studioPath.pendingProject=options.startingPath||null;
+  $("projectDialog").showModal();
 }
 async function saveProject(){
   const title=$("projectTitleInput").value.trim();if(!title)return toast("프로젝트 제목을 적어주세요.");const format=$("projectFormat").value;
+  const starting=state.studioPath.pendingProject;
   const p={id:uid(),title,format,threadId:$("projectThread").value,slots:templates[format].map(s=>({id:s.id,text:"",fragmentIds:[]})),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-  state.projects.unshift(p);await persist("projects",p);$("projectDialog").close();renderStudio();openProject(p.id);toast("Studio 작업대를 만들었습니다.");
+  if(starting&&starting.threadId===p.threadId&&starting.fragmentIds?.length){
+    p.startingFragmentIds=starting.fragmentIds.slice(0,8);
+    p.startingPath={title:starting.title,summary:starting.summary,guidingQuestion:starting.guidingQuestion,shape:starting.shape};
+  }
+  state.projects.unshift(p);
+  await persist("projects",p);
+  state.studioPath.pendingProject=null;
+  $("projectDialog").close();
+  // Thread에서 작업대를 만들어도 Garden에 머물지 않고, Studio로 이동한 뒤 방금 만든 작업대를 연다.
+  setView("studio");
+  openProject(p.id);
+  toast(p.startingFragmentIds?.length?"선택한 갈래로 Studio 작업대를 만들었습니다. 🌿":"Studio 작업대를 만들었습니다.");
 }
 function studioMaterialKey(pid,slotId){return `${pid}:${slotId}`}
 function renderAttachAiRecommendations(pid,slotId){
@@ -4979,6 +5128,10 @@ document.addEventListener("click",async e=>{
   const ls=e.target.closest("[data-link-to-source]");if(ls)return linkFragmentToSource($("sourceLinkFragmentId").value,ls.dataset.linkToSource);
   const ct=e.target.closest("[data-continue]");if(ct){const f=allFragments().find(x=>x.id===ct.dataset.continue);if(!f)return;return openCapture("",{kind:"continue",fromId:f.id,prompt:(f.thought||f.text||f.externalText||"").slice(0,120)})}
   const df=e.target.closest("[data-delete-fragment]");if(df)return deleteFragment(df.dataset.deleteFragment);
+  const findPath=e.target.closest("[data-find-writing-path]");if(findPath)return openStudioPathDialog(findPath.dataset.findWritingPath);
+  const pathThread=e.target.closest("[data-path-thread]");if(pathThread)return findStudioWritingPaths(pathThread.dataset.pathThread,false);
+  const refreshPath=e.target.closest("[data-refresh-writing-path]");if(refreshPath)return findStudioWritingPaths(refreshPath.dataset.refreshWritingPath,true);
+  const startPath=e.target.closest("[data-start-writing-path]");if(startPath)return startProjectFromWritingPath(startPath.dataset.startWritingPath);
   const pf=e.target.closest("[data-project-from-thread]");if(pf)return openProjectDialog(pf.dataset.projectFromThread);
   const op=e.target.closest("[data-open-project]");if(op)return openProject(op.dataset.openProject);
   if(e.target.closest("[data-back-studio]")){flushSlotSave();state.openProjectId=null;$("studioIndex").classList.remove("hidden");$("projectDetail").classList.add("hidden");return renderStudio()}
@@ -5057,7 +5210,7 @@ $("sheetSettings").addEventListener("click",()=>{
   $("settingsDialog").showModal();
 });
 $("betweenThoughtsNext").addEventListener("click",nextBetweenThoughtsPair);
-$("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());
+$("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());$("studioFindPath").addEventListener("click",()=>openStudioPathDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveBloomingReflection").addEventListener("click",saveBloomingReflection);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
 $("runApiSearch").addEventListener("click",searchSourceApi);
@@ -5081,6 +5234,7 @@ $("editSourceNew").addEventListener("click",()=>{
   openSourceDialog();
 });
 $("sourceDialog").addEventListener("close",()=>{state.pendingEditSourcePick=false});
+$("projectDialog").addEventListener("close",()=>{if(!$("projectDialog").open)state.studioPath.pendingProject=null});
 $("editSourcePicker").addEventListener("close",()=>{
   if($("editSourcePicker").dataset.handoff==="1"){$("editSourcePicker").dataset.handoff="";return}
   state.pendingEditSourcePick=false;
