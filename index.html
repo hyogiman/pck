@@ -189,12 +189,13 @@
     .recent-summary-item strong{font-family:var(--serif);display:inline-block;margin-top:4px;font-size:1.34rem;font-weight:700}
     .recent-summary-item>span{margin-left:4px;color:var(--muted);font-size:.67rem;font-weight:650}
 
-    /* HOME v27 · 숫자 대시보드보다 생각을 먼저 만나는 라운지 */
-    .home-lounge-head{margin-top:8px;margin-bottom:2px}
-    .home-lounge-head h2{font-size:1.48rem;letter-spacing:-.035em}
-    .home-lounge-head p{max-width:560px;line-height:1.55}
+    /* HOME v33 · 설명을 줄이고 아이콘 + 제목의 한 가지 문법으로 통일 */
+    .home-lounge-head{margin-top:8px;margin-bottom:2px;align-items:center}
+    .home-lounge-head h2{font-size:1.38rem;letter-spacing:-.035em}
     .home-lounge-feature{margin-top:24px}
     .home-lounge-feature .section-head h2{letter-spacing:-.025em}
+    .home-simple-head{align-items:center;margin-bottom:13px}
+    .home-simple-head h2{font-size:1.12rem;line-height:1.35}
     .between-thoughts-section{margin-top:34px}
     .between-thoughts-shell{position:relative;border:1px solid #dbe5dc;background:linear-gradient(180deg,#fbfdf9 0%,#f6faf6 100%);border-radius:22px;padding:17px 16px 15px;box-shadow:0 6px 22px rgba(56,78,62,.055);overflow:hidden}
     .between-thoughts-shell:before{content:"";position:absolute;left:28px;top:66px;bottom:66px;width:1px;background:linear-gradient(180deg,transparent,#cbd9ce 18%,#cbd9ce 82%,transparent);pointer-events:none}
@@ -659,8 +660,16 @@
     .thread-index-title{color:#285f3f;font-weight:850}
     .thread-index-sub{color:#748279}
     .thread-index-count{display:grid;place-items:center;min-width:38px;height:38px;padding:0 8px;border-radius:999px;background:linear-gradient(145deg,#eff7f0,#dcecdf);color:#2f6b48;border:1px solid #c9dfce;font-size:.95rem}
-    .garden-weekly-section{margin:10px 0 22px}
-    .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;border:1px solid #c9dccd;background:linear-gradient(145deg,#f7fbf7,#eef6ef);border-radius:16px;padding:14px 15px;margin-top:14px;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 5px 16px rgba(59,94,70,.06);transition:.14s}
+    /* GARDEN v33 · 찾기 → 최근 흐름 → 미연결 생각 → 주간 회고 순서 */
+    .garden-page-head{align-items:center;margin-bottom:13px}
+    .garden-page-head h2{font-size:1.2rem}
+    .garden-search-row{margin-bottom:20px}
+    .garden-recent-head{align-items:center;margin:0 0 7px}
+    .garden-recent-head h2{font-size:.93rem;font-weight:800;color:#4c5d52}
+    .garden-summary{display:flex;align-items:center;justify-content:flex-end;min-height:24px;margin:0;color:var(--muted);font-size:.68rem;font-weight:750;white-space:nowrap}
+    .garden-summary .status{padding:4px 8px;background:#f0f4ed;border-color:#e0e7dd;color:#6b776e}
+    .garden-weekly-section{margin:30px 0 4px;padding-top:23px;border-top:1px dashed var(--line)}
+    .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;border:1px solid #c9dccd;background:linear-gradient(145deg,#f7fbf7,#eef6ef);border-radius:16px;padding:14px 15px;margin-top:17px;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 5px 16px rgba(59,94,70,.06);transition:.14s}
     .thread-unlinked-summary:hover{transform:translateY(-1px);border-color:#aecaB5;background:linear-gradient(145deg,#f4faf5,#e8f3eb)}
     .thread-unlinked-copy{display:flex;align-items:center;gap:11px;min-width:0}
     .thread-unlinked-icon{display:grid;place-items:center;flex:0 0 auto;width:34px;height:34px;border-radius:11px;background:#fff;border:1px solid #d7e5da;color:#60806b;font-size:1.05rem;font-weight:900}
@@ -670,6 +679,10 @@
     .thread-unlinked-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     .thread-unlinked-summary b{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:5px 8px;border-radius:999px;background:#fff;border:1px solid #d7e5da;color:#315341;font-size:.7rem}
     .thread-unlinked-arrow{font-size:1.35rem;line-height:1;color:#71917b}
+    @media(max-width:680px){
+      /* 마지막 카드가 우측 하단 고정 + 버튼 아래에 걸리지 않도록 스크롤 안전영역 확보 */
+      #gardenIndex{padding-bottom:64px}
+    }
     .thread-suggest-section{margin-top:22px}
     .related-preview-card{padding:2px 0 4px}
     .related-preview-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
@@ -830,32 +843,28 @@
 
   <section class="view" data-view="home">
     <div class="section-head home-dashboard-head home-lounge-head">
-      <div>
-        <div class="eyebrow">HOME · LOUNGE</div>
-        <h2 style="margin-top:7px">생각의 라운지</h2>
-        <p>쌓인 숫자보다, 지금 다시 이어볼 생각을 먼저 꺼내봅니다.</p>
-      </div>
+      <div><h2>🛋️ 생각의 라운지</h2></div>
     </div>
 
     <div class="section home-lounge-feature">
-      <div class="section-head">
-        <div><h2>다시, 만나다</h2><p>한동안 떨어져 있던 생각 하나를 오늘의 나에게 다시 건넵니다.</p></div>
+      <div class="section-head home-simple-head">
+        <div><h2>🕰️ 다시, 만나다</h2></div>
         <button class="btn hidden" id="resurfaceNext" data-resurface-next type="button">🔀 다른 조각</button>
       </div>
       <div id="resurfaceBox"></div>
     </div>
 
     <div class="section between-thoughts-section">
-      <div class="section-head">
-        <div><h2>🌿 두 생각 사이</h2><p>AI가 생각의 짧은 표식을 먼저 훑고, 가능성 있는 조합만 원문·출처까지 다시 읽어 두 생각을 고릅니다.</p></div>
+      <div class="section-head home-simple-head">
+        <div><h2>🌿 두 생각 사이</h2></div>
         <button class="btn hidden" id="betweenThoughtsNext" type="button">↻ 다른 조합</button>
       </div>
       <div id="betweenThoughtsBox"></div>
     </div>
 
     <div class="section home-overview-section">
-      <div class="section-head compact-head">
-        <div><h2>요즘의 텃밭</h2><p>최근 7일을 먼저 보고, 누적은 작게만 남깁니다.</p></div>
+      <div class="section-head compact-head home-simple-head">
+        <div><h2>🌱 요즘의 텃밭</h2></div>
       </div>
       <div class="home-overview-shell">
         <div id="homeRecentSummary"></div>
@@ -873,8 +882,8 @@
     </div>
 
     <div class="section home-projects-section">
-      <div class="section-head">
-        <div><h2>이어 쓰는 작업</h2><p>지금 다시 들어갈 수 있는 Studio 작업.</p></div>
+      <div class="section-head home-simple-head">
+        <div><h2>🏭 이어 쓰는 작업</h2></div>
       </div>
       <div id="homeProjects"></div>
     </div>
@@ -929,25 +938,30 @@
 
   <section class="view" data-view="garden">
     <div id="gardenIndex">
-      <div class="section-head"><div><h2>🌱 Garden</h2><p>반복해서 돌아오는 생각의 흐름만 모아봅니다.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="section-head garden-page-head"><div><h2>🌱 Garden</h2></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
 
-      <div class="section hidden garden-weekly-section" id="weeklyMirrorSection">
-        <div class="section-head compact-head">
-          <div><h2>🌿 이번 주 텃밭</h2><p>이번 주에 실제로 자란 Thread와 새로 뻗은 생각의 줄기.</p></div>
-        </div>
-        <div id="weeklyMirror"></div>
+      <div class="search-row garden-search-row"><input class="input" id="gardenSearch" placeholder="Thread 검색" /></div>
+
+      <div class="section-head garden-recent-head">
+        <div><h2>최근 Thread</h2></div>
+        <div class="garden-summary" id="gardenSummary"></div>
       </div>
-
-      <div class="meta" id="gardenSummary"></div>
-      <div class="search-row"><input class="input" id="gardenSearch" placeholder="오래된 Thread도 검색할 수 있어요" /></div>
       <div id="threadList"></div>
+
       <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button">
         <span class="thread-unlinked-copy">
           <span class="thread-unlinked-icon">○</span>
-          <span class="thread-unlinked-text"><strong>아직 어느 Thread에도 연결되지 않은 생각</strong><small>흐름을 기다리는 생각 조각을 모아봅니다.</small></span>
+          <span class="thread-unlinked-text"><strong>아직 어느 Thread에도 연결되지 않은 생각</strong><small>아직 흐름을 정하지 않은 생각을 모아봅니다.</small></span>
         </span>
         <span class="thread-unlinked-right"><b id="gardenUnlinkedCount">0개</b><span class="thread-unlinked-arrow">›</span></span>
       </button>
+
+      <div class="section hidden garden-weekly-section" id="weeklyMirrorSection">
+        <div class="section-head compact-head">
+          <div><h2>🌿 이번 주 텃밭</h2></div>
+        </div>
+        <div id="weeklyMirror"></div>
+      </div>
     </div>
     <div id="threadDetail" class="hidden"></div>
   </section>
@@ -3080,8 +3094,8 @@ function renderGarden(){
   // 오래된 Thread는 사라지는 것이 아니라, 사용자가 검색할 때 다시 찾을 수 있다.
   const recentThreads=state.threads.filter(threadIsGardenRecent);
   $("gardenSummary").innerHTML=q
-    ? `<span class="status">🔎 Thread 검색</span>`
-    : `<span class="status">🌱 최근 5일 Thread ${recentThreads.length}</span>`;
+    ? `<span class="status">검색 결과</span>`
+    : `<span class="status">최근 5일 · ${recentThreads.length}개</span>`;
 
   let ts=state.threads
     .filter(t=>q ? [t.title,t.question].filter(Boolean).join(" ").toLowerCase().includes(q) : threadIsGardenRecent(t))
