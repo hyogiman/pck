@@ -22,7 +22,6 @@ const BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES = 36;
 const BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT = 6;
 const BETWEEN_THOUGHTS_CURATION_PAIR_COUNT = 3;
 const BETWEEN_THOUGHTS_CURATION_CACHE_MS = 3 * 24 * 60 * 60 * 1000;
-const STUDIO_PATH_DAILY_LIMIT = 6;
 const STUDIO_PATH_MAX_THREAD_FRAGMENTS = 36;
 const STUDIO_PATH_SCOUT_COUNT = 5;
 const STUDIO_PATH_RESULT_COUNT = 3;
@@ -1989,20 +1988,6 @@ exports.betweenThoughtsCurate = onCall(
   }
 );
 
-async function reserveStudioPathQuota(uid) {
-  const ref = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
-  return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists ? snap.data() || {} : {};
-    const used = Math.max(0, Number(data.studioPathDiscoveries || 0));
-    if (used >= STUDIO_PATH_DAILY_LIMIT) {
-      throw new HttpsError("resource-exhausted", "글의 갈래 찾기는 오늘 여기까지 사용할 수 있어요.");
-    }
-    tx.set(ref, { studioPathDiscoveries: used + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    return used + 1;
-  });
-}
-
 function selectStudioPathRows(rows, maxCount) {
   if (rows.length <= maxCount) return rows;
   const picked = [];
@@ -2245,7 +2230,6 @@ exports.studioThreadPaths = onCall(
       return { ok: true, cached: true, items: cache.items, model: String(cache.model || STUDIO_GARDENER_MODEL) };
     }
 
-    await reserveStudioPathQuota(uid);
     const selectedRows = selectStudioPathRows(allRows, STUDIO_PATH_MAX_THREAD_FRAGMENTS);
     const selectedIds = new Set(selectedRows.map((x) => x.id));
     const sourceIds = [...new Set(selectedRows.map((x) => String(x.data.sourceId || "")).filter(Boolean))];
@@ -2284,6 +2268,8 @@ exports.studioThreadPaths = onCall(
       generatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     batch.set(usageRef, {
+      // 성공적으로 갈래 분석을 마친 경우에만 사용 횟수를 기록한다.
+      studioPathCompleted: FieldValue.increment(1),
       studioPathInputTokens: FieldValue.increment(totalInputTokens),
       studioPathCachedInputTokens: FieldValue.increment(totalCachedInputTokens),
       studioPathOutputTokens: FieldValue.increment(totalOutputTokens),
@@ -2364,7 +2350,7 @@ exports.studioGardenerUsage = onCall(
     );
     const betweenThoughtsEstimatedCostUsd = betweenThoughtsCurationEstimatedCostUsd + betweenThoughtsProfileEstimatedCostUsd;
 
-    const studioPathDiscoveries = Math.max(0, Number(data.studioPathDiscoveries || 0));
+    const studioPathDiscoveries = Math.max(0, Number(data.studioPathCompleted || 0));
     const studioPathInputTokens = Math.max(0, Number(data.studioPathInputTokens || 0));
     const studioPathCachedInputTokens = Math.max(0, Number(data.studioPathCachedInputTokens || 0));
     const studioPathOutputTokens = Math.max(0, Number(data.studioPathOutputTokens || 0));
