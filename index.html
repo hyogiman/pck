@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v36 · Unnamed Thought Stems -->
+<!-- Thought Garden internal build: v38 · Library Date Tool + Capture Spacing Restore -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -347,7 +347,7 @@
     .spark-acts{display:flex;gap:8px;position:relative;z-index:1}
     .spark-acts .btn{flex:1;font-size:.79rem;padding:11px}
     .home-capture{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0}
-    .home-question{font-family:var(--serif);font-size:1.1rem;font-weight:700;letter-spacing:-.01em;margin:0 0 12px;color:#33372c}
+    .home-question{font-family:var(--serif);font-size:1.1rem;font-weight:700;letter-spacing:-.01em;margin:0 0 22px;color:#33372c}
     .capture-orb{width:clamp(108px,16vh,152px);height:clamp(108px,16vh,152px);border-radius:50%;border:1px solid #cdd9ce;background:radial-gradient(circle at 36% 30%,#fbfdfa,var(--accent2));color:var(--accent);box-shadow:0 20px 55px rgba(55,95,71,.16),inset 0 1px 0 rgba(255,255,255,.6);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.18s}
     .capture-orb:hover{transform:translateY(-2px)}
     .capture-orb:active{transform:scale(.97)}
@@ -808,6 +808,9 @@
     .toast.show{opacity:1;transform:translate(-50%,0)}
 
     .attachment-tools{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px}
+    .source-record-tools{align-items:center;justify-content:space-between;flex-wrap:nowrap}
+    .source-record-tools .date-inline{margin-left:auto;flex:0 0 auto;gap:4px}
+    .source-record-tools .date-input{padding:7px 8px;font-size:.75rem;min-height:34px}
     .file-pick{position:relative;overflow:hidden}
     .file-pick input{position:absolute;inset:0;opacity:0;cursor:pointer}
     .selected-files{display:grid;gap:7px;margin-top:9px}
@@ -879,6 +882,10 @@
       .inline-two{grid-template-columns:88px 1fr}
       .app{padding-left:13px;padding-right:13px}
       .fab{right:18px}
+      .source-record-tools{gap:6px}
+      .source-record-tools .file-pick{padding:8px 10px;font-size:.75rem;white-space:nowrap}
+      .source-record-tools .date-inline{flex:0 0 auto;justify-content:flex-end}
+      .source-record-tools .date-input{max-width:142px;padding:7px 7px;font-size:.74rem}
     }
   </style>
 </head>
@@ -3215,14 +3222,12 @@ function openSource(id){
   $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button><button class="text-btn danger-text" data-delete-source="${s.id}" type="button">작품 삭제</button></div></div>
     <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(srcType(s))}</div><div><span class="chip">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
     <div class="quick-capture">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:2px">
-        <div class="eyebrow">한 줄 + 나의 한 줄</div>
-        <span class="date-inline">🗓 <input class="input date-input" type="date" id="sourceRecordDate" value="${esc(quickDate)}" title="기록 날짜는 언제든 바꿀 수 있어요"></span>
-      </div>
+      <div class="eyebrow">한 줄 + 나의 한 줄</div>
       <div class="field"><label>${srcType(s)==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${srcType(s)==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea><input class="input locator-inline" id="sourceLocator" placeholder="${srcType(s)==="book"?"🗓 p.132 (위치)":"🗓 6화 / 12:31 (위치)"}"></div>
       <div class="field"><label>나의 한 줄</label><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
-      <div class="attachment-tools">
+      <div class="attachment-tools source-record-tools">
         <label class="btn file-pick">📎 사진·음성·영상<input id="sourceFiles" type="file" accept="image/*,audio/*,video/*" multiple></label>
+        <span class="date-inline" title="기록 날짜는 언제든 바꿀 수 있어요">🗓 <input class="input date-input" type="date" id="sourceRecordDate" value="${esc(quickDate)}"></span>
       </div>
       <div class="selected-files" id="sourceFileList"></div>
       <div style="display:flex;justify-content:flex-end;margin-top:9px"><button class="btn primary" data-save-source-fragment="${s.id}" type="button">생각 남기기</button></div>
