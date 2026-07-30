@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v45 · Optional Writing Paths -->
+<!-- Thought Garden internal build: v49 · Studio Path Reliability -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -812,10 +812,15 @@
     .studio-path-thread-main strong{font-family:var(--serif);font-size:.9rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .studio-path-thread-main small{font-size:.63rem;color:var(--muted)}
     .studio-path-thread-count{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-width:34px;padding:5px 8px;border-radius:999px;background:var(--accent3);color:var(--accent);font-size:.65rem;font-weight:850}
-    .studio-path-loading{display:grid;place-items:center;text-align:center;gap:12px;min-height:210px;padding:28px 12px}
-    .studio-path-loading .ai-dot{width:9px;height:9px;border-radius:999px;background:var(--accent);animation:aiPulse 1.25s ease-out infinite}
-    .studio-path-loading strong{font-family:var(--serif);font-size:1.02rem;color:#365e46}
-    .studio-path-loading p{max-width:440px;margin:0;color:var(--muted);font-size:.7rem;line-height:1.6}
+    .studio-path-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:230px;padding:30px 16px}
+    .studio-path-loader{display:flex;align-items:center;justify-content:center;gap:8px;height:34px;margin-bottom:16px}
+    .studio-path-loader span{width:9px;height:9px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 0 rgba(54,108,77,.2);animation:studioPathDot 1.05s ease-in-out infinite}
+    .studio-path-loader span:nth-child(2){animation-delay:.16s}.studio-path-loader span:nth-child(3){animation-delay:.32s}
+    @keyframes studioPathDot{0%,70%,100%{transform:translateY(0) scale(.78);opacity:.38;box-shadow:0 0 0 0 rgba(54,108,77,0)}35%{transform:translateY(-7px) scale(1.08);opacity:1;box-shadow:0 0 0 7px rgba(54,108,77,.08)}}
+    .studio-path-loading-title{display:block;max-width:min(430px,82vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--serif);font-size:1.06rem;color:#365e46;line-height:1.45}
+    .studio-path-loading-step{display:block;margin-top:5px;color:#365e46;font-size:.86rem;font-weight:780;line-height:1.45}
+    .studio-path-loading p{max-width:440px;margin:17px 0 0;color:var(--muted);font-size:.7rem;line-height:1.65;word-break:keep-all}
+    @media (prefers-reduced-motion:reduce){.studio-path-loader span{animation-duration:2.4s;transform:none}}
     .studio-path-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px;padding-bottom:12px;border-bottom:1px solid var(--line)}
     .studio-path-result-head h3{margin:0;font-family:var(--serif);font-size:1.05rem}
     .studio-path-result-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem;line-height:1.5}
@@ -1622,7 +1627,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v45 · Optional writing paths + Studio navigation */
+/* Thought Garden v49 · Optional writing paths + reliable loading */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -2088,7 +2093,7 @@ function renderStudioUsage(data){
 
     <span class="ai-usage-total"><span>오늘 전체 추정 비용</span><strong>약 ${formatUsdEstimate(totalCost)}</strong></span>`;
 
-  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 큐레이션 입력 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenProfileCached?`<br>생각 프로필 입력 중 ${betweenProfileCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${pathCached?`<br>글의 갈래 찾기 입력 중 ${pathCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 Fragment가 새로 생기거나 수정될 때 짧은 생각 프로필을 한 번 만들고 재사용합니다. 큐레이션 때는 여러 프로필을 먼저 훑은 뒤, 가능성이 높은 조합만 원문·출처·인용까지 다시 읽습니다. 준비된 조합은 기본 3일 동안 재사용합니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
+  note.innerHTML=`오늘(KST) 사용분을 모델별로 나눠 보여줍니다.${cached?`<br>정원사 입력 토큰 중 ${cached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${interviewCached?`<br>Blooming Interview 입력 토큰 중 ${interviewCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenCached?`<br>두 생각 사이 큐레이션 입력 중 ${betweenCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${betweenProfileCached?`<br>생각 프로필 입력 중 ${betweenProfileCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}${pathCached?`<br>글의 갈래 찾기 입력 중 ${pathCached.toLocaleString("ko-KR")}개는 캐시 입력으로 집계되었습니다.`:""}<br><b>두 생각 사이</b>는 Fragment가 새로 생기거나 수정될 때 짧은 생각 프로필을 한 번 만들고 재사용합니다. 큐레이션 때는 여러 프로필을 먼저 훑은 뒤, 가능성이 높은 조합만 원문·출처·인용까지 다시 읽습니다. 준비된 조합은 기본 3일 동안 재사용합니다.<br><b>글의 갈래 찾기</b> 횟수는 캐시가 아닌 새 분석이 끝난 경우에만 1회 기록됩니다. 이 기능에서 새로 만든 프로필 토큰은 두 생각 사이와 중복하지 않고 갈래 찾기 사용량에만 포함됩니다.<br>Thread 추천·닮은 생각 추천처럼 <b>이미 저장된 벡터끼리 비교하는 검색은 OpenAI 토큰을 새로 쓰지 않습니다.</b><br>생각 색인 토큰의 일일 합계는 이 버전 배포 이후 생성·갱신되는 embedding부터 집계됩니다.<br>표시 금액은 실제 청구액이 아니라 기록된 토큰과 현재 모델 단가로 계산한 추정값입니다. <b>실제 청구액은 OpenAI Usage/Billing에서 확인하세요.</b>`;
 
   const plus=$("studioLimitPlus10");
   if(plus){
@@ -4701,7 +4706,8 @@ function openStudioPathDialog(threadId=""){
 function renderStudioPathLoading(threadId){
   const t=state.threads.find(x=>x.id===threadId),body=$("studioPathDialogBody");
   $("studioPathDialogTitle").textContent="글의 갈래를 찾는 중";
-  body.innerHTML=`<div class="studio-path-loading"><span class="ai-dot"></span><strong>${esc(t?.title||"Thread")}의 생각을 살펴보고 있어요.</strong><p>생각 프로필로 가능한 줄기를 먼저 좁히고, 후보로 고른 생각의 원문과 출처를 다시 읽어 억지스럽지 않은 출발점만 남깁니다.</p></div>`;
+  const threadTitle=String(t?.title||"Thread");
+  body.innerHTML=`<div class="studio-path-loading" aria-live="polite"><div class="studio-path-loader" role="status" aria-label="글의 갈래 분석 중"><span></span><span></span><span></span></div><strong class="studio-path-loading-title" title="${esc(threadTitle)}">${esc(threadTitle)}</strong><span class="studio-path-loading-step">생각들을 읽고 있어요.</span><p>생각 프로필로 후보를 좁힌 뒤, 선택된 생각의 원문과 출처를 다시 읽고 있습니다.</p></div>`;
 }
 function renderStudioPathResults(){
   const body=$("studioPathDialogBody"),tid=state.studioPath.threadId,t=state.threads.find(x=>x.id===tid),items=state.studioPath.items||[];
