@@ -3201,14 +3201,24 @@ function sourceCard(s,compact=false){
     <div class="source-title">${esc(s.title)}</div><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · ")||"")}</div>
     <div class="meta"><span class="status">생각 ${count}개</span>${s.status==="done"?`<span class="status done">✓ 완료</span>`:""}</div></div></article>`;
 }
+function sourceQuickCaptureDefaultDate(s){
+  // 읽는/보는 중인 작품은 '가장 최근에 입력한 생각'에서 사용한 날짜를 이어 쓴다.
+  // 과거 기록을 옮길 때 매번 날짜를 다시 고르는 수고를 줄이기 위한 동작이다.
+  if(s?.status==="done")return today();
+  const latest=sourceFragments(s?.id).slice().sort((a,b)=>String(b.createdAt||b.updatedAt||"").localeCompare(String(a.createdAt||a.updatedAt||"")))[0];
+  return (latest?.date||latest?.createdAt||"").slice(0,10)||today();
+}
 function openSource(id){
   state.pendingFiles.source=[];state.openSourceId=id;const s=state.sources.find(x=>x.id===id);if(!s)return;
   $("libraryIndex").classList.add("hidden");$("sourceDetail").classList.remove("hidden");
-  const fs=sourceFragments(id);
+  const fs=sourceFragments(id),quickDate=sourceQuickCaptureDefaultDate(s);
   $("sourceDetail").innerHTML=`<div class="detail-topline"><button class="back-btn" data-back-library type="button">← Library</button><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end"><button class="text-btn" data-edit-source="${s.id}" type="button">작품정보 수정</button><button class="text-btn danger-text" data-delete-source="${s.id}" type="button">작품 삭제</button></div></div>
     <div class="detail-head"><div class="cover">${s.image?`<img src="${esc(s.image)}" alt="">`:sourceIcon(srcType(s))}</div><div><span class="chip">${sourceIcon(srcType(s))} ${srcTypeLabel(s)}</span><h2 style="margin:8px 0 4px;letter-spacing:-.04em">${esc(s.title)}</h2><div class="source-sub">${esc([s.creator,s.platform].filter(Boolean).join(" · "))}</div><div class="meta"><span class="status">생각 ${fs.length}개</span></div></div></div>
     <div class="quick-capture">
-      <div class="eyebrow">한 줄 + 나의 한 줄</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:2px">
+        <div class="eyebrow">한 줄 + 나의 한 줄</div>
+        <span class="date-inline">🗓 <input class="input date-input" type="date" id="sourceRecordDate" value="${esc(quickDate)}" title="기록 날짜는 언제든 바꿀 수 있어요"></span>
+      </div>
       <div class="field"><label>${srcType(s)==="book"?"책에서 남은 문장":"장면·대사·핵심 내용"} <span style="color:var(--muted);font-weight:500">(선택)</span></label><textarea class="textarea" id="sourceExternalText" placeholder="${srcType(s)==="book"?"놓치고 싶지 않은 한 줄":"기억하고 싶은 장면이나 말"}"></textarea><input class="input locator-inline" id="sourceLocator" placeholder="${srcType(s)==="book"?"🗓 p.132 (위치)":"🗓 6화 / 12:31 (위치)"}"></div>
       <div class="field"><label>나의 한 줄</label><textarea class="textarea" id="sourceThought" placeholder="그래서 나는 무엇을 생각했나요?"></textarea></div>
       <div class="attachment-tools">
@@ -4498,7 +4508,7 @@ async function saveSource(){
 async function saveSourceFragment(sourceId){
   const thought=$("sourceThought").value.trim(),externalText=$("sourceExternalText").value.trim();
   if(!thought&&!externalText&&!state.pendingFiles.source.length)return toast("문장·생각·미디어 중 하나는 남겨주세요.");
-  const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],attachments:[],date:today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+  const f={id:uid(),type:"source",sourceId,externalText,locator:$("sourceLocator").value.trim(),thought,threadIds:[],attachments:[],date:$("sourceRecordDate")?.value||today(),createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
   try{
     if(state.pendingFiles.source.length)f.attachments=await uploadFiles(state.pendingFiles.source,f.id,"source");
     state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);state.pendingFiles.source=[];openSource(sourceId);renderHome();renderGarden();toast("이 작품에 생각을 하나 더 쌓았습니다.");
