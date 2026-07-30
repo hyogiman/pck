@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Thought Garden internal build: v36 · Unnamed Thought Stems -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -710,7 +711,7 @@
     .thread-index-title{color:#285f3f;font-weight:850}
     .thread-index-sub{color:#748279}
     .thread-index-count{display:grid;place-items:center;min-width:38px;height:38px;padding:0 8px;border-radius:999px;background:linear-gradient(145deg,#eff7f0,#dcecdf);color:#2f6b48;border:1px solid #c9dfce;font-size:.95rem}
-    /* GARDEN v33 · 찾기 → 최근 흐름 → 미연결 생각 → 주간 회고 순서 */
+    /* GARDEN · 찾기 → 최근 흐름 → 이름 없는 줄기 → 주간 발견 순서 */
     .garden-page-head{align-items:center;margin-bottom:13px}
     .garden-page-head h2{font-size:1.2rem}
     .garden-search-row{margin-bottom:20px}
@@ -729,6 +730,22 @@
     .thread-unlinked-right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
     .thread-unlinked-summary b{display:inline-flex;align-items:center;justify-content:center;min-width:42px;padding:5px 8px;border-radius:999px;background:#fff;border:1px solid #d7e5da;color:#315341;font-size:.7rem}
     .thread-unlinked-arrow{font-size:1.35rem;line-height:1;color:#71917b}
+    .unnamed-stems-modal{max-width:720px}
+    .unnamed-stems-list{display:grid;gap:10px;margin-top:5px}
+    .unnamed-stem-card{width:100%;border:1px solid #d8e3d9;background:linear-gradient(145deg,#fffefa,#f6faf6);border-radius:16px;padding:14px 15px;text-align:left;cursor:pointer;box-shadow:0 4px 14px rgba(54,83,61,.045);transition:.14s}
+    .unnamed-stem-card:hover{transform:translateY(-1px);border-color:#b8cfbd;background:linear-gradient(145deg,#fffefa,#f0f7f1)}
+    .unnamed-stem-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+    .unnamed-stem-card-head strong{font-size:.76rem;color:#386049}
+    .unnamed-stem-card-head span{font-size:.62rem;color:var(--muted);white-space:nowrap}
+    .unnamed-stem-preview{display:grid;grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);gap:7px;align-items:center}
+    .unnamed-stem-frag{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--serif);font-size:.78rem;line-height:1.5;color:#3b443e}
+    .unnamed-stem-arrow{text-align:center;color:#7f9c86;font-weight:900}
+    .unnamed-stem-more{margin-top:9px;font-size:.62rem;font-weight:800;color:#78917f}
+    .unnamed-stem-detail-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px}
+    .unnamed-stem-back{border:0;background:transparent;padding:5px 0;color:#557260;font-size:.72rem;font-weight:850;cursor:pointer}
+    .unnamed-stem-detail-count{font-size:.65rem;color:var(--muted)}
+    .unnamed-stem-name-actions{display:flex;justify-content:flex-end;margin-top:17px;padding-top:15px;border-top:1px dashed var(--line)}
+    @media(max-width:520px){.unnamed-stem-preview{grid-template-columns:1fr}.unnamed-stem-arrow{transform:rotate(90deg)}.unnamed-stem-name-actions .btn{width:100%}}
     @media(max-width:680px){
       /* 마지막 카드가 우측 하단 고정 + 버튼 아래에 걸리지 않도록 스크롤 안전영역 확보 */
       #gardenIndex{padding-bottom:64px}
@@ -998,12 +1015,12 @@
       </div>
       <div id="threadList"></div>
 
-      <button class="thread-unlinked-summary" id="gardenUnlinkedSummary" type="button">
+      <button class="thread-unlinked-summary hidden" id="gardenUnnamedStemSummary" type="button">
         <span class="thread-unlinked-copy">
-          <span class="thread-unlinked-icon">○</span>
-          <span class="thread-unlinked-text"><strong>아직 어느 Thread에도 연결되지 않은 생각</strong><small>아직 흐름을 정하지 않은 생각을 모아봅니다.</small></span>
+          <span class="thread-unlinked-icon">🌿</span>
+          <span class="thread-unlinked-text"><strong>아직 이름 없는 생각의 줄기</strong><small>서로 이어졌지만 아직 Thread가 되지 않은 흐름</small></span>
         </span>
-        <span class="thread-unlinked-right"><b id="gardenUnlinkedCount">0개</b><span class="thread-unlinked-arrow">›</span></span>
+        <span class="thread-unlinked-right"><b id="gardenUnnamedStemCount">0줄기</b><span class="thread-unlinked-arrow">›</span></span>
       </button>
 
       <div class="section hidden garden-weekly-section" id="weeklyMirrorSection">
@@ -1289,6 +1306,16 @@
 
 
 
+<dialog id="unnamedStemsDialog">
+  <div class="modal unnamed-stems-modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">UNNAMED STEMS</div><h2>🌿 아직 이름 없는 생각의 줄기</h2><p class="helper" id="unnamedStemsSummary">서로 이어진 생각에 꼭 지금 이름을 붙일 필요는 없어요.</p></div>
+      <button class="close-btn" data-close="unnamedStemsDialog" type="button">✕</button>
+    </div>
+    <div id="unnamedStemsBody"></div>
+  </div>
+</dialog>
+
 <dialog id="thoughtStemDialog">
   <div class="modal stem-modal">
     <div class="modal-head">
@@ -1560,6 +1587,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
   gardenDiscovery:{chain:[],loading:false},
+  unnamedStemIds:[],
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
@@ -3209,6 +3237,78 @@ async function touchThreadActivity(tid){
   t.updatedAt=new Date().toISOString();
   await persist("threads",t);
 }
+function unnamedStemGroups(){
+  // Thread에 아직 한 번도 이름 붙지 않은 Fragment들끼리의 continuedFrom 연결만 본다.
+  // 고립된 한 조각은 여기서 제외한다. 이 공간의 목적은 '이미 생긴 관계에 이름 붙이기'다.
+  const pool=state.fragments.filter(f=>!(f.threadIds||[]).length);
+  const byId=new Map(pool.map(f=>[f.id,f]));
+  const adj=new Map(pool.map(f=>[f.id,new Set()]));
+  pool.forEach(f=>{
+    (f.continuedFrom||[]).forEach(pid=>{
+      if(!byId.has(pid))return;
+      adj.get(f.id).add(pid);adj.get(pid).add(f.id);
+    });
+  });
+  const seen=new Set(),groups=[];
+  for(const f of pool){
+    if(seen.has(f.id))continue;
+    const ids=[],stack=[f.id];
+    while(stack.length){const id=stack.pop();if(seen.has(id)||!byId.has(id))continue;seen.add(id);ids.push(id);for(const n of (adj.get(id)||[]))stack.push(n)}
+    if(ids.length<2)continue;
+    const fs=ids.map(id=>byId.get(id)).sort((a,b)=>thoughtStemSortKey(a).localeCompare(thoughtStemSortKey(b)));
+    const latest=fs.map(x=>thoughtStemSortKey(x)).sort().reverse()[0]||"";
+    groups.push({ids:fs.map(x=>x.id),fragments:fs,latest});
+  }
+  return groups.sort((a,b)=>String(b.latest).localeCompare(String(a.latest)));
+}
+function unnamedStemGroupFor(startId){return unnamedStemGroups().find(g=>g.ids.includes(startId))||null}
+function unnamedStemPreviewText(f){
+  const text=(f?.thought||f?.text||f?.externalText||f?.context||"").trim();
+  return text||"(내용 없음)";
+}
+function renderUnnamedStemsList(){
+  const groups=unnamedStemGroups(),box=$("unnamedStemsBody");if(!box)return;
+  state.unnamedStemIds=[];
+  $("unnamedStemsSummary").textContent=groups.length?`${groups.length}개의 줄기가 아직 이름 없이 자라고 있어요. 눌러서 흐름을 먼저 살펴보세요.`:"지금은 이름을 기다리는 생각의 줄기가 없어요.";
+  if(!groups.length){box.innerHTML=empty("🌿","아직 이름 없는 줄기가 없어요.","생각이 서로 이어지면 이곳에 나타납니다.");return}
+  box.innerHTML=`<div class="unnamed-stems-list">${groups.map(g=>{
+    const first=g.fragments[0],last=g.fragments[g.fragments.length-1];
+    const latestDate=(last?.date||last?.createdAt||"").slice(0,10);
+    return `<button class="unnamed-stem-card" data-open-unnamed-stem="${first.id}" type="button">
+      <span class="unnamed-stem-card-head"><strong>🌿 ${g.fragments.length}개의 생각이 이어짐</strong><span>${latestDate?`${esc(fmt(latestDate))}까지`:""}</span></span>
+      <span class="unnamed-stem-preview"><span class="unnamed-stem-frag">“${esc(unnamedStemPreviewText(first))}”</span><span class="unnamed-stem-arrow">→</span><span class="unnamed-stem-frag">“${esc(unnamedStemPreviewText(last))}”</span></span>
+      ${g.fragments.length>2?`<span class="unnamed-stem-more">중간에 ${g.fragments.length-2}개의 생각이 더 있어요</span>`:""}
+    </button>`;
+  }).join("")}</div>`;
+}
+function openUnnamedStems(){renderUnnamedStemsList();$("unnamedStemsDialog").showModal()}
+function unnamedStemTreeHTML(group){
+  const component=group.fragments,byId=new Map(component.map(f=>[f.id,f])),ids=new Set(group.ids),childMap=new Map();
+  component.forEach(f=>(f.continuedFrom||[]).forEach(pid=>{if(!ids.has(pid))return;if(!childMap.has(pid))childMap.set(pid,[]);childMap.get(pid).push(f.id)}));
+  childMap.forEach(arr=>arr.sort((a,b)=>thoughtStemSortKey(byId.get(a)).localeCompare(thoughtStemSortKey(byId.get(b)))));
+  let roots=component.filter(f=>!(f.continuedFrom||[]).some(pid=>ids.has(pid)));
+  if(!roots.length)roots=[component[0]];
+  roots.sort((a,b)=>thoughtStemSortKey(a).localeCompare(thoughtStemSortKey(b)));
+  const visited=new Set();
+  function node(id){
+    const f=byId.get(id);if(!f)return "";
+    if(visited.has(id))return `<div class="stem-cycle">이미 위에서 나타난 생각과 다시 연결됩니다.</div>`;
+    visited.add(id);const kids=childMap.get(id)||[];
+    return `<div class="stem-node">${thoughtStemCardHTML(f,"")}${kids.length?`<div class="stem-children"><div class="stem-branch-label">${kids.length>1?`${kids.length}개의 갈래`:"다음 생각"}</div>${kids.map(cid=>`<div class="stem-connector">이어짐</div>${node(cid)}`).join("")}</div>`:""}</div>`;
+  }
+  return roots.map(r=>`<div class="stem-root-group">${node(r.id)}</div>`).join("");
+}
+function openUnnamedStemDetail(startId){
+  const group=unnamedStemGroupFor(startId);if(!group)return toast("이 줄기는 이미 Thread가 되었거나 찾을 수 없어요.");
+  state.unnamedStemIds=group.ids.slice();
+  $("unnamedStemsSummary").textContent="먼저 흐름을 바라보고, 정말 하나의 주제라고 느껴질 때만 이름을 붙여보세요.";
+  $("unnamedStemsBody").innerHTML=`<div class="unnamed-stem-detail-head"><button class="unnamed-stem-back" data-back-unnamed-stems type="button">← 줄기 목록</button><span class="unnamed-stem-detail-count">생각 ${group.fragments.length}개</span></div><div class="stem-intro">Thread는 생각을 미리 분류하는 상자가 아니라, 이미 자란 흐름에 뒤늦게 붙이는 이름이어도 됩니다.</div>${unnamedStemTreeHTML(group)}<div class="unnamed-stem-name-actions"><button class="btn primary" data-name-unnamed-stem type="button">🌱 이 줄기에 이름 붙이기</button></div>`;
+}
+function nameUnnamedStem(){
+  const ids=(state.unnamedStemIds||[]).filter(id=>state.fragments.some(f=>f.id===id));if(ids.length<2)return toast("이름 붙일 생각의 줄기를 찾지 못했습니다.");
+  $("unnamedStemsDialog").close();state.pendingLinkFragmentIds=ids;state.pendingLinkFragmentId=ids[0];openThreadDialog();
+}
+
 function renderGarden(){
   renderWeeklyMirror();
   const q=$("gardenSearch").value.trim().toLowerCase();
@@ -3234,9 +3334,9 @@ function renderGarden(){
         q?"다른 이름으로 검색해보세요.":"지금 붙잡고 싶은 흐름이 생길 때만 다시 이어가면 돼요."
       );
 
-  const unlinked=state.fragments.filter(f=>!(f.threadIds||[]).length);
-  $("gardenUnlinkedCount").textContent=`${unlinked.length}개`;
-  $("gardenUnlinkedSummary").classList.toggle("hidden",!state.fragments.length);
+  const unnamedStems=unnamedStemGroups();
+  $("gardenUnnamedStemCount").textContent=`${unnamedStems.length}줄기`;
+  $("gardenUnnamedStemSummary").classList.toggle("hidden",!unnamedStems.length);
 }
 function threadFragments(id){return state.fragments.filter(f=>(f.threadIds||[]).includes(id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
 function threadCard(t,compact=false){
@@ -4851,7 +4951,10 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("[data-between-question]"))return openBetweenThoughtsQuestion();
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
-  if(e.target.closest("#gardenUnlinkedSummary"))return openFragmentList("연결되지 않은 생각",state.fragments.filter(f=>!(f.threadIds||[]).length));
+  if(e.target.closest("#gardenUnnamedStemSummary"))return openUnnamedStems();
+  const uos=e.target.closest("[data-open-unnamed-stem]");if(uos)return openUnnamedStemDetail(uos.dataset.openUnnamedStem);
+  if(e.target.closest("[data-back-unnamed-stems]"))return renderUnnamedStemsList();
+  if(e.target.closest("[data-name-unnamed-stem]"))return nameUnnamedStem();
   const gd=e.target.closest("[data-open-garden-discovery]");if(gd)return openGardenDiscovery(gd.dataset.openGardenDiscovery,gd.dataset.discoveryChild);
   const gedit=e.target.closest("[data-edit-discovery-frag]");if(gedit){$("gardenDiscoveryDialog").close();return openEditFragment(gedit.dataset.editDiscoveryFrag)}
   const gconn=e.target.closest("[data-connect-discovery]");if(gconn)return connectGardenDiscovery(gconn.dataset.connectDiscovery);
@@ -4972,6 +5075,7 @@ $("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentI
 $("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null;state.pendingLinkFragmentIds=null});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
 $("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null;state.pendingLinkFragmentIds=null});
+$("unnamedStemsDialog").addEventListener("close",()=>{state.unnamedStemIds=[]});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=8;renderGarden()});
 $("linkThreadSearch").addEventListener("input",renderLinkThreadList);
 $("fragSearch").addEventListener("input",()=>{state.fragLimit=5;renderFragments()});
@@ -5100,7 +5204,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
 $("bloomingInterviewDialog").addEventListener("click",e=>{if(e.target===$("bloomingInterviewDialog"))finishBloomingInterview()});
-["captureDialog","afterSaveDialog","bloomingCompareDialog","betweenThoughtsDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","gardenDiscoveryDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","bloomingCompareDialog","betweenThoughtsDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","unnamedStemsDialog","thoughtStemDialog","gardenDiscoveryDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
