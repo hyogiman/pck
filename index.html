@@ -4732,9 +4732,10 @@ async function findStudioWritingPaths(threadId,forceRefresh=false){
     renderStudioPathResults();
   }catch(e){
     console.warn("Studio writing paths failed",e?.code||e?.message||e);
-    const msg=String(e?.message||"").includes("오늘")?"오늘 사용할 수 있는 갈래 찾기 횟수를 모두 사용했어요.":"갈래를 찾지 못했어요.";
+    const code=String(e?.code||"");
+    const msg=code.includes("resource-exhausted")?"AI 요청이 잠시 몰렸어요. 잠시 뒤 다시 시도해주세요.":"갈래를 찾는 중 오류가 생겼어요.";
     $("studioPathDialogTitle").textContent="잠시 멈췄어요";
-    $("studioPathDialogBody").innerHTML=empty("🌿",msg,"기존 Studio 기능은 그대로 사용할 수 있습니다.");
+    $("studioPathDialogBody").innerHTML=empty("🌿",msg,"횟수 제한은 없으며, 성공한 분석만 사용량에 기록됩니다.");
   }finally{state.studioPath.loading=false}
 }
 function startProjectFromWritingPath(index){
