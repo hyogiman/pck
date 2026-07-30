@@ -223,6 +223,7 @@
     .between-mini-source span{display:block;font-family:var(--serif);font-size:.75rem;line-height:1.48;color:#666d68}
     .between-question-source{display:grid;gap:8px;margin:8px 0 14px}
     .between-question-source .mini-thought{background:#f7f9f5;border:1px solid var(--line);border-radius:13px;padding:11px 12px;font-family:var(--serif);font-size:.83rem;line-height:1.55;color:#3d4741}
+    .between-question-full-text{white-space:pre-wrap;word-break:keep-all}
     .between-question-divider{text-align:center;color:#8aa091;font-size:.77rem;font-weight:800}
     .between-question-box{background:#eff6ef;border:1px solid #d7e6da;border-radius:16px;padding:14px 15px;font-size:1rem;line-height:1.65;color:#284432;font-weight:760;letter-spacing:-.02em}
     .between-card-question{margin:0 0 11px;padding:11px 12px;border-radius:13px;background:#eff6ef;border:1px solid #d7e6da;color:#31533f;font-size:.84rem;line-height:1.55}
@@ -3012,8 +3013,10 @@ async function nextBetweenThoughtsPair(){
   await requestBetweenThoughtCuration(true);
 }
 function renderBetweenMiniThought(f){
-  const thought=betweenThoughtExcerptText(f?.thought||f?.text||"",150),source=renderBetweenThoughtSource(f,false,true);
-  return `<div class="mini-thought">${source}${thought?`<div>${esc(thought)}</div>`:(!source?esc(betweenThoughtExcerpt(f,150)):"")}</div>`;
+  // 질문에 답하는 화면에서는 두 생각을 원문 그대로 읽을 수 있어야 한다.
+  const parts=betweenThoughtDisplayParts(f,true),source=renderBetweenThoughtSource(f,true,false);
+  const thought=parts.thought||(!parts.src&&!parts.quote?betweenThoughtText(f):"");
+  return `<div class="mini-thought">${source}${thought?`<div class="between-question-full-text">${esc(thought)}</div>`:""}</div>`;
 }
 async function openBetweenThoughtsQuestion(){
   const bt=state.betweenThoughts,item=currentBetweenThoughtItem();
