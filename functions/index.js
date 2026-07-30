@@ -3187,6 +3187,7 @@ exports.openAiOfficialUsage = onCall(
 
     return {
       ok: true,
+      officialUsageVersion: "v48-cost-query-fix",
       timezone: "UTC",
       projectScoped: true,
       currency: monthCost.currency || todayCost.currency || "usd",
