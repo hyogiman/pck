@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v38 · Library Date Tool + Capture Spacing Restore -->
+<!-- Thought Garden internal build: v41 · View Concept Copy -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -7,7 +7,6 @@
   <meta name="theme-color" content="#f5f2e9" />
   <title>생각의 텃밭</title>
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#375f47" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -587,19 +586,17 @@
     .lens-chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;font-size:.78rem;font-weight:700;cursor:pointer;color:#4a4f44;transition:.12s}
     .lens-chip.on{background:var(--accent2);border-color:#bcd3c1;color:var(--accent)}
     .lens-badge{font-size:.66rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:2px 8px;font-weight:700;flex:0 0 auto}
-    .mirror-card{padding:7px 6px}
-    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:14px 12px;border-radius:13px}
-    .mirror-row:hover{background:#fbfcf9}
-    .mirror-row+.mirror-row{border-top:1px dashed var(--line)}
-    .mirror-kicker{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap}
-    .mirror-kind{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#316346;font-size:.64rem;font-weight:900;letter-spacing:.06em}
-    .mirror-caption{font-size:.7rem;font-weight:760;color:var(--muted)}
-    .mirror-title-line{display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .mirror-title{display:block;min-width:0;font-size:1rem;line-height:1.5;color:#242c28;font-weight:820;letter-spacing:-.025em}
-    .mirror-growth{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:40px;padding:5px 9px;border-radius:999px;background:#edf5ee;border:1px solid #d4e4d7;color:#37694a;font-size:.68rem;font-weight:900}
-    .mirror-branch{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);align-items:center;gap:7px;margin-top:2px}
-    .mirror-frag{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:9px 10px;border:1px solid #e2e5dc;border-radius:11px;background:#fffefa;font-family:var(--serif);font-size:.78rem;line-height:1.5;color:#434a46}
-    .mirror-arrow{display:grid;place-items:center;font-size:1rem;font-weight:900;color:#789481}
+    .stem-walk-card{padding:7px 6px}
+    .stem-walk-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:14px 12px;border-radius:13px}
+    .stem-walk-row:hover{background:#fbfcf9}
+    .stem-walk-row+.stem-walk-row{border-top:1px dashed var(--line)}
+    .stem-walk-kicker{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .stem-walk-kind{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#316346;font-size:.64rem;font-weight:900;letter-spacing:.04em}
+    .stem-walk-date{font-size:.63rem;font-weight:720;color:var(--muted);white-space:nowrap}
+    .stem-walk-branch{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);align-items:center;gap:7px}
+    .stem-walk-frag{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:9px 10px;border:1px solid #e2e5dc;border-radius:11px;background:#fffefa;font-family:var(--serif);font-size:.78rem;line-height:1.5;color:#434a46}
+    .stem-walk-arrow{display:grid;place-items:center;font-size:1rem;font-weight:900;color:#789481}
+    .stem-walk-cta{display:block;margin-top:9px;text-align:right;font-size:.64rem;font-weight:850;color:#668771}
 
     /* GARDEN v34 · 발견 → 연결 → 계속 이어가기 */
     .garden-discovery-modal{max-width:720px}
@@ -631,7 +628,7 @@
     .garden-discovery-next b{display:block;font-size:.78rem;color:#41614c;margin-bottom:8px}
     .garden-discovery-empty{padding:14px 4px 4px;text-align:center;color:var(--muted);font-size:.74rem;line-height:1.55}
     @media(max-width:560px){
-      .mirror-branch{grid-template-columns:1fr;gap:5px}.mirror-arrow{height:18px}.mirror-arrow:after{content:"↓"}.mirror-arrow{font-size:0}
+      .stem-walk-branch{grid-template-columns:1fr;gap:5px}.stem-walk-arrow{height:18px}.stem-walk-arrow:after{content:"↓"}.stem-walk-arrow{font-size:0}
       .garden-discovery-actions{grid-template-columns:1fr}.garden-discovery-find{grid-column:auto}
       .garden-discovery-candidate{grid-template-columns:1fr}.garden-discovery-candidate .btn{width:100%}
     }
@@ -711,7 +708,7 @@
     .thread-index-title{color:#285f3f;font-weight:850}
     .thread-index-sub{color:#748279}
     .thread-index-count{display:grid;place-items:center;min-width:38px;height:38px;padding:0 8px;border-radius:999px;background:linear-gradient(145deg,#eff7f0,#dcecdf);color:#2f6b48;border:1px solid #c9dfce;font-size:.95rem}
-    /* GARDEN · 찾기 → 최근 흐름 → 이름 없는 줄기 → 주간 발견 순서 */
+    /* GARDEN · 찾기 → 최근 흐름 → 이름 없는 줄기 → 줄기찾기 산책 */
     .garden-page-head{align-items:center;margin-bottom:13px}
     .garden-page-head h2{font-size:1.2rem}
     .garden-search-row{margin-bottom:20px}
@@ -719,7 +716,9 @@
     .garden-recent-head h2{font-size:.93rem;font-weight:800;color:#4c5d52}
     .garden-summary{display:flex;align-items:center;justify-content:flex-end;min-height:24px;margin:0;color:var(--muted);font-size:.68rem;font-weight:750;white-space:nowrap}
     .garden-summary .status{padding:4px 8px;background:#f0f4ed;border-color:#e0e7dd;color:#6b776e}
-    .garden-weekly-section{margin:30px 0 4px;padding-top:23px;border-top:1px dashed var(--line)}
+    .garden-stemwalk-section{margin:30px 0 4px;padding-top:23px;border-top:1px dashed var(--line)}
+    .garden-stemwalk-section .section-head{margin-bottom:10px}
+    .garden-stemwalk-section .section-head p{margin-top:4px;font-size:.7rem;line-height:1.45;color:var(--muted)}
     .thread-unlinked-summary{display:flex;width:100%;align-items:center;justify-content:space-between;gap:14px;border:1px solid #c9dccd;background:linear-gradient(145deg,#f7fbf7,#eef6ef);border-radius:16px;padding:14px 15px;margin-top:17px;color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 5px 16px rgba(59,94,70,.06);transition:.14s}
     .thread-unlinked-summary:hover{transform:translateY(-1px);border-color:#aecaB5;background:linear-gradient(145deg,#f4faf5,#e8f3eb)}
     .thread-unlinked-copy{display:flex;align-items:center;gap:11px;min-width:0}
@@ -917,7 +916,7 @@
 
   <section class="view" data-view="home">
     <div class="section-head home-dashboard-head home-lounge-head">
-      <div><h2>🛋️ 생각의 라운지</h2></div>
+      <div><h2>🛋️ 생각의 라운지</h2><p>지난 생각을 다시 만나고, 새로운 연결을 발견하는 곳.</p></div>
     </div>
 
     <div class="section home-lounge-feature">
@@ -995,8 +994,6 @@
         </select>
         <select class="select" id="fragLens">
           <option value="all">전체 표시</option>
-          <option value="stem">🌿 생각 줄기 있음</option>
-          <option value="solo">○ 생각 줄기 없음</option>
           <option value="question">❓ 질문</option>
           <option value="decision">⚖️ 결정</option>
           <option value="desire">🧭 욕망</option>
@@ -1012,7 +1009,7 @@
 
   <section class="view" data-view="garden">
     <div id="gardenIndex">
-      <div class="section-head garden-page-head"><div><h2>🌱 Garden</h2></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
+      <div class="section-head garden-page-head"><div><h2>🌱 Garden</h2><p>이어진 생각을 발견하고, 흐름으로 키워가는 곳.</p></div><button class="btn soft" id="newThread" type="button">+ Thread</button></div>
 
       <div class="search-row garden-search-row"><input class="input" id="gardenSearch" placeholder="Thread 검색" /></div>
 
@@ -1030,11 +1027,11 @@
         <span class="thread-unlinked-right"><b id="gardenUnnamedStemCount">0줄기</b><span class="thread-unlinked-arrow">›</span></span>
       </button>
 
-      <div class="section hidden garden-weekly-section" id="weeklyMirrorSection">
+      <div class="section hidden garden-stemwalk-section" id="stemWalkSection">
         <div class="section-head compact-head">
-          <div><h2>🌿 이번 주 텃밭</h2></div>
+          <div><h2>🌿 줄기찾기 산책</h2><p>이어진 생각 사이를 걸으며 다음 연결을 찾아봅니다.</p></div>
         </div>
-        <div id="weeklyMirror"></div>
+        <div id="stemWalk"></div>
       </div>
     </div>
     <div id="threadDetail" class="hidden"></div>
@@ -1042,7 +1039,7 @@
 
   <section class="view" data-view="studio">
     <div id="studioIndex">
-      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각과 재료를 한 편의 글로 완성하고, 끝낸 글은 나만의 글방에 쌓아둡니다.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
+      <div class="section-head"><div><h2>🏭 Studio</h2><p>생각을 한 편의 글로 키우는 작업대.</p></div><button class="btn soft" id="newProject" type="button">+ 프로젝트</button></div>
       <div id="projectList"></div>
     </div>
     <div id="projectDetail" class="hidden"></div>
@@ -2788,9 +2785,7 @@ function renderFragments(){
   else if(srcSel!=="all")list=list.filter(f=>{const s=state.sources.find(x=>x.id===f.sourceId);return s&&srcType(s)===srcSel});
   // 표시 방식 · 렌즈 · 중요
   const lensSel=$("fragLens")?.value||"all";
-  if(lensSel==="stem")list=list.filter(thoughtHasStemLink);
-  else if(lensSel==="solo")list=list.filter(f=>!thoughtHasStemLink(f));
-  else if(lensSel!=="all")list=list.filter(f=>effectiveLens(f)===lensSel);
+  if(lensSel!=="all")list=list.filter(f=>effectiveLens(f)===lensSel);
   if(state.fragStarOnly)list=list.filter(f=>f.starred);
   // 검색
   if(ql)list=list.filter(f=>[f.thought,f.text,f.externalText,f.context,f.locator,(state.sources.find(s=>s.id===f.sourceId)||{}).title].filter(Boolean).join(" ").toLowerCase().includes(ql));
@@ -3080,40 +3075,37 @@ function renderHome(){
   renderResurface();
   renderBetweenThoughts();
 }
-/* Garden의 이번 주 텃밭 — 회고 문구보다 연결할 재료가 먼저 보이게 한다. */
-function renderWeeklyMirror(){
-  const sec=$("weeklyMirrorSection"),box=$("weeklyMirror");if(!sec||!box)return;
-  const rows=[];
-  const recent=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)<=6);
-
-  let best=null,bestN=0;
-  for(const t of state.threads){
-    const n=recent.filter(f=>(f.threadIds||[]).includes(t.id)).length;
-    if(n>bestN){best=t;bestN=n}
-  }
-  if(best&&bestN>=2){
-    rows.push(`<button class="mirror-row" data-open-thread="${best.id}" type="button">
-      <span class="mirror-kicker"><span class="mirror-kind">🌿 THREAD</span><span class="mirror-caption">이번 주 가장 많이 자란 흐름</span></span>
-      <span class="mirror-title-line"><span class="mirror-title">${esc(best.title)}</span><span class="mirror-growth">+${bestN}</span></span>
-    </button>`);
-  }
-
-  const branchCandidates=recent.filter(f=>(f.continuedFrom||[]).length).sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")));
-  const child=branchCandidates[0];
-  if(child){
-    const parent=(child.continuedFrom||[]).map(id=>state.fragments.find(f=>f.id===id)).find(Boolean);
-    if(parent){
-      const pt=(parent.thought||parent.text||parent.externalText||"").trim();
-      const ct=(child.thought||child.text||child.externalText||"").trim();
-      rows.push(`<button class="mirror-row" data-open-garden-discovery="${parent.id}" data-discovery-child="${child.id}" type="button">
-        <span class="mirror-kicker"><span class="mirror-kind">🌱 생각의 줄기</span><span class="mirror-caption">이번 주 새로 이어진 생각</span></span>
-        <span class="mirror-branch"><span class="mirror-frag">“${esc(pt.slice(0,58))}${pt.length>58?"…":""}”</span><span class="mirror-arrow">→</span><span class="mirror-frag">“${esc(ct.slice(0,58))}${ct.length>58?"…":""}”</span></span>
-      </button>`);
+/* Garden · 줄기찾기 산책 — 이미 이어진 생각 두 조각에서 다음 연결을 발견한다. */
+function stemWalkHash(text){
+  let h=2166136261;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0;
+}
+function renderStemWalk(){
+  const sec=$("stemWalkSection"),box=$("stemWalk");if(!sec||!box)return;
+  const byId=new Map(state.fragments.map(f=>[f.id,f]));
+  const seen=new Set(),edges=[];
+  for(const child of state.fragments){
+    for(const pid of (child.continuedFrom||[])){
+      const parent=byId.get(pid);if(!parent||parent.id===child.id)continue;
+      const key=`${parent.id}>${child.id}`;if(seen.has(key))continue;seen.add(key);
+      edges.push({parent,child,key,date:(child.date||child.createdAt||parent.date||parent.createdAt||"").slice(0,10)});
     }
   }
+  if(!edges.length){sec.classList.add("hidden");box.innerHTML="";return}
 
-  if(!rows.length){sec.classList.add("hidden");box.innerHTML="";return}
-  sec.classList.remove("hidden");box.innerHTML=`<div class="card mirror-card">${rows.join("")}</div>`;
+  // 같은 줄기만 늘 위에 뜨지 않도록, 날짜별로 전체 줄기에서 가볍게 산책 후보를 바꾼다.
+  const dayKey=today();
+  edges.sort((a,b)=>stemWalkHash(`${dayKey}|${a.key}`)-stemWalkHash(`${dayKey}|${b.key}`));
+  const picked=edges.slice(0,Math.min(2,edges.length));
+  const rows=picked.map(({parent,child,date})=>{
+    const pt=(parent.thought||parent.text||parent.externalText||"").trim();
+    const ct=(child.thought||child.text||child.externalText||"").trim();
+    return `<button class="stem-walk-row" data-open-garden-discovery="${parent.id}" data-discovery-child="${child.id}" type="button">
+      <span class="stem-walk-kicker"><span class="stem-walk-kind">🌱 생각의 줄기</span><span class="stem-walk-date">${date?esc(fmt(date)):""}</span></span>
+      <span class="stem-walk-branch"><span class="stem-walk-frag">“${esc(pt.slice(0,58))}${pt.length>58?"…":""}”</span><span class="stem-walk-arrow">→</span><span class="stem-walk-frag">“${esc(ct.slice(0,58))}${ct.length>58?"…":""}”</span></span>
+      <span class="stem-walk-cta">이어서 걸어보기 ›</span>
+    </button>`;
+  });
+  sec.classList.remove("hidden");box.innerHTML=`<div class="card stem-walk-card">${rows.join("")}</div>`;
 }
 
 function gardenDiscoveryFragmentHTML(f,{current=false}={}){
@@ -3325,7 +3317,7 @@ function nameUnnamedStem(){
 }
 
 function renderGarden(){
-  renderWeeklyMirror();
+  renderStemWalk();
   const q=$("gardenSearch").value.trim().toLowerCase();
   if(state.gardenThreadLimit==null)state.gardenThreadLimit=8;
 
