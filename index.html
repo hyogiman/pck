@@ -234,7 +234,17 @@
     .home-overview-shell .recent-summary-item{background:transparent;box-shadow:none;border-radius:12px;padding:10px 11px;min-width:0}
     .home-overview-shell .recent-summary-item+.recent-summary-item{border-left:1px solid var(--line)}
     .home-overview-shell .recent-summary-item:hover{background:#f7f8f3}
-    .home-overview-shell .recent-summary-item small{font-size:.67rem;line-height:1.35;min-height:1.8em}
+    .home-overview-shell .recent-summary-item small{font-size:.67rem;line-height:1.35;min-height:1.35em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .home-overview-shell .recent-summary-item strong{display:block;margin-top:4px;line-height:1.05}
+    .home-overview-shell .recent-summary-item>span{display:block;margin:3px 0 0;font-size:.62rem}
+    .between-thread-handoff{margin-top:6px;padding:16px;border:1px solid #d6e5d9;border-radius:18px;background:linear-gradient(180deg,#f8fbf7,#f0f7f1)}
+    .between-thread-handoff h3{margin:0;font-family:var(--serif);font-size:1.06rem;line-height:1.42;color:#294434;letter-spacing:-.025em}
+    .between-thread-handoff p{margin:7px 0 0;font-size:.78rem;line-height:1.55;color:var(--muted)}
+    .between-thread-chain{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:7px;margin:14px 0 2px}
+    .between-thread-node{min-width:0;padding:9px 10px;border:1px solid #dfe8e0;border-radius:12px;background:#fff}
+    .between-thread-node small{display:block;margin-bottom:4px;font-size:.59rem;font-weight:850;letter-spacing:.04em;color:#799082}
+    .between-thread-node span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-family:var(--serif);font-size:.73rem;line-height:1.42;color:#38443d}
+    .between-thread-arrow{color:#86a08d;font-size:.88rem;font-weight:900}
     .home-total-strip{display:flex;align-items:center;justify-content:flex-start;gap:7px;flex-wrap:wrap;margin-top:7px;padding:10px 5px 2px;border-top:1px dashed var(--line);color:var(--muted)}
     .home-total-label{font-size:.63rem;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:#8b9189;margin-right:2px}
     .home-total-link{border:0;background:transparent;padding:4px 2px;color:var(--muted);font:inherit;cursor:pointer;display:inline-flex;align-items:baseline;gap:3px;border-radius:7px}
@@ -256,10 +266,14 @@
       .between-thought-actions .btn.primary{min-width:0;width:100%}
       .home-overview-section{margin-top:28px}
       .home-overview-shell{padding:8px 8px 7px}
-      .home-overview-shell .recent-summary-item{padding:9px 7px}
-      .home-overview-shell .recent-summary-item small{font-size:.62rem}
-      .home-overview-shell .recent-summary-item strong{font-size:1.2rem}
-      .home-overview-shell .recent-summary-item>span{font-size:.61rem;margin-left:2px}
+      .home-overview-shell .recent-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .home-overview-shell .recent-summary-item{padding:9px 7px;text-align:center}
+      .home-overview-shell .recent-summary-item small{font-size:.6rem;min-height:0}
+      .home-overview-shell .recent-summary-item strong{font-size:1.16rem;margin-top:5px}
+      .home-overview-shell .recent-summary-item>span{font-size:.58rem;margin:3px 0 0}
+      .between-thread-chain{grid-template-columns:1fr;gap:5px}
+      .between-thread-arrow{transform:rotate(90deg);justify-self:center;line-height:.7}
+      .between-thread-node{padding:8px 10px}
       .home-total-strip{gap:5px;padding-left:3px;padding-right:3px}
       .home-total-link span{font-size:.62rem}
       .home-total-link b{font-size:.76rem}
@@ -572,18 +586,54 @@
     .lens-chip{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 13px;font-size:.78rem;font-weight:700;cursor:pointer;color:#4a4f44;transition:.12s}
     .lens-chip.on{background:var(--accent2);border-color:#bcd3c1;color:var(--accent)}
     .lens-badge{font-size:.66rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:2px 8px;font-weight:700;flex:0 0 auto}
-    .mirror-card{padding:8px 6px}
-    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:13px 12px;border-radius:13px}
+    .mirror-card{padding:7px 6px}
+    .mirror-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:14px 12px;border-radius:13px}
     .mirror-row:hover{background:#fbfcf9}
     .mirror-row+.mirror-row{border-top:1px dashed var(--line)}
-    .mirror-kicker{display:flex;align-items:center;gap:7px;margin-bottom:7px;flex-wrap:wrap}
+    .mirror-kicker{display:flex;align-items:center;gap:7px;margin-bottom:8px;flex-wrap:wrap}
     .mirror-kind{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef5ef;color:#316346;font-size:.64rem;font-weight:900;letter-spacing:.06em}
-    .mirror-caption{font-size:.7rem;font-weight:750;color:var(--muted)}
-    .mirror-title{display:block;font-size:1rem;line-height:1.5;color:#242c28;font-weight:760;letter-spacing:-.02em}
-    .mirror-note{display:block;margin-top:6px;font-size:.79rem;line-height:1.45;color:#727975}
-    .mirror-branch{display:grid;gap:7px;margin-top:2px}
-    .mirror-frag{display:block;font-size:.9rem;line-height:1.5;color:#3b423f}
-    .mirror-arrow{font-size:.74rem;font-weight:850;color:var(--seal);letter-spacing:.04em}
+    .mirror-caption{font-size:.7rem;font-weight:760;color:var(--muted)}
+    .mirror-title-line{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .mirror-title{display:block;min-width:0;font-size:1rem;line-height:1.5;color:#242c28;font-weight:820;letter-spacing:-.025em}
+    .mirror-growth{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;min-width:40px;padding:5px 9px;border-radius:999px;background:#edf5ee;border:1px solid #d4e4d7;color:#37694a;font-size:.68rem;font-weight:900}
+    .mirror-branch{display:grid;grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);align-items:center;gap:7px;margin-top:2px}
+    .mirror-frag{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:9px 10px;border:1px solid #e2e5dc;border-radius:11px;background:#fffefa;font-family:var(--serif);font-size:.78rem;line-height:1.5;color:#434a46}
+    .mirror-arrow{display:grid;place-items:center;font-size:1rem;font-weight:900;color:#789481}
+
+    /* GARDEN v34 · 발견 → 연결 → 계속 이어가기 */
+    .garden-discovery-modal{max-width:720px}
+    .garden-discovery-chain{display:grid;gap:0;margin-top:4px}
+    .garden-discovery-node{width:100%;border:1px solid #dfe3da;background:#fffefa;border-radius:15px;padding:14px 15px;text-align:left;cursor:pointer;box-shadow:0 3px 12px rgba(46,67,51,.035);transition:.14s}
+    .garden-discovery-node:hover{border-color:#bfd4c4;background:#fbfdf9}
+    .garden-discovery-node.current{border-color:#8eb59a;background:linear-gradient(145deg,#fffefa,#f2f8f3)}
+    .garden-discovery-node-head{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:8px}
+    .garden-discovery-node-date{font-size:.64rem;font-weight:850;color:#7a877d}
+    .garden-discovery-node-edit{font-size:.62rem;font-weight:850;color:#6b8a74}
+    .garden-discovery-quote{margin:0 0 9px;padding:9px 10px;border-left:2px solid #a9c8b1;background:#f7f8f3;font-family:var(--serif);font-size:.76rem;line-height:1.55;color:#5f665e}
+    .garden-discovery-text{font-family:var(--serif);font-size:.94rem;line-height:1.68;color:#2e3531;white-space:pre-wrap}
+    .garden-discovery-context{margin-top:9px;color:var(--muted);font-size:.74rem;line-height:1.55}
+    .garden-discovery-connector{display:grid;place-items:center;height:30px;color:#7d9b85;font-size:1rem;font-weight:900}
+    .garden-discovery-connector:before{content:"↓"}
+    .garden-discovery-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:17px;padding-top:15px;border-top:1px dashed var(--line)}
+    .garden-discovery-find{grid-column:1/-1}
+    .garden-discovery-candidates{margin-top:14px;padding:14px;border:1px solid #d8e5da;border-radius:16px;background:#f7faf6}
+    .garden-discovery-candidates-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .garden-discovery-candidates-head strong{font-size:.82rem;color:#365843}
+    .garden-discovery-candidates-head small{font-size:.62rem;color:var(--muted)}
+    .garden-discovery-candidate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:11px;align-items:center;padding:11px 0;border-top:1px solid #e2e8e0}
+    .garden-discovery-candidate:first-of-type{border-top:0}
+    .garden-discovery-candidate-main{min-width:0}
+    .garden-discovery-candidate-meta{display:block;margin-bottom:4px;font-size:.61rem;font-weight:800;color:#7a877e}
+    .garden-discovery-candidate-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--serif);font-size:.82rem;line-height:1.5;color:#353d38}
+    .garden-discovery-candidate .btn{white-space:nowrap;padding:8px 11px;font-size:.69rem}
+    .garden-discovery-next{margin-top:14px;padding:13px 14px;border:1px solid #d5e4d8;border-radius:14px;background:linear-gradient(145deg,#f9fcf8,#eef6ef);text-align:center}
+    .garden-discovery-next b{display:block;font-size:.78rem;color:#41614c;margin-bottom:8px}
+    .garden-discovery-empty{padding:14px 4px 4px;text-align:center;color:var(--muted);font-size:.74rem;line-height:1.55}
+    @media(max-width:560px){
+      .mirror-branch{grid-template-columns:1fr;gap:5px}.mirror-arrow{height:18px}.mirror-arrow:after{content:"↓"}.mirror-arrow{font-size:0}
+      .garden-discovery-actions{grid-template-columns:1fr}.garden-discovery-find{grid-column:auto}
+      .garden-discovery-candidate{grid-template-columns:1fr}.garden-discovery-candidate .btn{width:100%}
+    }
     .related-box{margin-top:16px;padding-top:14px;border-top:1px dashed var(--line)}
     .related-box .rt-label{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:var(--seal);text-transform:uppercase}
     .related-item{display:block;width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer}
@@ -802,7 +852,7 @@
       .dashboard-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
       .nav-sheet-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
       .danger-grid{grid-template-columns:1fr}
-      .recent-summary-grid{grid-template-columns:1fr}
+      .recent-summary-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
       .library-grid,.studio-layout{grid-template-columns:1fr}
       .material-pool{position:static}
       .source-card{grid-template-columns:60px 1fr}
@@ -986,7 +1036,7 @@
   <div class="nav-sheet-handle"></div>
   <div class="nav-sheet-grid">
     <button class="sheet-nav active" data-view-target="capture" type="button"><span>✍️</span><b>기록</b></button>
-    <button class="sheet-nav" data-view-target="home" type="button"><span>🏠</span><b>Home</b></button>
+    <button class="sheet-nav" data-view-target="home" type="button"><span>🛋️</span><b>라운지</b></button>
     <button class="sheet-nav" data-view-target="fragments" type="button"><span>💭</span><b>생각 조각</b></button>
     <button class="sheet-nav" data-view-target="library" type="button"><span>📚</span><b>Library</b></button>
     <button class="sheet-nav" data-view-target="garden" type="button"><span>🌱</span><b>Garden</b></button>
@@ -1249,6 +1299,22 @@
   </div>
 </dialog>
 
+<dialog id="gardenDiscoveryDialog">
+  <div class="modal garden-discovery-modal">
+    <div class="modal-head">
+      <div><div class="eyebrow">GARDEN DISCOVERY</div><h2>생각의 줄기</h2><p class="helper" id="gardenDiscoverySummary">이어진 생각을 따라가 봅니다.</p></div>
+      <button class="close-btn" data-close="gardenDiscoveryDialog" type="button">✕</button>
+    </div>
+    <div id="gardenDiscoveryChain"></div>
+    <div id="gardenDiscoveryCandidates"></div>
+    <div class="garden-discovery-actions">
+      <button class="btn garden-discovery-find" id="gardenDiscoveryFind" type="button">＋ 덧붙일 생각 찾기</button>
+      <button class="btn" id="gardenDiscoveryStop" type="button">여기서 멈추기</button>
+      <button class="btn primary" id="gardenDiscoveryThread" type="button">🌱 Thread 연결</button>
+    </div>
+  </div>
+</dialog>
+
 <dialog id="relatedPreviewDialog">
   <div class="modal">
     <div class="modal-head"><div><div class="eyebrow" id="relatedPreviewEyebrow">RELATED THOUGHT</div><h2 id="relatedPreviewTitle">연관된 생각</h2></div><button class="close-btn" data-close="relatedPreviewDialog" type="button">✕</button></div>
@@ -1272,7 +1338,7 @@
 
 <dialog id="linkDialog">
   <div class="modal">
-    <div class="modal-head"><div><div class="eyebrow">CONNECT</div><h2>이 조각을 어디에 연결할까요?</h2></div><button class="close-btn" data-close="linkDialog" type="button">✕</button></div>
+    <div class="modal-head"><div><div class="eyebrow">CONNECT</div><h2 id="linkDialogTitle">이 조각을 어디에 연결할까요?</h2></div><button class="close-btn" data-close="linkDialog" type="button">✕</button></div>
     <input id="linkFragmentId" type="hidden" />
     <div class="link-top">
       <input class="input" id="linkThreadSearch" placeholder="Thread 검색" autocomplete="off" />
@@ -1474,7 +1540,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v31 · AI-curated Between Thoughts + source-aware questions */
+/* Thought Garden v35 · Between→Thread handoff + Compact Lounge + Garden Discovery */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -1488,11 +1554,12 @@ const DEFAULT_FIREBASE_CONFIG={
   appId:"1:894399979515:web:834a298e37ef05dbd0f55e"
 };
 const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"capture",openSourceId:null,openThreadId:null,openProjectId:null,resurfaceId:null,
-  gardenUnlinked:false,pendingLinkFragmentId:null,pendingSourceLinkFragmentId:null,
+  gardenUnlinked:false,pendingLinkFragmentId:null,pendingLinkFragmentIds:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
   aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
+  gardenDiscovery:{chain:[],loading:false},
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
@@ -2931,11 +2998,21 @@ async function openBetweenThoughtsQuestion(){
 async function saveBetweenThoughtsAnswer(){
   const bt=state.betweenThoughts,item=currentBetweenThoughtItem(),answer=($("betweenThoughtsAnswer")?.value||"").trim();if(!answer)return toast("떠오른 생각을 먼저 적어주세요.");
   const ids=(item?.fragmentIds||[]).filter(id=>state.fragments.some(f=>f.id===id));if(ids.length!==2||!item?.question)return toast("연결할 두 생각을 찾지 못했어요.");
+  const sourcePair=ids.map(id=>state.fragments.find(x=>x.id===id)).filter(Boolean);
   const createdAt=new Date().toISOString();
   const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🌿 두 생각 사이\nQ. ${item.question}`,continuedFrom:[...new Set(ids)],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,betweenThoughtsSourceIds:[...new Set(ids)],betweenThoughtsQuestion:item.question,betweenThoughtsAnsweredAt:createdAt,betweenThoughtsModel:bt.model||"",betweenThoughtsBridgeType:item.bridgeType||"",betweenThoughtsCurationId:bt.curationId||""};
-  state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);$("betweenThoughtsDialog").close();
+  state.fragments.unshift(f);await persist("fragments",f);requestFragmentEmbedding(f.id);
   if(bt.index<bt.items.length-1){bt.index++;bt.noPair=false}else{bt.items=[];bt.index=0;bt.noPair=true}
-  bt.candidateSignature=betweenThoughtCandidateSignature();bt.expanded={};renderAll();toast("두 생각 사이에서 나온 생각을 새 조각으로 남겼어요. 🌿");
+  bt.candidateSignature=betweenThoughtCandidateSignature();bt.expanded={};renderAll();
+
+  // 답은 이미 안전하게 저장됐다. Thread 연결은 그 다음의 선택일 뿐이다.
+  const chain=[...sourcePair,f];
+  const node=(x,label)=>`<div class="between-thread-node"><small>${label}</small><span>${esc(betweenThoughtExcerpt(x,78))}</span></div>`;
+  $("betweenThoughtsDialogTitle").textContent="🌱 이 흐름을 Thread로 이어볼까요?";
+  $("betweenThoughtsDialogBody").innerHTML=`<div class="between-thread-handoff"><h3>두 생각 사이에서 나온 답까지, 세 조각이 하나의 흐름이 됐어요.</h3><p>지금 묶어두고 싶다면 기존 Thread에 넣거나, 이 세 생각으로 새 Thread를 만들 수 있어요. 그냥 두어도 괜찮습니다.</p><div class="between-thread-chain">${node(chain[0],"생각 A")}<span class="between-thread-arrow">→</span>${node(chain[1],"생각 B")}<span class="between-thread-arrow">→</span>${node(chain[2],"새로 나온 생각")}</div></div>`;
+  $("betweenThoughtsDialogActions").innerHTML=`<button class="btn" id="betweenThreadSkip" type="button">이대로 둘게요</button><button class="btn primary" id="betweenThreadContinue" type="button">🌱 Thread로 이어보기</button>`;
+  $("betweenThreadSkip").onclick=()=>{$("betweenThoughtsDialog").close();toast("새 생각은 그대로 잘 남겨뒀어요. 🌿")};
+  $("betweenThreadContinue").onclick=()=>{$("betweenThoughtsDialog").close();openLinkDialogForFragments(chain.map(x=>x.id))};
 }
 
 function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();if($("trashDialog")?.open)renderTrash();renderSpark();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
@@ -2956,9 +3033,9 @@ function renderHome(){
   const freeRecent=recent.filter(f=>!f.sourceId).length;
   const linkedRecent=recent.filter(f=>(f.threadIds||[]).length).length;
   $("homeRecentSummary").innerHTML=`<div class="recent-summary-grid">
-    <button class="recent-summary-item" data-recent="all" type="button"><small>최근 7일 생각</small><strong>${recent.length}</strong><span>조각</span></button>
-    <button class="recent-summary-item" data-recent="source" type="button"><small>Library에서</small><strong>${sourceRecent}</strong><span>조각</span></button>
-    <button class="recent-summary-item" data-recent="thread" type="button"><small>Thread로 이어짐</small><strong>${linkedRecent}</strong><span>조각</span></button>
+    <button class="recent-summary-item" data-recent="all" type="button"><small>최근 7일</small><strong>${recent.length}</strong><span>생각</span></button>
+    <button class="recent-summary-item" data-recent="source" type="button"><small>Library</small><strong>${sourceRecent}</strong><span>생각</span></button>
+    <button class="recent-summary-item" data-recent="thread" type="button"><small>Thread</small><strong>${linkedRecent}</strong><span>이어짐</span></button>
   </div>`;
   const working=state.projects.filter(p=>p.status!=="published");
   const published=state.projects.filter(p=>p.status==="published").length;
@@ -2968,58 +3045,106 @@ function renderHome(){
   renderResurface();
   renderBetweenThoughts();
 }
-/* Garden의 이번 주 텃밭 — 억지로 세 칸을 채우지 않는다.
-   이번 주에 실제로 생긴 구조적 성장만 보여준다:
-   1) 가장 많이 자란 Thread
-   2) 새로 생긴 생각의 줄기(parent → child)
-   둘 다 없으면 섹션 자체를 숨긴다. */
+/* Garden의 이번 주 텃밭 — 회고 문구보다 연결할 재료가 먼저 보이게 한다. */
 function renderWeeklyMirror(){
   const sec=$("weeklyMirrorSection"),box=$("weeklyMirror");if(!sec||!box)return;
   const rows=[];
   const recent=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)<=6);
 
-  // ① 이번 주 가장 많이 자란 Thread — Thread임을 명확하게 표시한다.
   let best=null,bestN=0;
   for(const t of state.threads){
     const n=recent.filter(f=>(f.threadIds||[]).includes(t.id)).length;
     if(n>bestN){best=t;bestN=n}
   }
   if(best&&bestN>=2){
-    const latest=recent
-      .filter(f=>(f.threadIds||[]).includes(best.id))
-      .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")))[0];
     rows.push(`<button class="mirror-row" data-open-thread="${best.id}" type="button">
       <span class="mirror-kicker"><span class="mirror-kind">🌿 THREAD</span><span class="mirror-caption">이번 주 가장 많이 자란 흐름</span></span>
-      <span class="mirror-title">${esc(best.title)}</span>
-      <span class="mirror-note">이번 주 ${bestN}개의 생각이 이 흐름에 이어졌어요.${latest?` · 최근 조각 “${esc((latest.thought||latest.text||"").slice(0,42))}${(latest.thought||latest.text||"").length>42?"…":""}”`:""}</span>
+      <span class="mirror-title-line"><span class="mirror-title">${esc(best.title)}</span><span class="mirror-growth">+${bestN}</span></span>
     </button>`);
   }
 
-  // ② 이번 주 새로 생긴 생각의 줄기 — 질문/랜덤 문장이 아니라 실제 연결 관계를 보여준다.
-  const branchCandidates=recent
-    .filter(f=>(f.continuedFrom||[]).length)
-    .sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")));
+  const branchCandidates=recent.filter(f=>(f.continuedFrom||[]).length).sort((a,b)=>String(b.date||b.createdAt||"").localeCompare(String(a.date||a.createdAt||"")));
   const child=branchCandidates[0];
   if(child){
     const parent=(child.continuedFrom||[]).map(id=>state.fragments.find(f=>f.id===id)).find(Boolean);
     if(parent){
-      const pt=(parent.thought||parent.text||"").trim();
-      const ct=(child.thought||child.text||"").trim();
-      rows.push(`<button class="mirror-row" data-open-frag-mirror="${child.id}" type="button">
+      const pt=(parent.thought||parent.text||parent.externalText||"").trim();
+      const ct=(child.thought||child.text||child.externalText||"").trim();
+      rows.push(`<button class="mirror-row" data-open-garden-discovery="${parent.id}" data-discovery-child="${child.id}" type="button">
         <span class="mirror-kicker"><span class="mirror-kind">🌱 생각의 줄기</span><span class="mirror-caption">이번 주 새로 이어진 생각</span></span>
-        <span class="mirror-branch">
-          <span class="mirror-frag">“${esc(pt.slice(0,64))}${pt.length>64?"…":""}”</span>
-          <span class="mirror-arrow">↓ 여기서 이어져</span>
-          <span class="mirror-frag">“${esc(ct.slice(0,72))}${ct.length>72?"…":""}”</span>
-        </span>
+        <span class="mirror-branch"><span class="mirror-frag">“${esc(pt.slice(0,58))}${pt.length>58?"…":""}”</span><span class="mirror-arrow">→</span><span class="mirror-frag">“${esc(ct.slice(0,58))}${ct.length>58?"…":""}”</span></span>
       </button>`);
     }
   }
 
   if(!rows.length){sec.classList.add("hidden");box.innerHTML="";return}
-  sec.classList.remove("hidden");
-  box.innerHTML=`<div class="card mirror-card">${rows.join("")}</div>`;
+  sec.classList.remove("hidden");box.innerHTML=`<div class="card mirror-card">${rows.join("")}</div>`;
 }
+
+function gardenDiscoveryFragmentHTML(f,{current=false}={}){
+  if(!f)return "";
+  const src=f.sourceId?state.sources.find(x=>x.id===f.sourceId):null;
+  const text=(f.thought||f.text||"").trim();
+  return `<article class="garden-discovery-node ${current?"current":""}" data-edit-discovery-frag="${f.id}" role="button" tabindex="0">
+    <span class="garden-discovery-node-head"><span class="garden-discovery-node-date">${esc(fmt((f.date||f.createdAt||"").slice(0,10)))}</span><span class="garden-discovery-node-edit">눌러서 수정</span></span>
+    ${f.externalText?`<blockquote class="garden-discovery-quote">${esc(f.externalText)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${f.betweenThoughtsQuestion?`<div class="between-card-question"><span class="between-card-question-label">🌿 두 생각 사이의 질문</span>${esc(f.betweenThoughtsQuestion)}</div>`:f.bloomingInterviewQuestion?`<div class="interview-card-question"><span class="interview-card-question-label">🎙️ 질문</span>${esc(f.bloomingInterviewQuestion)}</div>`:""}
+    ${text?`<div class="garden-discovery-text">${esc(text)}</div>`:`<div class="garden-discovery-text" style="color:var(--muted)">(내용 없음)</div>`}
+    ${!f.bloomingInterviewQuestion&&!f.betweenThoughtsQuestion&&f.context?`<div class="garden-discovery-context">${esc(f.context)}</div>`:""}
+    ${src?`<div class="note-chips" style="margin-top:10px"><span class="tag">${sourceIcon(src.type)} ${esc(src.title)}</span></div>`:""}
+  </article>`;
+}
+function renderGardenDiscovery(){
+  const fs=(state.gardenDiscovery.chain||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean),box=$("gardenDiscoveryChain");if(!box)return;
+  box.innerHTML=`<div class="garden-discovery-chain">${fs.map((f,i)=>`${i?'<div class="garden-discovery-connector"></div>':''}${gardenDiscoveryFragmentHTML(f,{current:i===fs.length-1})}`).join("")}</div>`;
+  $("gardenDiscoverySummary").textContent=fs.length>2?`${fs.length}개의 생각이 이어졌어요. 여기서 멈춰도, 한 조각 더 찾아도 됩니다.`:"두 생각 사이에서 다음 연결을 발견해봅니다.";
+  $("gardenDiscoveryFind").textContent=fs.length>2?"＋ 다음 생각 찾기":"＋ 덧붙일 생각 찾기";
+}
+function fragmentAncestorIds(startId){
+  const out=new Set(),stack=[startId];
+  while(stack.length){const id=stack.pop(),f=state.fragments.find(x=>x.id===id);if(!f)continue;for(const pid of (f.continuedFrom||[])){if(!out.has(pid)){out.add(pid);stack.push(pid)}}}
+  return out;
+}
+function openGardenDiscovery(parentId,childId){
+  const parent=state.fragments.find(f=>f.id===parentId),child=state.fragments.find(f=>f.id===childId);if(!parent||!child)return toast("이어진 생각을 찾지 못했습니다.");
+  state.gardenDiscovery={chain:[parent.id,child.id],loading:false};$("gardenDiscoveryCandidates").innerHTML="";renderGardenDiscovery();$("gardenDiscoveryDialog").showModal();
+  setTimeout(()=>{$("gardenDiscoveryDialog")?.querySelector(".modal")?.scrollTo?.(0,0)},0);
+}
+function localPairCandidates(a,b,max=3){
+  const merged=new Map();
+  for(const items of [relatedThoughts(a,8),relatedThoughts(b,8)])for(const {f,score} of items){const x=merged.get(f.id)||{f,scores:[]};x.scores.push(Number(score||0));merged.set(f.id,x)}
+  return [...merged.values()].map(x=>({f:x.f,score:(x.scores.reduce((p,c)=>p+c,0)/x.scores.length)+(x.scores.length>1?.08:0)})).sort((a,b)=>b.score-a.score).slice(0,max);
+}
+async function loadGardenDiscoveryCandidates(){
+  const ids=state.gardenDiscovery.chain||[];if(ids.length<2||state.gardenDiscovery.loading)return;
+  const a=state.fragments.find(f=>f.id===ids[ids.length-2]),b=state.fragments.find(f=>f.id===ids[ids.length-1]);if(!a||!b)return;
+  const box=$("gardenDiscoveryCandidates"),btn=$("gardenDiscoveryFind");state.gardenDiscovery.loading=true;btn.disabled=true;box.innerHTML=`<div class="garden-discovery-candidates">${aiRecommendWaitHTML()}</div>`;
+  const excluded=new Set([...ids,...thoughtStemComponent(b.id).map(f=>f.id),...fragmentAncestorIds(b.id)]);
+  try{
+    let combined=[];
+    if(state.firebase.connected&&state.firebase.user&&a.embeddingModel&&b.embeddingModel){
+      const [ra,rb]=await Promise.all([callFn("findRelatedFragments",{fragmentId:a.id}),callFn("findRelatedFragments",{fragmentId:b.id})]);
+      const map=new Map();
+      for(const [idx,res] of [[0,ra],[1,rb]])for(const item of (res?.items||[])){if(excluded.has(item.id))continue;const f=state.fragments.find(x=>x.id===item.id);if(!f)continue;const x=map.get(item.id)||{f,scores:[null,null]};x.scores[idx]=Number(item.score||Math.max(0,1-Number(item.distance||1)));map.set(item.id,x)}
+      combined=[...map.values()].map(x=>{const vals=x.scores.filter(Number.isFinite),both=vals.length===2,avg=vals.reduce((p,c)=>p+c,0)/Math.max(1,vals.length);return {f:x.f,score:avg+(both?.08:-.04)}}).sort((x,y)=>y.score-x.score).slice(0,3);
+    }
+    if(!combined.length)combined=localPairCandidates(a,b,8).filter(x=>!excluded.has(x.f.id)).slice(0,3);
+    renderGardenDiscoveryCandidates(combined);
+  }catch(e){console.warn("Garden discovery candidate search fallback",e?.code||e?.message||e);renderGardenDiscoveryCandidates(localPairCandidates(a,b,8).filter(x=>!excluded.has(x.f.id)).slice(0,3));}
+  finally{state.gardenDiscovery.loading=false;btn.disabled=false}
+}
+function renderGardenDiscoveryCandidates(items){
+  const box=$("gardenDiscoveryCandidates");if(!items.length){box.innerHTML=`<div class="garden-discovery-candidates"><div class="garden-discovery-empty">지금 두 생각과 자연스럽게 이어질 만한 다른 조각을 찾지 못했어요.<br>여기서 멈추는 것도 좋은 끝입니다.</div></div>`;return}
+  box.innerHTML=`<div class="garden-discovery-candidates"><div class="garden-discovery-candidates-head"><strong>닿아 있는 생각 ${items.length}개</strong><small>두 생각의 의미를 함께 봤어요</small></div>${items.map(({f})=>{const ago=daysAgo(f.date||f.createdAt),when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;return `<div class="garden-discovery-candidate"><div class="garden-discovery-candidate-main"><span class="garden-discovery-candidate-meta">${when}</span><span class="garden-discovery-candidate-text">${esc(f.thought||f.text||f.externalText||"")}</span></div><button class="btn soft" data-connect-discovery="${f.id}" type="button">연결하기</button></div>`}).join("")}</div>`;
+}
+async function connectGardenDiscovery(fid){
+  const chain=state.gardenDiscovery.chain||[],tailId=chain[chain.length-1],f=state.fragments.find(x=>x.id===fid);if(!f||!tailId)return;
+  if(fragmentAncestorIds(tailId).has(fid))return toast("이미 앞쪽에 있는 생각이라 다시 연결하지 않았어요.");
+  f.continuedFrom=[...new Set([...(f.continuedFrom||[]),tailId])];f.updatedAt=new Date().toISOString();await persist("fragments",f);
+  state.gardenDiscovery.chain=[...chain,f.id];$("gardenDiscoveryCandidates").innerHTML=`<div class="garden-discovery-next"><b>한 조각이 더 이어졌어요. 🌱</b><button class="btn soft" data-discovery-next type="button">한 조각 더 찾아보기</button></div>`;renderGardenDiscovery();renderGarden();toast("생각 하나를 더 이어두었습니다. 🌱");
+}
+function openGardenDiscoveryThreadLink(){const ids=(state.gardenDiscovery.chain||[]).filter(id=>state.fragments.some(f=>f.id===id));if(!ids.length)return;$("gardenDiscoveryDialog").close();openLinkDialogForFragments(ids)}
+
 function renderResurface(reshuffle){
   const c=state.fragments.filter(f=>daysAgo(f.date||f.createdAt)>=7);
   if(!c.length){$("resurfaceBox").innerHTML=empty("🕰","조금 더 쌓이면 돌아옵니다.","7일 이상 지난 생각을 다시 보여줄게요.");$("resurfaceNext")?.classList.add("hidden");return}
@@ -4283,14 +4408,11 @@ function openThreadDialog(t=null){$("threadId").value=t?.id||"";$("threadTitleIn
 async function saveThread(){
   const title=$("threadTitleInput").value.trim();if(!title)return toast("Thread 이름을 적어주세요.");const old=state.threads.find(t=>t.id===$("threadId").value);
   const t={id:old?.id||uid(),title,question:$("threadQuestion").value.trim(),createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()};
-  const pendingFid=(!old && state.pendingLinkFragmentId)?state.pendingLinkFragmentId:null;
-  state.pendingLinkFragmentId=null;                    // 대기 상태는 여기서 반드시 끝낸다
+  const pendingIds=!old?(state.pendingLinkFragmentIds?.length?state.pendingLinkFragmentIds.slice():(state.pendingLinkFragmentId?[state.pendingLinkFragmentId]:[])):[];
+  state.pendingLinkFragmentId=null;state.pendingLinkFragmentIds=null;
   state.threads=old?state.threads.map(x=>x.id===t.id?t:x):[t,...state.threads];await persist("threads",t);
-  if(pendingFid){
-    const f=state.fragments.find(x=>x.id===pendingFid);
-    if(f){f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f);await touchThreadActivity(t.id);}
-  }
-  $("threadDialog").close();renderAll();toast(old?"Thread를 수정했습니다.":"생각의 줄기를 만들었습니다. 🌱");
+  if(pendingIds.length){for(const fid of pendingIds){const f=state.fragments.find(x=>x.id===fid);if(!f)continue;f.threadIds=[...new Set([...(f.threadIds||[]),t.id])];f.updatedAt=new Date().toISOString();await persist("fragments",f)}await touchThreadActivity(t.id)}
+  $("threadDialog").close();renderAll();toast(old?"Thread를 수정했습니다.":pendingIds.length>1?`${pendingIds.length}개의 생각으로 Thread를 만들었습니다. 🌱`:"생각의 줄기를 만들었습니다. 🌱");
 }
 function renderLinkThreadList(){
   const q=($("linkThreadSearch")?.value||"").trim().toLowerCase();
@@ -4299,7 +4421,7 @@ function renderLinkThreadList(){
 
   // 사용자가 직접 검색하기 시작하면 AI 추천 영역은 잠시 숨긴다.
   const rec=$("linkThreadRecommend"),label=$("linkThreadAllLabel");
-  if(rec)rec.classList.toggle("hidden",!!q);
+  if(rec)rec.classList.toggle("hidden",!!q||!!state.pendingLinkFragmentIds?.length);
   if(label)label.textContent=q?"검색 결과":"전체 Thread";
 
   $("linkThreadList").innerHTML=ts.length
@@ -4369,23 +4491,13 @@ async function loadThreadMatchRecommendations(fid,attempt=0){
   }
 }
 function openLinkDialog(fid){
-  state.pendingLinkFragmentId=fid;
-  $("linkFragmentId").value=fid;
-  $("linkThreadSearch").value="";
-  delete state.threadMatchCache[fid]; // 열 때마다 현재 Thread 구성을 기준으로 다시 계산
-  renderLinkThreadList();
-  renderThreadMatchRecommendations(fid);
-  $("linkDialog").showModal();
-  loadThreadMatchRecommendations(fid);
+  state.pendingLinkFragmentIds=null;state.pendingLinkFragmentId=fid;$("linkDialogTitle").textContent="이 조각을 어디에 연결할까요?";$("linkFragmentId").value=fid;$("linkThreadSearch").value="";delete state.threadMatchCache[fid];renderLinkThreadList();renderThreadMatchRecommendations(fid);$("linkDialog").showModal();loadThreadMatchRecommendations(fid);
+}
+function openLinkDialogForFragments(ids){
+  const clean=[...new Set((ids||[]).filter(id=>state.fragments.some(f=>f.id===id)))];if(!clean.length)return;state.pendingLinkFragmentIds=clean;state.pendingLinkFragmentId=clean[0];$("linkDialogTitle").textContent=`이 ${clean.length}개의 생각을 어느 Thread에 연결할까요?`;$("linkFragmentId").value=clean[0];$("linkThreadSearch").value="";const rec=$("linkThreadRecommend");if(rec){rec.classList.add("hidden");rec.innerHTML=""}renderLinkThreadList();$("linkDialog").showModal();
 }
 async function linkFragment(fid,tid){
-  const f=state.fragments.find(x=>x.id===fid);if(!f)return;
-  f.threadIds=[...new Set([...(f.threadIds||[]),tid])];
-  f.updatedAt=new Date().toISOString();
-  await persist("fragments",f);
-  await touchThreadActivity(tid);
-  delete state.threadMatchCache[fid];
-  $("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast("Thread에 연결했습니다.");
+  const ids=state.pendingLinkFragmentIds?.length?state.pendingLinkFragmentIds.slice():[fid],found=ids.map(id=>state.fragments.find(x=>x.id===id)).filter(Boolean);if(!found.length)return;for(const f of found){f.threadIds=[...new Set([...(f.threadIds||[]),tid])];f.updatedAt=new Date().toISOString();await persist("fragments",f);delete state.threadMatchCache[f.id]}await touchThreadActivity(tid);state.pendingLinkFragmentIds=null;state.pendingLinkFragmentId=null;$("linkDialog").close();renderAll();if(state.openThreadId)openThread(state.openThreadId);toast(found.length>1?`${found.length}개의 생각을 Thread에 연결했습니다. 🌱`:"Thread에 연결했습니다.");
 }
 async function addThreadThought(tid){
   const el=$("threadThoughtInput"),text=el?.value.trim();
@@ -4740,6 +4852,10 @@ document.addEventListener("click",async e=>{
   const ss=e.target.closest("[data-save-source-fragment]");if(ss)return saveSourceFragment(ss.dataset.saveSourceFragment);
   const ot=e.target.closest("[data-open-thread]");if(ot){if(state.view!=="garden")setView("garden");return openThread(ot.dataset.openThread)}
   if(e.target.closest("#gardenUnlinkedSummary"))return openFragmentList("연결되지 않은 생각",state.fragments.filter(f=>!(f.threadIds||[]).length));
+  const gd=e.target.closest("[data-open-garden-discovery]");if(gd)return openGardenDiscovery(gd.dataset.openGardenDiscovery,gd.dataset.discoveryChild);
+  const gedit=e.target.closest("[data-edit-discovery-frag]");if(gedit){$("gardenDiscoveryDialog").close();return openEditFragment(gedit.dataset.editDiscoveryFrag)}
+  const gconn=e.target.closest("[data-connect-discovery]");if(gconn)return connectGardenDiscovery(gconn.dataset.connectDiscovery);
+  if(e.target.closest("[data-discovery-next]"))return loadGardenDiscoveryCandidates();
   const mf=e.target.closest("[data-open-frag-mirror]");if(mf)return openEditFragment(mf.dataset.openFragMirror);
   if(e.target.closest("[data-back-garden]")){state.openThreadId=null;$("gardenIndex").classList.remove("hidden");$("threadDetail").classList.add("hidden");return renderGarden()}
   const et=e.target.closest("[data-edit-thread]");if(et)return openThreadDialog(state.threads.find(t=>t.id===et.dataset.editThread));
@@ -4853,9 +4969,9 @@ $("editSourcePicker").addEventListener("close",()=>{
 $("sourceLinkSearch").addEventListener("input",renderSourceLinkList);
 $("sourceLinkNew").addEventListener("click",()=>{$("sourceLinkDialog").dataset.handoff="1";$("sourceLinkDialog").close();openSourceDialog()});
 $("sourceDialog").addEventListener("close",()=>{state.pendingSourceLinkFragmentId=null});
-$("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null});
+$("threadDialog").addEventListener("close",()=>{state.pendingLinkFragmentId=null;state.pendingLinkFragmentIds=null});
 $("sourceLinkDialog").addEventListener("close",()=>{if($("sourceLinkDialog").dataset.handoff==="1"){$("sourceLinkDialog").dataset.handoff="";return;}state.pendingSourceLinkFragmentId=null});
-$("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null});
+$("linkDialog").addEventListener("close",()=>{if($("linkDialog").dataset.handoff==="1"){$("linkDialog").dataset.handoff="";return;}state.pendingLinkFragmentId=null;state.pendingLinkFragmentIds=null});
 $("sourceSearch").addEventListener("input",renderLibrary);$("sourceFilter").addEventListener("change",renderLibrary);$("gardenSearch").addEventListener("input",()=>{state.gardenThreadLimit=8;renderGarden()});
 $("linkThreadSearch").addEventListener("input",renderLinkThreadList);
 $("fragSearch").addEventListener("input",()=>{state.fragLimit=5;renderFragments()});
@@ -4899,6 +5015,9 @@ $("bloomingInterviewToggle").addEventListener("click",async()=>{
 });
 $("bloomingInterviewClose").addEventListener("click",finishBloomingInterview);
 $("connectRelatedPreview").addEventListener("click",connectRelatedPreview);
+$("gardenDiscoveryFind").addEventListener("click",loadGardenDiscoveryCandidates);
+$("gardenDiscoveryStop").addEventListener("click",()=>$("gardenDiscoveryDialog").close());
+$("gardenDiscoveryThread").addEventListener("click",openGardenDiscoveryThreadLink);
 $("openAiOfficialRefresh").addEventListener("click",refreshOpenAiOfficialUsage);
 $("studioLimitPlus10").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
@@ -4981,7 +5100,7 @@ $("saveApiKeys").addEventListener("click",async()=>{
 });
 [["captureDialog","capture"],["sourceDialog","source"],["threadDialog","thread"]].forEach(([id,kind])=>$(id).addEventListener("close",()=>discardPendingUploads(kind)));
 $("bloomingInterviewDialog").addEventListener("click",e=>{if(e.target===$("bloomingInterviewDialog"))finishBloomingInterview()});
-["captureDialog","afterSaveDialog","bloomingCompareDialog","betweenThoughtsDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
+["captureDialog","afterSaveDialog","bloomingCompareDialog","betweenThoughtsDialog","sourceLinkDialog","todayDialog","sourceDialog","threadDialog","linkDialog","projectDialog","attachDialog","accountDialog","settingsDialog","searchDialog","editFragmentDialog","thoughtStemDialog","gardenDiscoveryDialog","relatedPreviewDialog","trashDialog","mergeGuardDialog","publishDialog","editSourcePicker","listDialog"].forEach(id=>$(id).addEventListener("click",e=>{if(e.target===$(id))$(id).close()}));
 function openLightbox(url){$("lightboxImg").src=url;const lb=$("lightbox");if(!lb.open)lb.showModal()}
 function closeLightbox(){const lb=$("lightbox");if(lb.open)lb.close();$("lightboxImg").src=""}
 $("lightbox").addEventListener("click",e=>{if(e.target===$("lightbox"))closeLightbox()});
