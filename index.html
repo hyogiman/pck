@@ -1606,7 +1606,7 @@
         </section>
 
         <div class="setting-tool-card">
-          <div class="setting-tool-head"><div><b>🧠 AI 데이터 관리</b><div class="helper" style="margin-top:4px">기존 생각의 글과 첨부 사진을 함께 읽어 다층 AI 색인과 의미 벡터를 보완합니다. 사진은 고화질로 한 생각당 최대 6장까지 분석하며, 이미 최신인 생각은 건너뜁니다.</div></div><button class="btn" id="backfillEmbeddings" type="button">다층 색인 만들기</button></div>
+          <div class="setting-tool-head"><div><b>🧠 AI 데이터 관리</b><div class="helper" style="margin-top:4px">기존 생각의 글과 사진을 하나의 표현으로 읽어 다층 AI 색인과 의미 벡터를 보완합니다. 사진은 고화질로 분석해 보이는 정보뿐 아니라 왜 이 글에 붙였는지, 어떤 상황·대비·정서를 더하는지도 근거와 확신도와 함께 색인합니다.</div></div><button class="btn" id="backfillEmbeddings" type="button">다층 색인 만들기</button></div>
           <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 글과 첨부 사진을 함께 반영한 다층 AI 색인과 의미 벡터가 만들어집니다.</div>
         </div>
       </div>
@@ -5576,7 +5576,7 @@ $("studioGardenerToggle").addEventListener("click",async()=>{
 });
 $("backfillEmbeddings").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user)return toast("Google 로그인 후 사용할 수 있습니다.");
-  if(!await askAppConfirm("기존 생각의 글과 첨부 사진에 다층 AI 색인과 의미 벡터를 만들까요?\n사진은 고화질로 한 생각당 최대 6장까지 분석하므로 사진이 있는 생각에는 추가 OpenAI 입력 토큰이 사용됩니다. 이미 최신인 글 전용 생각은 건너뛰고, 기존 사진이 있는 생각만 새로 반영합니다.",{title:"다층 색인 만들기",confirmText:"색인 만들기",symbol:"🧠"}))return;
+  if(!await askAppConfirm("기존 생각의 글과 사진을 하나의 표현으로 다시 읽을까요?\n사진을 비언어적 문장으로 해석해 첨부 의도·정서적 기능·말하지 않은 상황을 근거와 확신도와 함께 보완합니다. 사진이 있는 생각만 새 사진 색인으로 갱신하고, 글 전용 생각은 건너뜁니다.",{title:"다층 색인 만들기",confirmText:"색인 만들기",symbol:"🧠"}))return;
   const btn=$("backfillEmbeddings"),status=$("embeddingBackfillStatus");
   btn.disabled=true;
   let totalProcessed=0,totalAttempted=0,rounds=0,lastRemaining=0;
