@@ -1,4 +1,4 @@
-// Thought Garden v52 · Multi-layer Thought Index
+// Thought Garden v56 · Multimodal Thought Index
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -14,6 +14,9 @@ const MAX_EMBEDDING_TEXT_CHARS = 12000;
 const THOUGHT_INDEX_MODEL = "gpt-5.4-mini";
 const THOUGHT_INDEX_VERSION = 2;
 const THOUGHT_INDEX_MAX_BATCH = 8;
+const THOUGHT_INDEX_IMAGE_DETAIL = "high";
+const THOUGHT_INDEX_MAX_IMAGES_PER_FRAGMENT = 6;
+const THOUGHT_INDEX_VISION_VERSION = 1;
 
 const STUDIO_GARDENER_MODEL = "gpt-5.4-mini";
 const BLOOMING_INTERVIEW_MODEL = STUDIO_GARDENER_MODEL;
@@ -219,6 +222,19 @@ function buildEmbeddingText(fragment) {
   if (thought) parts.push(`내 생각:\n${thought}`);
   if (externalText) parts.push(`함께 남긴 문장·장면:\n${externalText}`);
   if (context) parts.push(`기록 맥락:\n${context}`);
+
+  // 임베딩 모델은 이미지를 직접 받지 않으므로, 고화질 사진 분석에서 얻은
+  // 시각 색인을 짧은 텍스트로 합쳐 사진의 의미도 관련 생각 검색에 반영한다.
+  const visual = normalizeThoughtIndex(fragment?.aiIndex)?.visualContext;
+  if (visual?.hasImages) {
+    const visualLines = [
+      visual.sceneSummary,
+      visual.observedElements.length ? `보이는 요소: ${visual.observedElements.join(", ")}` : "",
+      visual.visibleText.length ? `사진 속 문자: ${visual.visibleText.join(" / ")}` : "",
+      visual.relationEvidence ? `글과 사진의 관계: ${visual.relationEvidence}` : "",
+    ].filter(Boolean);
+    if (visualLines.length) parts.push(`첨부 사진 색인:\n${visualLines.join("\n")}`);
+  }
 
   return parts.join("\n\n").slice(0, MAX_EMBEDDING_TEXT_CHARS);
 }
@@ -1287,6 +1303,7 @@ async function requestBetweenThoughtsQuestion(fragmentA, fragmentB) {
   const systemPrompt = [
     "당신은 '생각의 텃밭'에서 서로 다른 두 생각 사이를 비추는 인터뷰어다.",
     "사용자가 과거에 직접 남긴 생각 A와 생각 B를 함께 읽고, 둘 사이에서 사용자가 새로운 생각을 발견하도록 돕는 질문 딱 하나만 만든다.",
+    "각 생각의 visualContext가 있으면 첨부 사진을 고화질로 한 번 읽어 저장한 시각 색인이다. 실제 사진을 다시 보는 것은 아니므로 시각 색인의 불확실성을 존중하고, 글에 없는 작성자 의도를 사진만으로 단정하지 않는다.",
     "두 생각의 관계를 정답처럼 선언하거나 요약하지 않는다. 질문 자체가 사용자가 관계를 발견하게 해야 한다.",
     "답을 대신 쓰지 말고, 조언·평가·칭찬·진단·교훈을 하지 않는다.",
     "두 생각이 비슷하면 반복되는 가치·욕구·두려움·선택·긴장·패턴을 살펴볼 수 있고, 다르면 무엇이 달라졌는지·충돌하는지·함께 놓았을 때 무엇이 보이는지를 물을 수 있다.",
@@ -1398,12 +1415,24 @@ exports.betweenThoughtsQuestion = onCall(
 
     const docs = snaps.map((snap) => snap.data() || {});
     if (docs.some((data) => data.deletedAt)) throw new HttpsError("failed-precondition", "지운 생각은 함께 볼 수 없습니다.");
-    const texts = docs.map((data) => String(data.thought || data.text || data.externalText || "").trim().slice(0, 6000));
-    if (texts.some((text) => text.length < 4)) return { ok: true, question: null, reason: "not-enough-context" };
+    const thoughtInputs = docs.map((data) => {
+      const text = String(data.thought || data.text || data.externalText || "").trim().slice(0, 6000);
+      const visualContext = normalizeThoughtIndex(data.aiIndex)?.visualContext || null;
+      return { text, visualContext: visualContext?.hasImages ? visualContext : null };
+    });
+    if (thoughtInputs.some((item) => item.text.length < 4 && !item.visualContext?.sceneSummary)) {
+      return { ok: true, question: null, reason: "not-enough-context" };
+    }
 
     const canonicalIds = ids.slice().sort();
     const cacheId = sha256(canonicalIds.join("|")).slice(0, 40);
-    const sourceHash = sha256(canonicalIds.map((id) => `${id}:${texts[ids.indexOf(id)]}`).join("|"));
+    const hasVisualContext = thoughtInputs.some((item) => item.visualContext);
+    const sourceHash = hasVisualContext
+      ? sha256(canonicalIds.map((id) => {
+          const item = thoughtInputs[ids.indexOf(id)];
+          return `${id}:${item.text}:${JSON.stringify(item.visualContext || null)}`;
+        }).join("|"))
+      : sha256(canonicalIds.map((id) => `${id}:${thoughtInputs[ids.indexOf(id)].text}`).join("|"));
     const cacheRef = userRef.collection("aiBetweenThoughts").doc(cacheId);
     const cacheSnap = await cacheRef.get();
     const cache = cacheSnap.exists ? cacheSnap.data() || {} : {};
@@ -1418,7 +1447,7 @@ exports.betweenThoughtsQuestion = onCall(
     }
 
     await reserveBetweenThoughtsQuota(uid);
-    const result = await requestBetweenThoughtsQuestion(texts[0], texts[1]);
+    const result = await requestBetweenThoughtsQuestion(thoughtInputs[0], thoughtInputs[1]);
     const usageRef = userRef.collection("aiUsage").doc(koreaDateKey());
     const batch = db.batch();
     batch.set(
@@ -1496,7 +1525,25 @@ async function reserveBetweenThoughtsCurationQuota(uid) {
 }
 
 
+function thoughtImageAttachments(data) {
+  return (Array.isArray(data?.attachments) ? data.attachments : [])
+    .filter((item) => String(item?.type || "").toLowerCase().startsWith("image/"))
+    .map((item, index) => ({
+      index: index + 1,
+      name: String(item?.name || `사진 ${index + 1}`).trim().slice(0, 180),
+      type: String(item?.type || "image/jpeg").trim().slice(0, 80),
+      path: String(item?.path || "").trim().slice(0, 900),
+      url: String(item?.url || "").trim().slice(0, 2400),
+    }))
+    .filter((item) => /^https:\/\//i.test(item.url))
+    .slice(0, THOUGHT_INDEX_MAX_IMAGES_PER_FRAGMENT);
+}
+
 function betweenThoughtFullRecord(id, data, source) {
+  const images = thoughtImageAttachments(data);
+  const totalImageCount = (Array.isArray(data?.attachments) ? data.attachments : [])
+    .filter((item) => String(item?.type || "").toLowerCase().startsWith("image/"))
+    .length;
   return {
     id,
     date: String(data.date || data.createdAt || "").slice(0, 10),
@@ -1512,17 +1559,32 @@ function betweenThoughtFullRecord(id, data, source) {
       publisher: String(source.publisher || "").trim().slice(0, 140),
       type: String(source.type || "").trim().slice(0, 40),
     } : null,
+    images,
+    totalImageCount,
   };
 }
 
 function betweenThoughtProfileFingerprint(record) {
-  return sha256(JSON.stringify({
+  const base = {
     thought: record.thought,
     context: record.context,
     sourceExcerpt: record.sourceExcerpt,
     locator: record.locator,
     sourceId: record.sourceId,
     source: record.source,
+  };
+  const images = Array.isArray(record.images) ? record.images : [];
+  // 기존 텍스트 전용 생각은 v52 fingerprint를 그대로 유지해 불필요한 재색인을 막는다.
+  if (!images.length && !Number(record.totalImageCount || 0)) return sha256(JSON.stringify(base));
+  return sha256(JSON.stringify({
+    ...base,
+    images: images.map((image) => ({
+      key: image.path || image.url,
+      type: image.type,
+      name: image.name,
+    })),
+    totalImageCount: Number(record.totalImageCount || 0),
+    imageDetail: THOUGHT_INDEX_IMAGE_DETAIL,
   }));
 }
 
@@ -1586,6 +1648,17 @@ function normalizeThoughtIndex(index) {
         ? String(index.sourceContext.contextKind)
         : "other",
     },
+    visualContext: {
+      hasImages: Boolean(index.visualContext?.hasImages),
+      sceneSummary: String(index.visualContext?.sceneSummary || "").trim().slice(0, 320),
+      observedElements: normalizeStringList(index.visualContext?.observedElements, 8, 120),
+      visibleText: normalizeStringList(index.visualContext?.visibleText, 5, 160),
+      relationToThought: ["none", "supports", "expands", "contrasts", "contextualizes", "unclear"].includes(String(index.visualContext?.relationToThought || ""))
+        ? String(index.visualContext.relationToThought)
+        : "none",
+      relationEvidence: String(index.visualContext?.relationEvidence || "").trim().slice(0, 240),
+      uncertaintyNotes: normalizeStringList(index.visualContext?.uncertaintyNotes, 3, 180),
+    },
   };
 }
 
@@ -1648,34 +1721,37 @@ function compactBetweenThoughtProfile(id, profile, date) {
     sourceRelation: index.sourceContext.relation,
     sourceAnchor: index.sourceContext.anchor,
     contextKind: index.sourceContext.contextKind,
+    visualSummary: index.visualContext.sceneSummary,
+    visualElements: index.visualContext.observedElements,
+    visibleText: index.visualContext.visibleText,
+    visualRelation: index.visualContext.relationToThought,
+    visualRelationEvidence: index.visualContext.relationEvidence,
+    visualUncertaintyNotes: index.visualContext.uncertaintyNotes,
   };
 }
 
 async function requestThoughtIndexes(records) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
-  const inputs = records.map((r) => ({
-    id: r.id,
-    date: r.date,
-    thought: r.thought,
-    context: r.context,
-    sourceExcerpt: r.sourceExcerpt,
-    locator: r.locator,
-    source: r.source,
-  }));
+
   const systemPrompt = [
-    "당신은 '생각의 텃밭'에서 사용자가 남긴 생각 조각을 여러 기능이 재사용할 수 있는 다층 색인으로 정리한다.",
-    "이 색인은 원문을 대체하거나 사용자를 진단하는 요약문이 아니다. 나중에 관련 생각을 찾고, 원문을 다시 읽을 후보를 고르기 위한 지도다.",
+    "당신은 '생각의 텃밭'에서 사용자가 남긴 글과 첨부 사진을 함께 읽고, 여러 기능이 재사용할 수 있는 다층 색인으로 정리한다.",
+    "이 색인은 원문과 사진을 대체하거나 사용자를 진단하는 결과가 아니다. 나중에 관련 생각을 찾고, 원문과 사진을 다시 검토할 후보를 고르기 위한 지도다.",
     "thought와 context는 사용자가 직접 쓴 내용이다. sourceExcerpt와 source는 외부의 책·영상·대화·타인의 말일 수 있으므로 사용자 생각과 절대 섞지 않는다.",
+    "각 FRAGMENT 표식 뒤에 이어지는 이미지는 바로 그 fragment의 첨부 사진이다. 사진과 다른 fragment를 섞지 않는다.",
+    "사진은 high detail로 제공된다. 실제로 보이는 장면·사물·배치·읽을 수 있는 문자만 기록하고, 보이지 않는 사건이나 사진 밖의 맥락을 상상하지 않는다.",
+    "사진 속 사람의 신원, 정확한 나이, 관계, 직업, 건강 상태, 민감한 특성은 추정하지 않는다. 표정만으로 감정이나 작성자의 의도를 단정하지 않는다.",
+    "작성자의 생각과 의도는 글을 우선한다. 사진은 글을 지지·확장·대조·맥락화하는 시각 자료로 다루며, 관계가 불명확하면 unclear로 둔다.",
     "긴 텍스트 안의 줄바꿈된 '…'는 가운데 일부가 길이 때문에 생략됐다는 표시다. 생략된 내용을 상상해 채우지 않는다.",
-    "literal에는 원문에 직접 나타난 내용만 적는다. summary는 핵심을 1~2문장으로, topics는 표면 주제와 개념을, events와 claims는 실제 사건·판단을, keyPhrases는 작성자의 의미와 말투가 잘 남는 짧은 원문 표현을 적는다.",
-    "authorPerspective의 explicitIntents는 사용자가 직접 밝힌 목적만 적는다. inferredIntents와 valuesOrNeeds는 추론일 수 있으므로 반드시 근거 표현과 confidence를 함께 적는다.",
+    "literal에는 글과 사진에서 직접 확인되는 내용만 적는다. summary는 글의 핵심과 사진이 제공하는 실제 맥락을 1~2문장으로, topics는 표면 주제와 개념을, events와 claims는 실제 사건·판단을, keyPhrases는 작성자의 의미와 말투가 잘 남는 짧은 원문 표현을 적는다.",
+    "authorPerspective의 explicitIntents는 사용자가 직접 밝힌 목적만 적는다. inferredIntents와 valuesOrNeeds는 추론일 수 있으므로 반드시 글 속 근거 표현과 confidence를 함께 적는다. 사진만으로 작성자의 내면을 추정하지 않는다.",
     "innerDynamics는 감정, 충돌하는 마음, 글 안의 관점 변화, 아직 닫히지 않은 문제를 다룬다. 근거가 없으면 빈 배열로 두고, 모순을 억지로 하나로 정리하지 않는다.",
-    "alternateReadings에는 지배적인 해석과 다른 읽기가 실제 문장에 의해 가능할 때만 최대 2개를 적는다. 단순한 상상이나 심리 추측은 넣지 않는다.",
-    "모든 evidence는 원문의 짧은 표현 또는 그 표현에 아주 가까운 구체적 근거여야 한다. 제공되지 않은 사실·성격·동기·감정을 만들지 않는다.",
+    "alternateReadings에는 지배적인 해석과 다른 읽기가 실제 글이나 사진에 의해 가능할 때만 최대 2개를 적는다. 단순한 상상이나 심리 추측은 넣지 않는다.",
+    "모든 evidence는 사용자가 쓴 짧은 표현 또는 그 표현에 아주 가까운 구체적 근거여야 한다. 사진에서 본 사실은 visualContext에 기록하고 authorPerspective의 근거로 억지 사용하지 않는다.",
     "원문이 짧거나 애매해 의도와 감정을 판단하기 어렵다면 uncertainty.insufficientContext를 true로 하고 notes에 무엇을 단정할 수 없는지 적는다.",
     "질병, 성격 유형, 애착 유형 같은 진단을 하지 않는다. 사용자의 독특한 표현을 모두 일반적인 심리 용어로 바꾸지 않는다.",
     "sourceContext는 외부 재료와 사용자의 생각이 실제로 어떤 관계인지 기록한다. 외부 문장 자체를 사용자 신념처럼 취급하지 않는다.",
+    "visualContext에는 사진에서 직접 본 장면, 주요 요소, 실제로 읽히는 문자, 글과 사진의 관계, 시각적 불확실성을 기록한다. attachedImageCount가 providedImageCount보다 크면 제공되지 않은 사진은 분석하지 않았음을 uncertaintyNotes에 적는다. 사진이 없으면 hasImages=false이고 나머지는 빈 값으로 둔다.",
     "각 항목은 짧고 평이한 한국어로 쓴다. 수를 채우기 위해 약한 항목을 만들지 않는다.",
   ].join("\n");
 
@@ -1690,6 +1766,33 @@ async function requestThoughtIndexes(records) {
     additionalProperties: false,
   };
 
+  const userContent = [];
+  for (const record of records) {
+    const images = Array.isArray(record.images) ? record.images : [];
+    userContent.push({
+      type: "text",
+      text: `FRAGMENT ${record.id}\n${JSON.stringify({
+        id: record.id,
+        date: record.date,
+        thought: record.thought,
+        context: record.context,
+        sourceExcerpt: record.sourceExcerpt,
+        locator: record.locator,
+        source: record.source,
+        attachedImageCount: Number(record.totalImageCount || images.length),
+        providedImageCount: images.length,
+      })}`,
+    });
+    images.forEach((image, index) => {
+      userContent.push({ type: "text", text: `FRAGMENT ${record.id} 첨부 사진 ${index + 1}/${images.length}: ${image.name || "사진"}` });
+      userContent.push({
+        type: "image_url",
+        image_url: { url: image.url, detail: THOUGHT_INDEX_IMAGE_DETAIL },
+      });
+    });
+  }
+  userContent.push({ type: "text", text: "위 FRAGMENT들을 각각 독립적으로 분석해 indexes 배열로 반환하세요." });
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -1697,12 +1800,12 @@ async function requestThoughtIndexes(records) {
       model: THOUGHT_INDEX_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify({ fragments: inputs }) },
+        { role: "user", content: userContent },
       ],
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "thought_indexes_v2",
+          name: "thought_indexes_v2_multimodal",
           strict: true,
           schema: {
             type: "object",
@@ -1768,8 +1871,22 @@ async function requestThoughtIndexes(records) {
                       required: ["relation", "anchor", "contextKind"],
                       additionalProperties: false,
                     },
+                    visualContext: {
+                      type: "object",
+                      properties: {
+                        hasImages: { type: "boolean" },
+                        sceneSummary: { type: "string" },
+                        observedElements: { type: "array", minItems: 0, maxItems: 8, items: { type: "string" } },
+                        visibleText: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
+                        relationToThought: { type: "string", enum: ["none", "supports", "expands", "contrasts", "contextualizes", "unclear"] },
+                        relationEvidence: { type: "string" },
+                        uncertaintyNotes: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
+                      },
+                      required: ["hasImages", "sceneSummary", "observedElements", "visibleText", "relationToThought", "relationEvidence", "uncertaintyNotes"],
+                      additionalProperties: false,
+                    },
                   },
-                  required: ["id", "literal", "authorPerspective", "innerDynamics", "alternateReadings", "uncertainty", "sourceContext"],
+                  required: ["id", "literal", "authorPerspective", "innerDynamics", "alternateReadings", "uncertainty", "sourceContext", "visualContext"],
                   additionalProperties: false,
                 },
               },
@@ -1779,7 +1896,7 @@ async function requestThoughtIndexes(records) {
           },
         },
       },
-      max_completion_tokens: Math.min(7200, Math.max(1000, records.length * 650)),
+      max_completion_tokens: Math.min(7200, Math.max(1000, records.length * 700)),
     }),
   });
 
@@ -1787,7 +1904,7 @@ async function requestThoughtIndexes(records) {
   try { payload = await response.json(); } catch (_) { payload = null; }
   if (!response.ok) {
     logger.error("OpenAI thought index HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
-    throw new HttpsError("internal", "생각 색인을 만들지 못했습니다.");
+    throw new HttpsError("internal", "글과 사진의 생각 색인을 만들지 못했습니다.");
   }
   const raw = payload?.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "생각 색인 결과가 비어 있습니다.");
@@ -1832,8 +1949,24 @@ async function ensureThoughtIndexes(uid, userRef, records) {
   let usage = { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
   if (!stale.length) return { profiles: resultMap, indexes: resultMap, usage };
 
+  // 사진이 들어간 생각은 비용·오류 범위를 분리하기 위해 한 건씩 처리하고,
+  // 텍스트 전용 생각만 기존처럼 묶어서 처리한다.
   const chunks = [];
-  for (let i = 0; i < stale.length; i += THOUGHT_INDEX_MAX_BATCH) chunks.push(stale.slice(i, i + THOUGHT_INDEX_MAX_BATCH));
+  let textChunk = [];
+  const flushTextChunk = () => {
+    if (textChunk.length) chunks.push(textChunk);
+    textChunk = [];
+  };
+  for (const item of stale) {
+    if (Array.isArray(item.record.images) && item.record.images.length) {
+      flushTextChunk();
+      chunks.push([item]);
+    } else {
+      textChunk.push(item);
+      if (textChunk.length >= THOUGHT_INDEX_MAX_BATCH) flushTextChunk();
+    }
+  }
+  flushTextChunk();
 
   for (let i = 0; i < chunks.length; i += 2) {
     const group = chunks.slice(i, i + 2);
@@ -1857,6 +1990,10 @@ async function ensureThoughtIndexes(uid, userRef, records) {
           aiIndexInputTokens: Math.round(generated.inputTokens / divisor),
           aiIndexCachedInputTokens: Math.round(generated.cachedInputTokens / divisor),
           aiIndexOutputTokens: Math.round(generated.outputTokens / divisor),
+          aiIndexImageCount: Array.isArray(item.record.images) ? item.record.images.length : 0,
+          aiIndexTotalImageCount: Number(item.record.totalImageCount || 0),
+          aiIndexImageDetail: Array.isArray(item.record.images) && item.record.images.length ? THOUGHT_INDEX_IMAGE_DETAIL : "none",
+          aiIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
           aiIndexUpdatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         count++;
@@ -1900,14 +2037,34 @@ async function ensureUnifiedThoughtIndex(uid, fragmentId, options = {}) {
   const sourceId = String(data.sourceId || "");
   const sourceSnap = sourceId ? await userRef.collection("sources").doc(sourceId).get() : null;
   const record = betweenThoughtFullRecord(fragmentId, data, sourceSnap?.exists ? sourceSnap.data() || {} : null);
-  const canStructure = includeStructured && (record.thought || record.sourceExcerpt).trim().length >= 8;
+  const canStructure = includeStructured && (
+    (record.thought || record.sourceExcerpt).trim().length >= 8 ||
+    (Array.isArray(record.images) && record.images.length > 0)
+  );
 
-  const [embedding, structured] = await Promise.all([
-    includeEmbedding ? ensureFragmentEmbedding(uid, fragmentRef, data) : Promise.resolve({ ok: true, skipped: true, reason: "not-requested", inputTokens: 0 }),
-    canStructure
-      ? ensureThoughtIndexes(uid, userRef, [record])
-      : Promise.resolve({ profiles: new Map(), indexes: new Map(), usage: { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 } }),
-  ]);
+  const emptyStructured = () => Promise.resolve({
+    profiles: new Map(), indexes: new Map(),
+    usage: { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+  });
+  let embedding;
+  let structured;
+
+  if (Array.isArray(record.images) && record.images.length && canStructure) {
+    // 사진 의미를 임베딩에도 반영하려면 먼저 고화질 시각 색인을 만든 뒤,
+    // 그 시각 요약을 글과 합쳐 text embedding을 생성해야 한다.
+    structured = await ensureThoughtIndexes(uid, userRef, [record]);
+    const freshIndex = structured.indexes.get(fragmentId) || data.aiIndex;
+    embedding = includeEmbedding
+      ? await ensureFragmentEmbedding(uid, fragmentRef, { ...data, aiIndex: freshIndex })
+      : { ok: true, skipped: true, reason: "not-requested", inputTokens: 0 };
+  } else {
+    [embedding, structured] = await Promise.all([
+      includeEmbedding
+        ? ensureFragmentEmbedding(uid, fragmentRef, data)
+        : Promise.resolve({ ok: true, skipped: true, reason: "not-requested", inputTokens: 0 }),
+      canStructure ? ensureThoughtIndexes(uid, userRef, [record]) : emptyStructured(),
+    ]);
+  }
 
   const index = structured.indexes.get(fragmentId);
   return {
@@ -2029,10 +2186,12 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
     sourceExcerpt: r.sourceExcerpt,
     locator: r.locator,
     source: r.source,
+    visualContext: r.visualContext || null,
   }));
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 최종 큐레이터이자 인터뷰어다.",
     "1차 큐레이터가 생각 프로필만 보고 고른 후보 조합을 이제 실제 원문, 출처, 인용과 함께 다시 읽는다. 1차 판단을 그대로 믿지 말고 반드시 재검증한다.",
+    "visualContext가 있으면 첨부 사진을 고화질로 한 번 읽어 저장한 시각 색인이다. 실제 사진을 다시 보는 것은 아니므로 시각 색인의 불확실성을 존중하고, 글에 없는 작성자 의도를 사진만으로 확정하지 않는다.",
     "원문 안의 줄바꿈된 '…'는 긴 글의 가운데 일부가 생략됐다는 표시다. 생략된 내용을 추정하지 않는다.",
     `최종적으로 사용자가 함께 바라볼 가치가 분명한 조합만 최대 ${BETWEEN_THOUGHTS_CURATION_PAIR_COUNT}개 남기고, 각 조합에 질문 하나를 만든다.`,
     "가장 중요한 기준은 사용자가 두 카드를 보는 순간 '왜 이 둘을 같이 보여줬는지 알 것 같다'고 느낄 가능성이다. 설명을 길게 해야만 연결되는 조합은 탈락시킨다.",
@@ -2157,8 +2316,9 @@ exports.betweenThoughtsProfile = onCall(
 
 /**
  * 새 생각 저장 뒤 한 번만 호출하는 통합 색인 함수.
- * - 의미 검색용 embedding
- * - 두 생각 사이 / 글의 갈래 / Studio 질문이 공유하는 다층 AI 색인
+ * - 의미 검색용 text embedding
+ * - 글과 고화질 첨부 사진을 함께 읽는 다층 AI 색인
+ * - 두 생각 사이 / 글의 갈래 / Studio 질문이 공유하는 공통 지도
  * 두 결과를 같은 Fragment 문서에 저장하고, 원문이 바뀌지 않으면 다시 호출하지 않는다.
  * 색인은 원문을 대체하지 않으며 최종 질문과 갈래 판단은 선택된 원문을 다시 읽는다.
  */
@@ -2228,7 +2388,8 @@ exports.backfillThoughtIndexes = onCall(
       );
       const record = betweenThoughtFullRecord(row.id, row.data, sourceMap.get(String(row.data.sourceId || "")) || null);
       const fingerprint = betweenThoughtProfileFingerprint(record);
-      const canStructure = (record.thought || record.sourceExcerpt).trim().length >= 8;
+      const canStructure = (record.thought || record.sourceExcerpt).trim().length >= 8 ||
+        (Array.isArray(record.images) && record.images.length > 0);
       const indexCurrent = !canStructure || (
         row.data.aiIndexVersion === THOUGHT_INDEX_VERSION &&
         row.data.aiIndexFingerprint === fingerprint &&
@@ -2260,9 +2421,15 @@ exports.backfillThoughtIndexes = onCall(
     let migratedNow = 0;
     let embeddedNow = 0;
     let embeddingTokens = 0;
+    const structuredIndexById = new Map();
 
-    // 임베딩은 먼저 묶어서 처리하고, 묶음이 실패하면 생각별로 다시 시도한다.
-    const embeddingItems = items.filter((x) => !x.embeddingCurrent && x.embeddingText);
+    // 임베딩은 먼저 묶어서 처리하되, 사진 색인이 새로 필요한 생각은
+    // 시각 색인 생성 뒤에 글+사진 의미를 합쳐 임베딩한다.
+    const embeddingItems = items.filter((x) =>
+      !x.embeddingCurrent &&
+      x.embeddingText &&
+      !(Array.isArray(x.record.images) && x.record.images.length && !x.indexCurrent)
+    );
     if (embeddingItems.length) {
       try {
         const result = await requestEmbeddings(embeddingItems.map((x) => x.embeddingText));
@@ -2324,7 +2491,10 @@ exports.backfillThoughtIndexes = onCall(
         indexedNow += Number(structured.usage?.count || 0);
         migratedNow += Number(structured.usage?.migrated || 0);
         structureItems.forEach((item) => {
-          if (structured.indexes?.has(item.id)) structuredSuccess.add(item.id);
+          if (structured.indexes?.has(item.id)) {
+            structuredSuccess.add(item.id);
+            structuredIndexById.set(item.id, structured.indexes.get(item.id));
+          }
         });
         missing = structureItems.filter((item) => !structuredSuccess.has(item.id));
       } catch (error) {
@@ -2341,6 +2511,7 @@ exports.backfillThoughtIndexes = onCall(
           const single = await ensureBetweenThoughtProfiles(uid, userRef, [item.record]);
           if (single.indexes?.has(item.id)) {
             structuredSuccess.add(item.id);
+            structuredIndexById.set(item.id, single.indexes.get(item.id));
             indexedNow += Number(single.usage?.count || 0);
             migratedNow += Number(single.usage?.migrated || 0);
           } else {
@@ -2355,6 +2526,33 @@ exports.backfillThoughtIndexes = onCall(
             message: singleError?.message || null,
           });
         }
+      }
+    }
+
+    // 사진이 있는 생각은 새 시각 색인을 짧은 텍스트로 변환해 임베딩에도 포함한다.
+    // text-embedding 모델 자체는 이미지를 직접 받지 않지만, 이 단계로 사진 의미가
+    // 닮은 생각·Thread 추천 후보 검색에도 반영된다.
+    const visualEmbeddingItems = items.filter((item) =>
+      Array.isArray(item.record.images) &&
+      item.record.images.length &&
+      structuredSuccess.has(item.id)
+    );
+    for (const item of visualEmbeddingItems) {
+      try {
+        const freshIndex = structuredIndexById.get(item.id) || normalizeThoughtIndex(item.data.aiIndex);
+        const result = await ensureFragmentEmbedding(uid, item.ref, { ...item.data, aiIndex: freshIndex });
+        embeddingSuccess.add(item.id);
+        if (!result.skipped) embeddedNow += 1;
+        embeddingTokens += Number(result.inputTokens || 0);
+      } catch (visualEmbeddingError) {
+        embeddingSuccess.delete(item.id);
+        failureCodes.set(item.id, String(visualEmbeddingError?.code || "visual-embedding-failed"));
+        logger.warn("Thought-index backfill visual embedding failed", {
+          uid,
+          fragmentId: item.id,
+          code: visualEmbeddingError?.code || null,
+          message: visualEmbeddingError?.message || null,
+        });
       }
     }
 
@@ -2413,7 +2611,7 @@ exports.betweenThoughtsCurate = onCall(
     const sourceMap = new Map();
     sourceSnaps.forEach((snap, i) => { if (snap.exists) sourceMap.set(sourceIds[i], snap.data() || {}); });
     const records = docs.map((x) => betweenThoughtFullRecord(x.id, x.data, sourceMap.get(String(x.data.sourceId || "")) || null))
-      .filter((x) => (x.thought || x.sourceExcerpt).length >= 8);
+      .filter((x) => (x.thought || x.sourceExcerpt).length >= 8 || (Array.isArray(x.images) && x.images.length > 0));
     if (records.length < 2) return { ok: true, items: [], reason: "not-enough-context" };
     const recordMap = new Map(records.map((x) => [x.id, x]));
     const validIds = new Set(records.map((x) => x.id));
@@ -2425,6 +2623,7 @@ exports.betweenThoughtsCurate = onCall(
       const age = Date.now() - Number(cache.generatedAtMs || 0);
       if (
         cache.thoughtIndexVersion === THOUGHT_INDEX_VERSION &&
+        cache.thoughtIndexVisionVersion === THOUGHT_INDEX_VISION_VERSION &&
         age >= 0 && age < BETWEEN_THOUGHTS_CURATION_CACHE_MS &&
         Array.isArray(cache.items)
       ) {
@@ -2445,6 +2644,10 @@ exports.betweenThoughtsCurate = onCall(
 
     await reserveBetweenThoughtsCurationQuota(uid);
     const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    records.forEach((record) => {
+      const profile = ensured.profiles.get(record.id);
+      if (profile?.visualContext) record.visualContext = profile.visualContext;
+    });
     const profileCandidates = records.map((r) => compactBetweenThoughtProfile(r.id, ensured.profiles.get(r.id), r.date)).filter((x) => x.core);
     if (profileCandidates.length < 2) return { ok: true, items: [], reason: "not-enough-profile-context" };
 
@@ -2469,6 +2672,7 @@ exports.betweenThoughtsCurate = onCall(
       noPairReason: deep.noPairReason,
       model: BETWEEN_THOUGHTS_MODEL,
       thoughtIndexVersion: THOUGHT_INDEX_VERSION,
+      thoughtIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
       scoutInputTokens: scout.inputTokens,
       scoutCachedInputTokens: scout.cachedInputTokens,
       scoutOutputTokens: scout.outputTokens,
@@ -2687,10 +2891,20 @@ async function requestStudioPathDeep(thread, candidates, recordMap) {
     shape: candidate.shape,
     scoutReason: candidate.reason,
     workingQuestion: candidate.workingQuestion,
-    fragments: candidate.fragmentIds.map((id) => recordMap.get(id)).filter(Boolean),
+    fragments: candidate.fragmentIds.map((id) => recordMap.get(id)).filter(Boolean).map((record) => ({
+      id: record.id,
+      date: record.date,
+      thought: record.thought,
+      context: record.context,
+      sourceExcerpt: record.sourceExcerpt,
+      locator: record.locator,
+      source: record.source,
+      visualContext: record.visualContext || null,
+    })),
   }));
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 글쓰기 길안내자다. 이제 후보 갈래에 포함된 생각의 실제 원문·맥락·외부 인용과 출처를 다시 읽는다.",
+    "visualContext가 있으면 첨부 사진을 고화질로 한 번 읽어 저장한 시각 색인이다. 실제 사진을 다시 보는 것은 아니므로 사진에서 직접 확인된 맥락만 보조적으로 사용하고, 글에 없는 작성자 의도를 단정하지 않는다.",
     "원문 안의 줄바꿈된 '…'는 긴 글의 가운데 일부가 생략됐다는 표시다. 생략된 내용을 추정하지 않는다.",
     `원문에 근거해 글을 시작할 만한 갈래만 최대 ${STUDIO_PATH_RESULT_COUNT}개 남긴다. 약하거나 억지스러운 후보는 버린다. 하나만 좋으면 하나만 반환하고, 없으면 빈 배열을 반환한다.`,
     "갈래는 완성된 글감 묶음이나 목차가 아니다. 사용자가 쓰기 시작할 중심 나뭇가지다. 재료가 2개든 3개든 4개든 실제로 필요한 만큼만 남긴다.",
@@ -2802,7 +3016,8 @@ exports.studioThreadPaths = onCall(
       if (data.deletedAt) return;
       const thought = String(data.thought || data.text || "").trim();
       const excerpt = String(data.externalText || "").trim();
-      if ((thought || excerpt).length < 8) return;
+      const images = thoughtImageAttachments(data);
+      if ((thought || excerpt).length < 8 && !images.length) return;
       allRows.push({ id: doc.id, data, at: String(data.date || data.createdAt || "") });
     });
     allRows.sort((a, b) => a.at.localeCompare(b.at));
@@ -2810,10 +3025,12 @@ exports.studioThreadPaths = onCall(
 
     const signature = sha256(JSON.stringify({
       thoughtIndexVersion: THOUGHT_INDEX_VERSION,
+      thoughtIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
       title: String(threadData.title || ""), question: String(threadData.question || ""),
       fragments: allRows.map((x) => ({
         id: x.id, thought: String(x.data.thought || x.data.text || ""), context: String(x.data.context || ""),
         externalText: String(x.data.externalText || ""), sourceId: String(x.data.sourceId || ""),
+        imageKeys: thoughtImageAttachments(x.data).map((image) => image.path || image.url),
         continuedFrom: Array.isArray(x.data.continuedFrom) ? x.data.continuedFrom.map(String).sort() : [],
         updatedAt: String(x.data.updatedAt || x.data.createdAt || ""),
       })),
@@ -2834,6 +3051,10 @@ exports.studioThreadPaths = onCall(
     const records = selectedRows.map((x) => betweenThoughtFullRecord(x.id, x.data, sourceMap.get(String(x.data.sourceId || "")) || null));
     const recordMap = new Map(records.map((x) => [x.id, x]));
     const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    records.forEach((record) => {
+      const profile = ensured.profiles.get(record.id);
+      if (profile?.visualContext) record.visualContext = profile.visualContext;
+    });
     const childCount = new Map();
     selectedRows.forEach((x) => (Array.isArray(x.data.continuedFrom) ? x.data.continuedFrom : []).forEach((pid) => {
       const id = String(pid); if (selectedIds.has(id)) childCount.set(id, (childCount.get(id) || 0) + 1);
@@ -2862,6 +3083,7 @@ exports.studioThreadPaths = onCall(
     batch.set(cacheRef, {
       threadId, signature, items: deep.paths, model: STUDIO_GARDENER_MODEL,
       thoughtIndexVersion: THOUGHT_INDEX_VERSION,
+      thoughtIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
       selectedFragmentCount: selectedRows.length, totalFragmentCount: allRows.length,
       generatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
