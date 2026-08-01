@@ -1,3 +1,4 @@
+// Thought Garden v52 · Multi-layer Thought Index
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -10,6 +11,9 @@ const db = getFirestore();
 const EMBEDDING_MODEL = "text-embedding-3-small";
 const EMBEDDING_VERSION = 1;
 const MAX_EMBEDDING_TEXT_CHARS = 12000;
+const THOUGHT_INDEX_MODEL = "gpt-5.4-mini";
+const THOUGHT_INDEX_VERSION = 2;
+const THOUGHT_INDEX_MAX_BATCH = 8;
 
 const STUDIO_GARDENER_MODEL = "gpt-5.4-mini";
 const BLOOMING_INTERVIEW_MODEL = STUDIO_GARDENER_MODEL;
@@ -17,7 +21,6 @@ const BLOOMING_INTERVIEW_DAILY_LIMIT = 6;
 const BETWEEN_THOUGHTS_MODEL = STUDIO_GARDENER_MODEL;
 const BETWEEN_THOUGHTS_DAILY_LIMIT = 12;
 const BETWEEN_THOUGHTS_CURATION_DAILY_LIMIT = 4;
-const BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT = 60;
 const BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES = 36;
 const BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT = 6;
 const BETWEEN_THOUGHTS_CURATION_PAIR_COUNT = 3;
@@ -289,6 +292,47 @@ async function requestEmbeddings(inputs) {
   };
 }
 
+async function ensureFragmentEmbedding(uid, fragmentRef, fragment) {
+  const text = buildEmbeddingText(fragment);
+  if (!text) return { ok: true, skipped: true, reason: "no-text", inputTokens: 0 };
+
+  const textHash = sha256(text);
+  const current =
+    fragment.embedding &&
+    fragment.embeddingModel === EMBEDDING_MODEL &&
+    fragment.embeddingVersion === EMBEDDING_VERSION &&
+    fragment.embeddingTextHash === textHash;
+
+  if (current) {
+    return { ok: true, skipped: true, reason: "already-current", model: EMBEDDING_MODEL, inputTokens: 0 };
+  }
+
+  const result = await requestEmbeddings([text]);
+  const vector = result.vectors[0];
+  const usageRef = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
+  const batch = db.batch();
+  batch.set(fragmentRef, {
+    embedding: FieldValue.vector(vector),
+    embeddingModel: EMBEDDING_MODEL,
+    embeddingVersion: EMBEDDING_VERSION,
+    embeddingTextHash: textHash,
+    embeddingDimensions: vector.length,
+    embeddingInputTokens: result.totalTokens,
+    embeddingUpdatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  batch.set(usageRef, {
+    fragmentEmbeddingTokens: FieldValue.increment(result.totalTokens),
+    fragmentEmbeddingCount: FieldValue.increment(1),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  await batch.commit();
+
+  return {
+    ok: true, skipped: false, model: EMBEDDING_MODEL, dimensions: vector.length,
+    inputTokens: result.totalTokens,
+  };
+}
+
 exports.embedFragment = onCall(
   {
     region: "us-central1",
@@ -304,66 +348,10 @@ exports.embedFragment = onCall(
     const fragmentId = safeId(request.data?.fragmentId, "생각 조각");
     const fragmentRef = db.collection("users").doc(uid).collection("fragments").doc(fragmentId);
     const fragmentSnap = await fragmentRef.get();
-
     if (!fragmentSnap.exists) throw new HttpsError("not-found", "생각 조각을 찾지 못했습니다.");
-
     const fragment = fragmentSnap.data() || {};
-    if (fragment.deletedAt) {
-      throw new HttpsError("failed-precondition", "휴지통의 생각 조각은 분석하지 않습니다.");
-    }
-
-    const text = buildEmbeddingText(fragment);
-    if (!text) return { ok: true, skipped: true, reason: "no-text" };
-
-    const textHash = sha256(text);
-    if (
-      fragment.embedding &&
-      fragment.embeddingModel === EMBEDDING_MODEL &&
-      fragment.embeddingVersion === EMBEDDING_VERSION &&
-      fragment.embeddingTextHash === textHash
-    ) {
-      return { ok: true, skipped: true, reason: "already-current", model: EMBEDDING_MODEL };
-    }
-
-    const result = await requestEmbeddings([text]);
-    const vector = result.vectors[0];
-
-    const usageRef = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
-    const writeBatch = db.batch();
-
-    writeBatch.set(
-      fragmentRef,
-      {
-        embedding: FieldValue.vector(vector),
-        embeddingModel: EMBEDDING_MODEL,
-        embeddingVersion: EMBEDDING_VERSION,
-        embeddingTextHash: textHash,
-        embeddingDimensions: vector.length,
-        embeddingInputTokens: result.totalTokens,
-        embeddingUpdatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    writeBatch.set(
-      usageRef,
-      {
-        fragmentEmbeddingTokens: FieldValue.increment(result.totalTokens),
-        fragmentEmbeddingCount: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    await writeBatch.commit();
-
-    return {
-      ok: true,
-      skipped: false,
-      model: EMBEDDING_MODEL,
-      dimensions: vector.length,
-      inputTokens: result.totalTokens,
-    };
+    if (fragment.deletedAt) throw new HttpsError("failed-precondition", "휴지통의 생각 조각은 분석하지 않습니다.");
+    return ensureFragmentEmbedding(uid, fragmentRef, fragment);
   }
 );
 
@@ -604,6 +592,11 @@ async function requestStudioQuestion(context) {
     "당신은 '생각의 텃밭' Studio의 정원사다.",
     "사용자가 자신의 글을 직접 쓰도록 돕되, 절대로 글의 답이나 문장을 대신 작성하지 않는다.",
     "프로젝트 제목, Thread의 생각 조각, 앞서 작성한 모든 칸, 현재 문항의 초안을 함께 보고 '현재 선택한 문항'에 질문 하나만 건넨다.",
+    "attachedMaterials와 글의 출발 재료에는 original이 들어올 수 있다. original.thought/context는 사용자의 실제 기록이고 original.sourceExcerpt는 외부 문장일 수 있으므로 반드시 구분해서 읽는다.",
+    "original이 있는 핵심 재료는 색인보다 우선한다. 질문의 구체적 근거와 사용자의 의도 판단은 원문에서 찾고, index는 어떤 부분을 살펴볼지 알려주는 지도와 배경 정보로만 쓴다.",
+    "긴 원문 안의 줄바꿈된 '…'는 가운데 일부가 길이 때문에 생략됐다는 표시다. 생략된 내용을 추정해 채우지 않는다.",
+    "index의 inferredIntents, valuesOrNeeds, emotions, tensions, alternateReadings는 근거와 confidence가 붙은 가설이다. 원문이 뒷받침하지 않으면 사실처럼 전제하거나 질문 속에 선언하지 않는다.",
+    "Thread의 넓은 배경 재료는 index만 들어올 수 있다. 이 경우 후보 방향을 참고할 수는 있지만, 색인만으로 사용자의 숨은 의도나 감정을 단정하지 않는다.",
     "가장 중요한 원칙은 중복 회피다. 질문을 만들기 전에 previousSlots와 currentDraft에서 이미 다룬 주장·원인·사례·감정·결론을 내부적으로 파악한다.",
     "이미 답이 적혀 있는 내용, 또는 앞선 문항에서 충분히 다룬 내용을 표현만 바꿔 다시 묻지 않는다.",
     "먼저 '앞에서 이미 간 방향'과 '현재 문항만이 할 수 있는 고유한 역할'을 구분한 뒤, 아직 가지 않은 사고 방향 하나를 고른다. 이 내부 분석은 출력하지 않는다.",
@@ -706,6 +699,70 @@ async function requestStudioQuestion(context) {
   };
 }
 
+function balancedText(value, maxChars) {
+  const text = String(value || "").trim();
+  const limit = Math.max(80, Number(maxChars || 0));
+  if (!text || text.length <= limit) return text;
+  const separator = "\n…\n";
+  const bodyLimit = Math.max(20, limit - separator.length);
+  const head = Math.ceil(bodyLimit * 0.58);
+  const tail = bodyLimit - head;
+  return text.slice(0, head).trimEnd() + separator + text.slice(-tail).trimStart();
+}
+
+function studioOriginalRecord(data, maxChars = 6200) {
+  let remaining = Math.max(800, Number(maxChars || 6200));
+  const take = (value, limit) => {
+    const text = String(value || "").trim();
+    if (!text || remaining <= 0) return "";
+    const out = balancedText(text, Math.min(limit, remaining));
+    remaining -= out.length;
+    return out;
+  };
+  // 작성자의 생각과 맥락을 외부 인용보다 먼저 보존한다.
+  const thought = take(data?.thought || data?.text, 4200);
+  const context = take(data?.context, 900);
+  const sourceExcerpt = take(data?.externalText, 2200);
+  return {
+    thought,
+    context,
+    sourceExcerpt,
+    locator: String(data?.locator || "").trim().slice(0, 180),
+  };
+}
+
+function studioMaterialCharCount(material) {
+  const original = material?.original || {};
+  return String(original.thought || "").length + String(original.context || "").length + String(original.sourceExcerpt || "").length;
+}
+
+function compactStudioMaterial(data, options = {}) {
+  const includeOriginal = options.includeOriginal === true;
+  const excerptLimit = Math.max(240, Math.min(900, Number(options.excerptLimit || 650)));
+  const originalLimit = Math.max(800, Math.min(7200, Number(options.originalLimit || 6200)));
+  const raw = [data?.context, data?.thought || data?.text, data?.externalText].filter(Boolean).join("\n").trim();
+  if (!raw) return null;
+
+  const normalized = normalizeThoughtIndex(data?.aiIndex);
+  const compact = normalized ? compactBetweenThoughtProfile(String(options.fragmentId || ""), normalized, data?.date || data?.createdAt) : null;
+  let index = null;
+  if (compact?.core) {
+    const { id, date, ...rest } = compact;
+    index = rest;
+  }
+
+  if (includeOriginal) {
+    return {
+      fragmentId: String(options.fragmentId || ""),
+      index,
+      original: studioOriginalRecord(data, originalLimit),
+    };
+  }
+
+  if (index) return { fragmentId: String(options.fragmentId || ""), index };
+  return { fragmentId: String(options.fragmentId || ""), excerpt: raw.slice(0, excerptLimit) };
+}
+
 /**
  * Studio의 '현재 선택한 문항'을 더 잘 쓰게 하는 질문 하나를 만든다.
  *
@@ -719,8 +776,8 @@ exports.studioGardenerQuestion = onCall(
   {
     region: "us-central1",
     secrets: ["OPENAI_API_KEY"],
-    timeoutSeconds: 45,
-    memory: "256MiB",
+    timeoutSeconds: 60,
+    memory: "512MiB",
     maxInstances: 3,
   },
   async (request) => {
@@ -759,33 +816,46 @@ exports.studioGardenerQuestion = onCall(
         id: String(s.id || ""),
         title: STUDIO_META[project.format]?.[s.id]?.[0] || String(s.id || ""),
         purpose: STUDIO_META[project.format]?.[s.id]?.[1] || "",
-        text: String(s.text || "").trim().slice(0, 1800),
+        text: balancedText(s.text, 1800),
       }))
       .filter((s) => s.text);
 
-    // 현재 target slot에 사용자가 직접 붙여둔 재료
-    const attachedIds = Array.isArray(targetSlot.fragmentIds)
-      ? [...new Set(targetSlot.fragmentIds)].filter(Boolean).slice(0, 8)
-      : [];
+    // 사용자가 직접 붙였거나 글의 출발점으로 고른 생각은 원문을 우선한다.
+    // 비용과 컨텍스트 폭주를 막기 위해 핵심 원문 전체 합계만 제한하고,
+    // 예산을 넘긴 나머지는 다층 색인으로 배경을 남긴다.
+    const primarySeen = new Set();
+    let primaryOriginalBudget = 30000;
+    const addPrimaryMaterial = (target, doc) => {
+      if (!doc?.exists || primarySeen.has(doc.id)) return;
+      const data = doc.data() || {};
+      if (data.deletedAt) return;
+      primarySeen.add(doc.id);
+      const includeOriginal = primaryOriginalBudget >= 800;
+      const material = compactStudioMaterial(data, {
+        fragmentId: doc.id,
+        includeOriginal,
+        originalLimit: Math.min(6200, primaryOriginalBudget),
+      });
+      if (!material) return;
+      if (includeOriginal) primaryOriginalBudget = Math.max(0, primaryOriginalBudget - studioMaterialCharCount(material));
+      target.push(material);
+    };
 
+    const attachedIds = Array.isArray(targetSlot.fragmentIds)
+      ? [...new Set(targetSlot.fragmentIds.map(String).filter(Boolean))].slice(0, 6)
+      : [];
     const attachedMaterials = [];
     if (attachedIds.length) {
-      const refs = attachedIds.map((id) => userRef.collection("fragments").doc(String(id)));
+      const refs = attachedIds.map((id) => userRef.collection("fragments").doc(id));
       const docs = await db.getAll(...refs);
-      docs.forEach((doc) => {
-        if (!doc.exists) return;
-        const data = doc.data() || {};
-        if (data.deletedAt) return;
-        const text = [data.context, data.thought, data.externalText].filter(Boolean).join("\n").trim();
-        if (text) attachedMaterials.push(text.slice(0, 900));
-      });
+      docs.forEach((doc) => addPrimaryMaterial(attachedMaterials, doc));
     }
 
-    // Studio가 Thread에서 시작됐다면 Thread 제목을 본다.
-    // '글의 갈래 찾기'로 시작한 프로젝트는 선택된 출발 생각만 우선해서 읽고,
-    // 일반 Thread 프로젝트일 때만 최근 Thread 생각을 넓게 참고한다.
+    // Studio가 Thread에서 시작됐다면 Thread 제목과 출발 재료를 본다.
+    // 출발 재료는 원문, Thread 전체의 나머지는 색인 위주의 배경으로 전달한다.
     let threadTitle = "";
     let threadQuestion = "";
+    const startingMaterials = [];
     const threadMaterials = [];
     const startingPath = project.startingPath && typeof project.startingPath === "object"
       ? {
@@ -796,7 +866,7 @@ exports.studioGardenerQuestion = onCall(
         }
       : null;
     const startingIds = Array.isArray(project.startingFragmentIds)
-      ? [...new Set(project.startingFragmentIds.map(String).filter(Boolean))].slice(0, 8)
+      ? [...new Set(project.startingFragmentIds.map(String).filter(Boolean))].slice(0, 6)
       : [];
 
     if (project.threadId) {
@@ -810,29 +880,42 @@ exports.studioGardenerQuestion = onCall(
       if (startingIds.length) {
         const refs = startingIds.map((id) => userRef.collection("fragments").doc(id));
         const docs = await db.getAll(...refs);
-        docs.forEach((doc) => {
-          if (!doc.exists) return;
-          const data = doc.data() || {};
-          if (data.deletedAt) return;
-          const text = [data.context, data.thought, data.externalText].filter(Boolean).join("\n").trim();
-          if (text) threadMaterials.push(text.slice(0, 1200));
-        });
-      } else {
-        const fragSnap = await userRef
-          .collection("fragments")
-          .where("threadIds", "array-contains", threadId)
-          .get();
-
-        const rows = [];
-        fragSnap.forEach((doc) => {
-          const data = doc.data() || {};
-          if (data.deletedAt) return;
-          const text = [data.context, data.thought, data.externalText].filter(Boolean).join("\n").trim();
-          if (!text) return;
-          rows.push({ at: String(data.createdAt || data.date || ""), text: text.slice(0, 800) });
-        });
-        rows.sort((a, b) => a.at.localeCompare(b.at)).slice(-20).forEach((row) => threadMaterials.push(row.text));
+        docs.forEach((doc) => addPrimaryMaterial(startingMaterials, doc));
       }
+
+      const fragSnap = await userRef
+        .collection("fragments")
+        .where("threadIds", "array-contains", threadId)
+        .get();
+
+      const threadRows = [];
+      fragSnap.forEach((doc) => {
+        const data = doc.data() || {};
+        if (data.deletedAt) return;
+        threadRows.push({ id: doc.id, at: String(data.createdAt || data.date || ""), data });
+      });
+      threadRows.sort((a, b) => a.at.localeCompare(b.at));
+
+      // 별도로 고른 출발 갈래가 없는 일반 Thread 프로젝트도 색인만 보지 않는다.
+      // 부모·자식 구조, 시간대, 임베딩 다양성을 이용해 핵심 원문 최대 6개를 먼저 읽힌다.
+      if (!startingIds.length) {
+        selectStudioPathRows(threadRows, 6).forEach((row) => addPrimaryMaterial(startingMaterials, {
+          exists: true,
+          id: row.id,
+          data: () => row.data,
+        }));
+      }
+
+      threadRows.forEach((row) => {
+        if (primarySeen.has(row.id)) return;
+        const material = compactStudioMaterial(row.data, { fragmentId: row.id, includeOriginal: false, excerptLimit: 520 });
+        if (!material) return;
+        threadMaterials.push({ at: row.at, material });
+      });
+      threadMaterials.sort((a, b) => a.at.localeCompare(b.at));
+      const background = threadMaterials.slice(-20).map((row) => row.material);
+      threadMaterials.length = 0;
+      background.forEach((material) => threadMaterials.push(material));
     }
 
     const context = {
@@ -842,6 +925,7 @@ exports.studioGardenerQuestion = onCall(
       threadTitle,
       threadQuestion,
       startingPath,
+      startingMaterials,
       threadMaterials,
       previousSlots,
       targetSlotTitle: meta[0],
@@ -850,13 +934,14 @@ exports.studioGardenerQuestion = onCall(
         STUDIO_GARDENER_GUIDE[project.format]?.[slotId] ||
         "앞에서 이미 다룬 내용을 반복하지 말고, 현재 문항의 고유한 역할에서 아직 탐색하지 않은 방향을 연다.",
       previousGardenerQuestion: String(targetSlot.gardenerQuestion || "").trim().slice(0, 500),
-      currentDraft: targetText.slice(0, 3500),
+      currentDraft: balancedText(targetText, 3500),
       attachedMaterials,
     };
 
     const hasContext =
       context.projectTitle ||
       context.threadTitle ||
+      context.startingMaterials.length ||
       context.threadMaterials.length ||
       context.previousSlots.length ||
       context.attachedMaterials.length;
@@ -1410,26 +1495,14 @@ async function reserveBetweenThoughtsCurationQuota(uid) {
   });
 }
 
-async function assertBetweenThoughtProfilesQuota(uid, count) {
-  const n = Math.max(0, Math.min(BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT, Number(count || 0)));
-  if (!n) return 0;
-  const ref = db.collection("users").doc(uid).collection("aiUsage").doc(koreaDateKey());
-  const snap = await ref.get();
-  const data = snap.exists ? snap.data() || {} : {};
-  const used = Math.max(0, Number(data.betweenThoughtsProfileGenerations || 0));
-  if (used + n > BETWEEN_THOUGHTS_PROFILE_DAILY_LIMIT) {
-    throw new HttpsError("resource-exhausted", "오늘 만들 수 있는 생각 프로필 수를 넘었어요. 내일 이어서 정리할게요.");
-  }
-  return used;
-}
 
 function betweenThoughtFullRecord(id, data, source) {
   return {
     id,
     date: String(data.date || data.createdAt || "").slice(0, 10),
-    thought: String(data.thought || data.text || "").trim().slice(0, 4200),
-    context: String(data.context || "").trim().slice(0, 900),
-    sourceExcerpt: String(data.externalText || "").trim().slice(0, 2200),
+    thought: balancedText(data.thought || data.text, 4200),
+    context: balancedText(data.context, 900),
+    sourceExcerpt: balancedText(data.externalText, 2200),
     locator: String(data.locator || "").trim().slice(0, 200),
     sourceId: String(data.sourceId || ""),
     source: source ? {
@@ -1453,23 +1526,132 @@ function betweenThoughtProfileFingerprint(record) {
   }));
 }
 
-function compactBetweenThoughtProfile(id, profile, date) {
+function normalizeStringList(value, maxItems, maxChars) {
+  return Array.isArray(value)
+    ? value.map((x) => String(x || "").trim().slice(0, maxChars)).filter(Boolean).slice(0, maxItems)
+    : [];
+}
+
+function normalizeConfidence(value) {
+  const raw = String(value || "medium").toLowerCase();
+  return ["low", "medium", "high"].includes(raw) ? raw : "medium";
+}
+
+function normalizeEvidenceList(value, maxItems, valueChars = 130, evidenceChars = 180) {
+  return Array.isArray(value)
+    ? value.map((item) => ({
+        value: String(item?.value || item?.reading || "").trim().slice(0, valueChars),
+        evidence: String(item?.evidence || "").trim().slice(0, evidenceChars),
+        confidence: normalizeConfidence(item?.confidence),
+      })).filter((item) => item.value && item.evidence).slice(0, maxItems)
+    : [];
+}
+
+function isThoughtIndexV2(index) {
+  return Boolean(index?.literal?.summary && index?.authorPerspective && index?.innerDynamics && index?.uncertainty);
+}
+
+function normalizeThoughtIndex(index) {
+  if (!isThoughtIndexV2(index)) return null;
   return {
+    literal: {
+      summary: String(index.literal?.summary || "").trim().slice(0, 380),
+      topics: normalizeStringList(index.literal?.topics, 5, 70),
+      events: normalizeStringList(index.literal?.events, 3, 150),
+      claims: normalizeStringList(index.literal?.claims, 4, 160),
+      keyPhrases: normalizeStringList(index.literal?.keyPhrases, 4, 120),
+    },
+    authorPerspective: {
+      explicitIntents: normalizeStringList(index.authorPerspective?.explicitIntents, 3, 150),
+      inferredIntents: normalizeEvidenceList(index.authorPerspective?.inferredIntents, 2, 150, 180),
+      valuesOrNeeds: normalizeEvidenceList(index.authorPerspective?.valuesOrNeeds, 4, 120, 180),
+    },
+    innerDynamics: {
+      emotions: normalizeEvidenceList(index.innerDynamics?.emotions, 3, 90, 160),
+      tensions: normalizeEvidenceList(index.innerDynamics?.tensions, 3, 150, 180),
+      shifts: normalizeEvidenceList(index.innerDynamics?.shifts, 2, 170, 190),
+      openLoops: normalizeEvidenceList(index.innerDynamics?.openLoops, 3, 170, 190),
+    },
+    alternateReadings: normalizeEvidenceList(index.alternateReadings, 2, 170, 190),
+    uncertainty: {
+      insufficientContext: Boolean(index.uncertainty?.insufficientContext),
+      notes: normalizeStringList(index.uncertainty?.notes, 3, 180),
+    },
+    sourceContext: {
+      relation: ["none", "resonates", "challenges", "applies", "questions", "extends"].includes(String(index.sourceContext?.relation || ""))
+        ? String(index.sourceContext.relation)
+        : "none",
+      anchor: String(index.sourceContext?.anchor || "").trim().slice(0, 220),
+      contextKind: ["personal_experience", "reflection", "decision", "desire", "source_response", "mixed", "other"].includes(String(index.sourceContext?.contextKind || ""))
+        ? String(index.sourceContext.contextKind)
+        : "other",
+    },
+  };
+}
+
+function compactEvidenceItems(items, maxItems = 3) {
+  return (Array.isArray(items) ? items : []).slice(0, maxItems).map((item) => ({
+    value: String(item?.value || "").slice(0, 150),
+    evidence: String(item?.evidence || "").slice(0, 180),
+    confidence: normalizeConfidence(item?.confidence),
+  })).filter((item) => item.value && item.evidence);
+}
+
+function compactBetweenThoughtProfile(id, profile, date) {
+  const index = normalizeThoughtIndex(profile);
+  if (!index) return {
     id,
     date: String(date || "").slice(0, 10),
     core: String(profile?.core || "").trim().slice(0, 320),
-    themes: Array.isArray(profile?.themes) ? profile.themes.map(String).slice(0, 5) : [],
-    valuesOrNeeds: Array.isArray(profile?.valuesOrNeeds) ? profile.valuesOrNeeds.map(String).slice(0, 4) : [],
-    patternsOrTensions: Array.isArray(profile?.patternsOrTensions) ? profile.patternsOrTensions.map(String).slice(0, 4) : [],
-    emotions: Array.isArray(profile?.emotions) ? profile.emotions.map(String).slice(0, 3) : [],
+    themes: normalizeStringList(profile?.themes, 5, 80),
+    keyPhrases: [],
+    explicitIntents: [],
+    inferredIntents: [],
+    valuesOrNeeds: normalizeStringList(profile?.valuesOrNeeds, 4, 90).map((value) => ({ value, evidence: "이전 색인", confidence: "low" })),
+    patternsOrTensions: normalizeStringList(profile?.patternsOrTensions, 4, 110),
+    tensions: [],
+    shifts: [],
+    emotions: normalizeStringList(profile?.emotions, 3, 50).map((value) => ({ value, evidence: "이전 색인", confidence: "low" })),
+    openLoops: String(profile?.unfinished || "").trim() ? [{ value: String(profile.unfinished).trim().slice(0, 170), evidence: "이전 색인", confidence: "low" }] : [],
+    alternateReadings: [],
+    uncertaintyNotes: ["이전 버전 색인"],
+    insufficientContext: false,
     unfinished: String(profile?.unfinished || "").trim().slice(0, 240),
     sourceRelation: String(profile?.sourceRelation || "none"),
     sourceAnchor: String(profile?.sourceAnchor || "").trim().slice(0, 220),
     contextKind: String(profile?.contextKind || "other"),
   };
+
+  const tensions = compactEvidenceItems(index.innerDynamics.tensions, 3);
+  const shifts = compactEvidenceItems(index.innerDynamics.shifts, 2);
+  const openLoops = compactEvidenceItems(index.innerDynamics.openLoops, 3);
+  return {
+    id,
+    date: String(date || "").slice(0, 10),
+    core: index.literal.summary,
+    themes: index.literal.topics,
+    keyPhrases: index.literal.keyPhrases,
+    events: index.literal.events,
+    claims: index.literal.claims,
+    explicitIntents: index.authorPerspective.explicitIntents,
+    inferredIntents: compactEvidenceItems(index.authorPerspective.inferredIntents, 2),
+    valuesOrNeeds: compactEvidenceItems(index.authorPerspective.valuesOrNeeds, 4),
+    patternsOrTensions: [...tensions.map((x) => x.value), ...shifts.map((x) => x.value)].slice(0, 5),
+    tensions,
+    shifts,
+    emotions: compactEvidenceItems(index.innerDynamics.emotions, 3),
+    openLoops,
+    alternateReadings: compactEvidenceItems(index.alternateReadings, 2),
+    uncertaintyNotes: index.uncertainty.notes,
+    insufficientContext: index.uncertainty.insufficientContext,
+    unfinished: openLoops.map((x) => x.value).join(" / ").slice(0, 280),
+    sourceRelation: index.sourceContext.relation,
+    sourceAnchor: index.sourceContext.anchor,
+    contextKind: index.sourceContext.contextKind,
+  };
 }
 
-async function requestBetweenThoughtProfiles(records) {
+async function requestThoughtIndexes(records) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
   const inputs = records.map((r) => ({
@@ -1482,22 +1664,37 @@ async function requestBetweenThoughtProfiles(records) {
     source: r.source,
   }));
   const systemPrompt = [
-    "당신은 '생각의 텃밭'에서 사용자의 생각 조각을 나중의 연결 탐색에 재사용할 수 있도록 짧은 '생각 프로필'로 정리한다.",
-    "이 프로필은 사용자에게 직접 보여주는 요약문이 아니라 AI 큐레이션용 내부 표식이다. 따라서 짧고 구체적이어야 한다.",
-    "thought는 사용자가 직접 쓴 생각이다. sourceExcerpt는 책·영상·대화·타인의 말 등 외부에서 가져온 인용/장면일 수 있다. 둘을 절대 사용자 생각처럼 섞지 않는다.",
-    "core에는 사용자가 실제로 말한 핵심 생각만 1~2문장으로 적는다. 사용자가 말하지 않은 성격·진단·동기·감정을 추측하지 않는다.",
-    "themes는 표면 주제, valuesOrNeeds는 사용자가 중요하게 여긴 가치나 욕구, patternsOrTensions는 반복 가능성이 있는 행동·긴장·모순을 짧은 구로 적는다. 근거가 없으면 빈 배열로 둔다.",
-    "emotions는 글에서 직접 드러난 정서만 적는다. unfinished에는 아직 열려 있는 질문이나 미완의 생각이 실제로 보일 때만 적는다.",
-    "출처가 있으면 sourceRelation은 사용자의 생각이 그 외부 내용과 어떤 관계인지 고른다. sourceAnchor에는 질문 연결에 쓸 만한 인용/장면의 핵심만 아주 짧게 적는다. 출처가 없으면 none과 빈 문자열을 쓴다.",
-    "같은 책이나 같은 소재라는 사실만으로 나중에 강한 연결이라고 오해하지 않도록, 사용자가 그 내용을 어떻게 받아들였는지를 중심으로 프로필을 만든다.",
-    "각 문자열은 짧고 평이한 한국어로 쓴다. 프로필 하나를 장황한 요약으로 만들지 않는다.",
+    "당신은 '생각의 텃밭'에서 사용자가 남긴 생각 조각을 여러 기능이 재사용할 수 있는 다층 색인으로 정리한다.",
+    "이 색인은 원문을 대체하거나 사용자를 진단하는 요약문이 아니다. 나중에 관련 생각을 찾고, 원문을 다시 읽을 후보를 고르기 위한 지도다.",
+    "thought와 context는 사용자가 직접 쓴 내용이다. sourceExcerpt와 source는 외부의 책·영상·대화·타인의 말일 수 있으므로 사용자 생각과 절대 섞지 않는다.",
+    "긴 텍스트 안의 줄바꿈된 '…'는 가운데 일부가 길이 때문에 생략됐다는 표시다. 생략된 내용을 상상해 채우지 않는다.",
+    "literal에는 원문에 직접 나타난 내용만 적는다. summary는 핵심을 1~2문장으로, topics는 표면 주제와 개념을, events와 claims는 실제 사건·판단을, keyPhrases는 작성자의 의미와 말투가 잘 남는 짧은 원문 표현을 적는다.",
+    "authorPerspective의 explicitIntents는 사용자가 직접 밝힌 목적만 적는다. inferredIntents와 valuesOrNeeds는 추론일 수 있으므로 반드시 근거 표현과 confidence를 함께 적는다.",
+    "innerDynamics는 감정, 충돌하는 마음, 글 안의 관점 변화, 아직 닫히지 않은 문제를 다룬다. 근거가 없으면 빈 배열로 두고, 모순을 억지로 하나로 정리하지 않는다.",
+    "alternateReadings에는 지배적인 해석과 다른 읽기가 실제 문장에 의해 가능할 때만 최대 2개를 적는다. 단순한 상상이나 심리 추측은 넣지 않는다.",
+    "모든 evidence는 원문의 짧은 표현 또는 그 표현에 아주 가까운 구체적 근거여야 한다. 제공되지 않은 사실·성격·동기·감정을 만들지 않는다.",
+    "원문이 짧거나 애매해 의도와 감정을 판단하기 어렵다면 uncertainty.insufficientContext를 true로 하고 notes에 무엇을 단정할 수 없는지 적는다.",
+    "질병, 성격 유형, 애착 유형 같은 진단을 하지 않는다. 사용자의 독특한 표현을 모두 일반적인 심리 용어로 바꾸지 않는다.",
+    "sourceContext는 외부 재료와 사용자의 생각이 실제로 어떤 관계인지 기록한다. 외부 문장 자체를 사용자 신념처럼 취급하지 않는다.",
+    "각 항목은 짧고 평이한 한국어로 쓴다. 수를 채우기 위해 약한 항목을 만들지 않는다.",
   ].join("\n");
+
+  const evidenceItem = {
+    type: "object",
+    properties: {
+      value: { type: "string" },
+      evidence: { type: "string" },
+      confidence: { type: "string", enum: ["low", "medium", "high"] },
+    },
+    required: ["value", "evidence", "confidence"],
+    additionalProperties: false,
+  };
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: BETWEEN_THOUGHTS_MODEL,
+      model: THOUGHT_INDEX_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: JSON.stringify({ fragments: inputs }) },
@@ -1505,141 +1702,233 @@ async function requestBetweenThoughtProfiles(records) {
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "between_thought_profiles",
+          name: "thought_indexes_v2",
           strict: true,
           schema: {
             type: "object",
             properties: {
-              profiles: {
+              indexes: {
                 type: "array",
                 minItems: 1,
-                maxItems: BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES,
+                maxItems: THOUGHT_INDEX_MAX_BATCH,
                 items: {
                   type: "object",
                   properties: {
                     id: { type: "string" },
-                    core: { type: "string" },
-                    themes: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
-                    valuesOrNeeds: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
-                    patternsOrTensions: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
-                    emotions: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
-                    unfinished: { type: "string" },
-                    sourceRelation: { type: "string", enum: ["none", "resonates", "challenges", "applies", "questions", "extends"] },
-                    sourceAnchor: { type: "string" },
-                    contextKind: { type: "string", enum: ["personal_experience", "reflection", "decision", "desire", "source_response", "mixed", "other"] },
+                    literal: {
+                      type: "object",
+                      properties: {
+                        summary: { type: "string" },
+                        topics: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
+                        events: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
+                        claims: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
+                        keyPhrases: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
+                      },
+                      required: ["summary", "topics", "events", "claims", "keyPhrases"],
+                      additionalProperties: false,
+                    },
+                    authorPerspective: {
+                      type: "object",
+                      properties: {
+                        explicitIntents: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
+                        inferredIntents: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                        valuesOrNeeds: { type: "array", minItems: 0, maxItems: 4, items: evidenceItem },
+                      },
+                      required: ["explicitIntents", "inferredIntents", "valuesOrNeeds"],
+                      additionalProperties: false,
+                    },
+                    innerDynamics: {
+                      type: "object",
+                      properties: {
+                        emotions: { type: "array", minItems: 0, maxItems: 3, items: evidenceItem },
+                        tensions: { type: "array", minItems: 0, maxItems: 3, items: evidenceItem },
+                        shifts: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                        openLoops: { type: "array", minItems: 0, maxItems: 3, items: evidenceItem },
+                      },
+                      required: ["emotions", "tensions", "shifts", "openLoops"],
+                      additionalProperties: false,
+                    },
+                    alternateReadings: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                    uncertainty: {
+                      type: "object",
+                      properties: {
+                        insufficientContext: { type: "boolean" },
+                        notes: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
+                      },
+                      required: ["insufficientContext", "notes"],
+                      additionalProperties: false,
+                    },
+                    sourceContext: {
+                      type: "object",
+                      properties: {
+                        relation: { type: "string", enum: ["none", "resonates", "challenges", "applies", "questions", "extends"] },
+                        anchor: { type: "string" },
+                        contextKind: { type: "string", enum: ["personal_experience", "reflection", "decision", "desire", "source_response", "mixed", "other"] },
+                      },
+                      required: ["relation", "anchor", "contextKind"],
+                      additionalProperties: false,
+                    },
                   },
-                  required: ["id", "core", "themes", "valuesOrNeeds", "patternsOrTensions", "emotions", "unfinished", "sourceRelation", "sourceAnchor", "contextKind"],
+                  required: ["id", "literal", "authorPerspective", "innerDynamics", "alternateReadings", "uncertainty", "sourceContext"],
                   additionalProperties: false,
                 },
               },
             },
-            required: ["profiles"],
+            required: ["indexes"],
             additionalProperties: false,
           },
         },
       },
-      max_completion_tokens: Math.min(6200, Math.max(700, records.length * 190)),
+      max_completion_tokens: Math.min(7200, Math.max(1000, records.length * 650)),
     }),
   });
 
   let payload;
   try { payload = await response.json(); } catch (_) { payload = null; }
   if (!response.ok) {
-    logger.error("OpenAI Between Thoughts profile HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
-    throw new HttpsError("internal", "생각 프로필을 만들지 못했습니다.");
+    logger.error("OpenAI thought index HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
+    throw new HttpsError("internal", "생각 색인을 만들지 못했습니다.");
   }
   const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "생각 프로필 결과가 비어 있습니다.");
+  if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "생각 색인 결과가 비어 있습니다.");
   let parsed;
-  try { parsed = JSON.parse(raw); } catch (_) { throw new HttpsError("internal", "생각 프로필 형식이 올바르지 않습니다."); }
+  try { parsed = JSON.parse(raw); } catch (_) { throw new HttpsError("internal", "생각 색인 형식이 올바르지 않습니다."); }
   const validIds = new Set(records.map((x) => x.id));
-  const profiles = (Array.isArray(parsed?.profiles) ? parsed.profiles : [])
-    .filter((p) => validIds.has(String(p?.id || "")))
-    .map((p) => ({
-      id: String(p.id),
-      core: String(p.core || "").trim().slice(0, 320),
-      themes: Array.isArray(p.themes) ? p.themes.map((x) => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 5) : [],
-      valuesOrNeeds: Array.isArray(p.valuesOrNeeds) ? p.valuesOrNeeds.map((x) => String(x).trim().slice(0, 90)).filter(Boolean).slice(0, 4) : [],
-      patternsOrTensions: Array.isArray(p.patternsOrTensions) ? p.patternsOrTensions.map((x) => String(x).trim().slice(0, 110)).filter(Boolean).slice(0, 4) : [],
-      emotions: Array.isArray(p.emotions) ? p.emotions.map((x) => String(x).trim().slice(0, 50)).filter(Boolean).slice(0, 3) : [],
-      unfinished: String(p.unfinished || "").trim().slice(0, 240),
-      sourceRelation: String(p.sourceRelation || "none"),
-      sourceAnchor: String(p.sourceAnchor || "").trim().slice(0, 220),
-      contextKind: String(p.contextKind || "other"),
-    }))
-    .filter((p) => p.core);
+  const indexes = (Array.isArray(parsed?.indexes) ? parsed.indexes : [])
+    .filter((item) => validIds.has(String(item?.id || "")))
+    .map((item) => ({ id: String(item.id), index: normalizeThoughtIndex(item) }))
+    .filter((item) => item.index?.literal?.summary);
   return {
-    profiles,
-    model: BETWEEN_THOUGHTS_MODEL,
+    indexes,
+    profiles: indexes.map((item) => ({ id: item.id, ...item.index })),
+    model: THOUGHT_INDEX_MODEL,
     inputTokens: Number(payload?.usage?.prompt_tokens || 0),
     cachedInputTokens: Number(payload?.usage?.prompt_tokens_details?.cached_tokens || 0),
     outputTokens: Number(payload?.usage?.completion_tokens || 0),
   };
 }
 
-async function ensureBetweenThoughtProfiles(uid, userRef, records, options = {}) {
-  const usageScope = options.usageScope === "studioPath" ? "studioPath" : "betweenThoughts";
-  const profileCol = userRef.collection("aiBetweenThoughtProfiles");
-  const snaps = await Promise.all(records.map((r) => profileCol.doc(r.id).get()));
+async function ensureThoughtIndexes(uid, userRef, records) {
+  const fragmentRefs = records.map((r) => userRef.collection("fragments").doc(r.id));
+  const fragmentSnaps = fragmentRefs.length ? await db.getAll(...fragmentRefs) : [];
   const resultMap = new Map();
   const stale = [];
-  records.forEach((r, i) => {
-    const fingerprint = betweenThoughtProfileFingerprint(r);
-    const data = snaps[i].exists ? snaps[i].data() || {} : {};
-    if (data.fingerprint === fingerprint && data.profile?.core) {
-      resultMap.set(r.id, data.profile);
-    } else {
-      stale.push({ record: r, fingerprint });
+
+  records.forEach((record, i) => {
+    const fingerprint = betweenThoughtProfileFingerprint(record);
+    const fragmentData = fragmentSnaps[i]?.exists ? fragmentSnaps[i].data() || {} : {};
+    const currentIndex = normalizeThoughtIndex(fragmentData.aiIndex);
+    if (
+      fragmentData.aiIndexVersion === THOUGHT_INDEX_VERSION &&
+      fragmentData.aiIndexFingerprint === fingerprint &&
+      currentIndex
+    ) {
+      resultMap.set(record.id, currentIndex);
+      return;
     }
+    stale.push({ record, fingerprint, ref: fragmentRefs[i] });
   });
 
-  let usage = { count: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
-  if (stale.length) {
-    // 두 생각 사이에서 새 프로필을 만들 때만 전용 일일 한도를 확인한다.
-    // Studio의 글의 갈래 찾기는 자체 기능으로 집계하며, 이 한도를 중복 소비하지 않는다.
-    if (usageScope === "betweenThoughts") {
-      await assertBetweenThoughtProfilesQuota(uid, stale.length);
-    }
-    const generated = await requestBetweenThoughtProfiles(stale.map((x) => x.record));
-    const generatedMap = new Map(generated.profiles.map((p) => [p.id, p]));
-    const batch = db.batch();
-    for (const item of stale) {
-      const profile = generatedMap.get(item.record.id);
-      if (!profile) continue;
-      resultMap.set(item.record.id, profile);
-      batch.set(profileCol.doc(item.record.id), {
-        fragmentId: item.record.id,
-        fingerprint: item.fingerprint,
-        sourceId: item.record.sourceId || "",
-        profile,
-        model: generated.model,
-        generatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
-    const count = [...stale].filter((x) => generatedMap.has(x.record.id)).length;
-    if (count) {
-      if (usageScope === "betweenThoughts") {
+  let usage = { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
+  if (!stale.length) return { profiles: resultMap, indexes: resultMap, usage };
+
+  const chunks = [];
+  for (let i = 0; i < stale.length; i += THOUGHT_INDEX_MAX_BATCH) chunks.push(stale.slice(i, i + THOUGHT_INDEX_MAX_BATCH));
+
+  for (let i = 0; i < chunks.length; i += 2) {
+    const group = chunks.slice(i, i + 2);
+    const generatedGroup = await Promise.all(group.map((chunk) => requestThoughtIndexes(chunk.map((item) => item.record))));
+    for (let g = 0; g < group.length; g++) {
+      const chunk = group[g];
+      const generated = generatedGroup[g];
+      const generatedMap = new Map(generated.indexes.map((item) => [item.id, item.index]));
+      const batch = db.batch();
+      let count = 0;
+      const divisor = Math.max(1, generated.indexes.length);
+      for (const item of chunk) {
+        const index = generatedMap.get(item.record.id);
+        if (!index) continue;
+        resultMap.set(item.record.id, index);
+        batch.set(item.ref, {
+          aiIndex: index,
+          aiIndexVersion: THOUGHT_INDEX_VERSION,
+          aiIndexModel: generated.model,
+          aiIndexFingerprint: item.fingerprint,
+          aiIndexInputTokens: Math.round(generated.inputTokens / divisor),
+          aiIndexCachedInputTokens: Math.round(generated.cachedInputTokens / divisor),
+          aiIndexOutputTokens: Math.round(generated.outputTokens / divisor),
+          aiIndexUpdatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        count++;
+      }
+      if (count) {
         batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
-          betweenThoughtsProfileGenerations: FieldValue.increment(count),
-          betweenThoughtsProfileInputTokens: FieldValue.increment(generated.inputTokens),
-          betweenThoughtsProfileCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
-          betweenThoughtsProfileOutputTokens: FieldValue.increment(generated.outputTokens),
-          betweenThoughtsProfileModel: BETWEEN_THOUGHTS_MODEL,
+          thoughtIndexGenerations: FieldValue.increment(count),
+          thoughtIndexInputTokens: FieldValue.increment(generated.inputTokens),
+          thoughtIndexCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
+          thoughtIndexOutputTokens: FieldValue.increment(generated.outputTokens),
+          thoughtIndexModel: THOUGHT_INDEX_MODEL,
+          thoughtIndexVersion: THOUGHT_INDEX_VERSION,
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
+        await batch.commit();
+        usage.count += count;
+        usage.inputTokens += generated.inputTokens;
+        usage.cachedInputTokens += generated.cachedInputTokens;
+        usage.outputTokens += generated.outputTokens;
       }
-      await batch.commit();
-      usage = { count, inputTokens: generated.inputTokens, cachedInputTokens: generated.cachedInputTokens, outputTokens: generated.outputTokens };
     }
   }
-  return { profiles: resultMap, usage };
+  return { profiles: resultMap, indexes: resultMap, usage };
+}
+
+// 이전 함수명은 호출부 호환을 위해 유지하되 실제로는 v2 다층 색인을 보장한다.
+async function ensureBetweenThoughtProfiles(uid, userRef, records) {
+  return ensureThoughtIndexes(uid, userRef, records);
+}
+
+async function ensureUnifiedThoughtIndex(uid, fragmentId, options = {}) {
+  const includeEmbedding = options.includeEmbedding !== false;
+  const includeStructured = options.includeStructured !== false;
+  const userRef = db.collection("users").doc(uid);
+  const fragmentRef = userRef.collection("fragments").doc(fragmentId);
+  const snap = await fragmentRef.get();
+  if (!snap.exists) throw new HttpsError("not-found", "생각 조각을 찾지 못했습니다.");
+  const data = snap.data() || {};
+  if (data.deletedAt) return { ok: true, skipped: true, reason: "deleted" };
+
+  const sourceId = String(data.sourceId || "");
+  const sourceSnap = sourceId ? await userRef.collection("sources").doc(sourceId).get() : null;
+  const record = betweenThoughtFullRecord(fragmentId, data, sourceSnap?.exists ? sourceSnap.data() || {} : null);
+  const canStructure = includeStructured && (record.thought || record.sourceExcerpt).trim().length >= 8;
+
+  const [embedding, structured] = await Promise.all([
+    includeEmbedding ? ensureFragmentEmbedding(uid, fragmentRef, data) : Promise.resolve({ ok: true, skipped: true, reason: "not-requested", inputTokens: 0 }),
+    canStructure
+      ? ensureThoughtIndexes(uid, userRef, [record])
+      : Promise.resolve({ profiles: new Map(), indexes: new Map(), usage: { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 } }),
+  ]);
+
+  const index = structured.indexes.get(fragmentId);
+  return {
+    ok: true,
+    skipped: Boolean(embedding.skipped && !structured.usage.count),
+    embedding,
+    indexed: Boolean(index),
+    indexGenerated: structured.usage.count > 0,
+    indexMigrated: false,
+    aiIndexVersion: THOUGHT_INDEX_VERSION,
+    model: THOUGHT_INDEX_MODEL,
+  };
 }
 
 async function requestBetweenThoughtsScout(profileCandidates, excludePairKeys) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
   const systemPrompt = [
-    "당신은 '생각의 텃밭'의 1차 큐레이터다. 지금 보는 것은 각 생각의 원문이 아니라 재사용 가능한 짧은 '생각 프로필'이다.",
+    "당신은 '생각의 텃밭'의 1차 큐레이터다. 지금 보는 것은 각 생각의 원문이 아니라 여러 관점과 근거를 분리해 둔 다층 생각 색인이다.",
+    "core/themes/events/claims/keyPhrases는 원문에 직접 나타난 내용에 가깝다. inferredIntents, valuesOrNeeds, emotions, tensions, shifts, openLoops, alternateReadings는 evidence와 confidence가 붙은 해석 후보이므로 사실처럼 단정하지 않는다.",
+    "한 항목의 summary만 따라가지 말고 직접 진술, 의도, 가치, 긴장, 변화, 미완의 질문, 대안 해석을 서로 다른 렌즈로 살핀다. uncertainty가 크면 후보 점수를 낮춘다.",
     `최대 ${BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT}개의 조합만 원문 정밀 검토 대상으로 고른다. 이 단계에서는 질문을 만들지 않는다.`,
     "가장 비슷한 두 생각을 찾는 것이 목표가 아니다. 함께 놓았을 때 새로운 자기 이해가 생길 가능성이 있는 두 생각을 찾는다.",
     "좋은 후보 유형은 세 가지다: (1) 직접 연결 — 같은 주제를 더 깊게 이어가는 관계, (2) 반복 패턴 — 소재는 다르지만 가치·욕구·감정·행동·긴장이 구체적으로 반복되는 관계, (3) 뜻밖의 연결 — 표면 주제는 다르지만 사용자가 실제로 적은 내용에서 선명한 공통 축이나 모순이 보이는 관계.",
@@ -1744,6 +2033,7 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 최종 큐레이터이자 인터뷰어다.",
     "1차 큐레이터가 생각 프로필만 보고 고른 후보 조합을 이제 실제 원문, 출처, 인용과 함께 다시 읽는다. 1차 판단을 그대로 믿지 말고 반드시 재검증한다.",
+    "원문 안의 줄바꿈된 '…'는 긴 글의 가운데 일부가 생략됐다는 표시다. 생략된 내용을 추정하지 않는다.",
     `최종적으로 사용자가 함께 바라볼 가치가 분명한 조합만 최대 ${BETWEEN_THOUGHTS_CURATION_PAIR_COUNT}개 남기고, 각 조합에 질문 하나를 만든다.`,
     "가장 중요한 기준은 사용자가 두 카드를 보는 순간 '왜 이 둘을 같이 보여줬는지 알 것 같다'고 느낄 가능성이다. 설명을 길게 해야만 연결되는 조합은 탈락시킨다.",
     "같은 책·같은 영상·같은 출처라는 이유만으로는 연결 근거가 되지 않는다. 두 기록에서 사용자가 붙잡은 생각의 변화·긴장·적용 방식이 실제로 이어져야 한다.",
@@ -1847,33 +2137,144 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
 }
 
 /**
- * Fragment가 새로 생기거나 수정될 때 한 번 만드는 '두 생각 사이' 전용 생각 프로필.
- * 원문/출처가 바뀌지 않으면 같은 프로필을 재사용한다.
+ * 이전 클라이언트 호환용 이름. 실제로는 Fragment의 v2 다층 생각 색인을 갱신한다.
  */
 exports.betweenThoughtsProfile = onCall(
   {
     region: "us-central1",
     secrets: ["OPENAI_API_KEY"],
-    timeoutSeconds: 45,
-    memory: "256MiB",
+    timeoutSeconds: 90,
+    memory: "512MiB",
     maxInstances: 3,
   },
   async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError("unauthenticated", "로그인 후 사용할 수 있습니다.");
     const fragmentId = safeId(request.data?.fragmentId, "생각 조각");
+    return ensureUnifiedThoughtIndex(uid, fragmentId, { includeEmbedding: false });
+  }
+);
+
+/**
+ * 새 생각 저장 뒤 한 번만 호출하는 통합 색인 함수.
+ * - 의미 검색용 embedding
+ * - 두 생각 사이 / 글의 갈래 / Studio 질문이 공유하는 다층 AI 색인
+ * 두 결과를 같은 Fragment 문서에 저장하고, 원문이 바뀌지 않으면 다시 호출하지 않는다.
+ * 색인은 원문을 대체하지 않으며 최종 질문과 갈래 판단은 선택된 원문을 다시 읽는다.
+ */
+exports.thoughtIndexFragment = onCall(
+  {
+    region: "us-central1",
+    secrets: ["OPENAI_API_KEY"],
+    timeoutSeconds: 90,
+    memory: "512MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
+    const fragmentId = safeId(request.data?.fragmentId, "생각 조각");
+    const isAnonymous = request.auth?.token?.firebase?.sign_in_provider === "anonymous";
+    return ensureUnifiedThoughtIndex(uid, fragmentId, { includeEmbedding: true, includeStructured: !isAnonymous });
+  }
+);
+
+/**
+ * 기존 생각의 embedding과 공통 AI 색인을 함께 보완한다.
+ * 현재 v2 색인이 원문과 일치하는 생각은 다시 호출하지 않는다.
+ */
+exports.backfillThoughtIndexes = onCall(
+  {
+    region: "us-central1",
+    secrets: ["OPENAI_API_KEY"],
+    timeoutSeconds: 180,
+    memory: "512MiB",
+    maxInstances: 1,
+  },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
+    const requested = Number(request.data?.limit || THOUGHT_INDEX_MAX_BATCH);
+    const limit = Math.max(1, Math.min(THOUGHT_INDEX_MAX_BATCH, Number.isFinite(requested) ? Math.floor(requested) : THOUGHT_INDEX_MAX_BATCH));
     const userRef = db.collection("users").doc(uid);
-    const snap = await userRef.collection("fragments").doc(fragmentId).get();
-    if (!snap.exists) throw new HttpsError("not-found", "생각 조각을 찾지 못했습니다.");
-    const data = snap.data() || {};
-    if (data.deletedAt) return { ok: true, skipped: true, reason: "deleted" };
-    const sourceId = String(data.sourceId || "");
-    const sourceSnap = sourceId ? await userRef.collection("sources").doc(sourceId).get() : null;
-    const record = betweenThoughtFullRecord(fragmentId, data, sourceSnap?.exists ? sourceSnap.data() || {} : null);
-    if ((record.thought || record.sourceExcerpt).trim().length < 8) return { ok: true, skipped: true, reason: "not-enough-context" };
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, [record]);
-    const profile = ensured.profiles.get(fragmentId);
-    return { ok: true, cached: ensured.usage.count === 0, profiled: Boolean(profile), model: BETWEEN_THOUGHTS_MODEL };
+    const snap = await userRef.collection("fragments").get();
+    const rows = [];
+    snap.forEach((doc) => {
+      const data = doc.data() || {};
+      if (!data.deletedAt) rows.push({ id: doc.id, ref: doc.ref, data });
+    });
+
+    const sourceIds = [...new Set(rows.map((x) => String(x.data.sourceId || "")).filter(Boolean))];
+    const sourceSnaps = sourceIds.length ? await db.getAll(...sourceIds.map((id) => userRef.collection("sources").doc(id))) : [];
+    const sourceMap = new Map();
+    sourceSnaps.forEach((sourceSnap, i) => { if (sourceSnap.exists) sourceMap.set(sourceIds[i], sourceSnap.data() || {}); });
+
+    const pending = [];
+    for (const row of rows) {
+      const embeddingText = buildEmbeddingText(row.data);
+      const embeddingHash = embeddingText ? sha256(embeddingText) : "";
+      const embeddingCurrent = !embeddingText || (
+        row.data.embedding &&
+        row.data.embeddingModel === EMBEDDING_MODEL &&
+        row.data.embeddingVersion === EMBEDDING_VERSION &&
+        row.data.embeddingTextHash === embeddingHash
+      );
+      const record = betweenThoughtFullRecord(row.id, row.data, sourceMap.get(String(row.data.sourceId || "")) || null);
+      const fingerprint = betweenThoughtProfileFingerprint(record);
+      const canStructure = (record.thought || record.sourceExcerpt).trim().length >= 8;
+      const indexCurrent = !canStructure || (
+        row.data.aiIndexVersion === THOUGHT_INDEX_VERSION &&
+        row.data.aiIndexFingerprint === fingerprint &&
+        Boolean(normalizeThoughtIndex(row.data.aiIndex))
+      );
+      if (!embeddingCurrent || !indexCurrent) pending.push({ ...row, record, embeddingText, embeddingHash, embeddingCurrent, indexCurrent });
+    }
+
+    const items = pending.slice(0, limit);
+    if (!items.length) return { ok: true, processed: 0, remaining: 0, liveCount: rows.length, indexedNow: 0, embeddedNow: 0 };
+
+    const structureItems = items.filter((x) => !x.indexCurrent);
+    const structured = structureItems.length
+      ? await ensureBetweenThoughtProfiles(uid, userRef, structureItems.map((x) => x.record))
+      : { profiles: new Map(), indexes: new Map(), usage: { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 } };
+    const embeddingItems = items.filter((x) => !x.embeddingCurrent && x.embeddingText);
+    let embeddedNow = 0;
+    let embeddingTokens = 0;
+    if (embeddingItems.length) {
+      const result = await requestEmbeddings(embeddingItems.map((x) => x.embeddingText));
+      const batch = db.batch();
+      embeddingItems.forEach((item, i) => {
+        const vector = result.vectors[i];
+        batch.set(item.ref, {
+          embedding: FieldValue.vector(vector),
+          embeddingModel: EMBEDDING_MODEL,
+          embeddingVersion: EMBEDDING_VERSION,
+          embeddingTextHash: item.embeddingHash,
+          embeddingDimensions: vector.length,
+          embeddingInputTokens: 0,
+          embeddingUpdatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+      batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
+        fragmentEmbeddingTokens: FieldValue.increment(result.totalTokens),
+        fragmentEmbeddingCount: FieldValue.increment(embeddingItems.length),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      await batch.commit();
+      embeddedNow = embeddingItems.length;
+      embeddingTokens = result.totalTokens;
+    }
+
+    return {
+      ok: true,
+      processed: items.length,
+      remaining: Math.max(0, pending.length - items.length),
+      liveCount: rows.length,
+      indexedNow: structured.usage.count,
+      migratedNow: structured.usage.migrated || 0,
+      embeddedNow,
+      embeddingTokens,
+    };
   }
 );
 
@@ -1887,8 +2288,8 @@ exports.betweenThoughtsCurate = onCall(
   {
     region: "us-central1",
     secrets: ["OPENAI_API_KEY"],
-    timeoutSeconds: 90,
-    memory: "256MiB",
+    timeoutSeconds: 180,
+    memory: "512MiB",
     maxInstances: 3,
   },
   async (request) => {
@@ -1920,7 +2321,11 @@ exports.betweenThoughtsCurate = onCall(
       const cacheSnap = await currentRef.get();
       const cache = cacheSnap.exists ? cacheSnap.data() || {} : {};
       const age = Date.now() - Number(cache.generatedAtMs || 0);
-      if (age >= 0 && age < BETWEEN_THOUGHTS_CURATION_CACHE_MS && Array.isArray(cache.items)) {
+      if (
+        cache.thoughtIndexVersion === THOUGHT_INDEX_VERSION &&
+        age >= 0 && age < BETWEEN_THOUGHTS_CURATION_CACHE_MS &&
+        Array.isArray(cache.items)
+      ) {
         const validItems = cache.items.filter((item) => Array.isArray(item?.fragmentIds) && item.fragmentIds.length === 2 && item.fragmentIds.every((id) => validIds.has(String(id))));
         if (validItems.length) {
           return {
@@ -1937,7 +2342,7 @@ exports.betweenThoughtsCurate = onCall(
     }
 
     await reserveBetweenThoughtsCurationQuota(uid);
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records, { usageScope: "studioPath" });
+    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
     const profileCandidates = records.map((r) => compactBetweenThoughtProfile(r.id, ensured.profiles.get(r.id), r.date)).filter((x) => x.core);
     if (profileCandidates.length < 2) return { ok: true, items: [], reason: "not-enough-profile-context" };
 
@@ -1947,11 +2352,11 @@ exports.betweenThoughtsCurate = onCall(
 
     const generatedAtMs = Date.now();
     const curationId = sha256(`${uid}:${generatedAtMs}:${deep.items.map((x) => x.fragmentIds.join("|")).join(",")}`).slice(0, 40);
-    // 갈래 찾기에 필요해 새로 만든 프로필 토큰도 갈래 찾기 사용량으로만 합산한다.
-    // 두 생각 사이의 프로필 생성 횟수와 중복 집계하지 않는다.
-    const totalInputTokens = ensured.usage.inputTokens + scout.inputTokens + deep.inputTokens;
-    const totalCachedInputTokens = ensured.usage.cachedInputTokens + scout.cachedInputTokens + deep.cachedInputTokens;
-    const totalOutputTokens = ensured.usage.outputTokens + scout.outputTokens + deep.outputTokens;
+    // 공통 생각 색인은 별도 항목으로 한 번만 집계한다.
+    // 이 기능의 사용량에는 실제 후보 선정과 원문 검토 토큰만 포함한다.
+    const totalInputTokens = scout.inputTokens + deep.inputTokens;
+    const totalCachedInputTokens = scout.cachedInputTokens + deep.cachedInputTokens;
+    const totalOutputTokens = scout.outputTokens + deep.outputTokens;
     const usageRef = userRef.collection("aiUsage").doc(koreaDateKey());
     const batch = db.batch();
     batch.set(currentRef, {
@@ -1961,6 +2366,7 @@ exports.betweenThoughtsCurate = onCall(
       items: deep.items,
       noPairReason: deep.noPairReason,
       model: BETWEEN_THOUGHTS_MODEL,
+      thoughtIndexVersion: THOUGHT_INDEX_VERSION,
       scoutInputTokens: scout.inputTokens,
       scoutCachedInputTokens: scout.cachedInputTokens,
       scoutOutputTokens: scout.outputTokens,
@@ -1998,15 +2404,88 @@ exports.betweenThoughtsCurate = onCall(
   }
 );
 
+function storedVectorArray(value) {
+  try {
+    if (Array.isArray(value)) return value.map(Number).filter(Number.isFinite);
+    if (value && typeof value.toArray === "function") {
+      const array = value.toArray();
+      return Array.isArray(array) ? array.map(Number).filter(Number.isFinite) : null;
+    }
+  } catch (_) {}
+  return null;
+}
+
+function cosineDistance(a, b) {
+  if (!Array.isArray(a) || !Array.isArray(b) || !a.length || a.length !== b.length) return null;
+  let dot = 0;
+  let aa = 0;
+  let bb = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    aa += a[i] * a[i];
+    bb += b[i] * b[i];
+  }
+  if (!aa || !bb) return null;
+  return 1 - dot / (Math.sqrt(aa) * Math.sqrt(bb));
+}
+
 function selectStudioPathRows(rows, maxCount) {
   if (rows.length <= maxCount) return rows;
-  const picked = [];
-  const seen = new Set();
-  for (let i = 0; i < maxCount; i++) {
-    const index = Math.round((i * (rows.length - 1)) / Math.max(1, maxCount - 1));
-    if (!seen.has(index)) { seen.add(index); picked.push(rows[index]); }
+  const selected = new Map();
+  const add = (row) => {
+    if (row && selected.size < maxCount && !selected.has(row.id)) selected.set(row.id, row);
+  };
+
+  // 시간의 양끝, 최근 생각, 사용자가 중요 표시한 생각을 먼저 보존한다.
+  add(rows[0]);
+  add(rows[rows.length - 1]);
+  const recentCount = Math.min(5, Math.max(1, Math.floor(maxCount / 8)));
+  const starredCount = Math.min(4, Math.max(1, Math.floor(maxCount / 10)));
+  rows.slice(-recentCount).forEach(add);
+  rows.filter((row) => row.data?.starred).slice(0, starredCount).forEach(add);
+
+  // 부모·자식으로 직접 이어진 뼈대와 갈라지는 지점을 보존한다.
+  const childCount = new Map();
+  rows.forEach((row) => (Array.isArray(row.data?.continuedFrom) ? row.data.continuedFrom : []).forEach((parentId) => {
+    const id = String(parentId);
+    childCount.set(id, (childCount.get(id) || 0) + 1);
+  }));
+  rows.slice().sort((a, b) => {
+    const score = (row) => (childCount.get(row.id) || 0) * 3 + (Array.isArray(row.data?.continuedFrom) ? row.data.continuedFrom.length : 0);
+    return score(b) - score(a);
+  }).slice(0, Math.min(6, Math.max(1, Math.floor(maxCount / 8)))).forEach(add);
+
+  // 임베딩은 해석을 대신하지 않고, 이미 고른 생각들과 의미상 다른 후보를 넓게 확보하는 데만 쓴다.
+  const vectorRows = rows.map((row) => ({ row, vector: storedVectorArray(row.data?.embedding) })).filter((item) => item.vector?.length);
+  const semanticTarget = Math.min(maxCount, Math.max(selected.size, Math.ceil(maxCount * 0.78)));
+  while (selected.size < semanticTarget && vectorRows.length) {
+    const selectedVectors = vectorRows.filter((item) => selected.has(item.row.id)).map((item) => item.vector);
+    let best = null;
+    let bestDistance = -1;
+    for (const item of vectorRows) {
+      if (selected.has(item.row.id)) continue;
+      let minDistance = 1;
+      if (selectedVectors.length) {
+        const distances = selectedVectors.map((vector) => cosineDistance(item.vector, vector)).filter(Number.isFinite);
+        if (distances.length) minDistance = Math.min(...distances);
+      }
+      if (minDistance > bestDistance) {
+        bestDistance = minDistance;
+        best = item.row;
+      }
+    }
+    if (!best) break;
+    add(best);
   }
-  return picked;
+
+  // 나머지는 전체 시간대에서 고르게 채워 특정 시기에 편중되지 않게 한다.
+  const remaining = maxCount - selected.size;
+  if (remaining > 0) {
+    const step = (rows.length - 1) / Math.max(1, remaining - 1);
+    for (let i = 0; i < remaining; i++) add(rows[Math.min(rows.length - 1, Math.round(i * step))]);
+  }
+  rows.slice().reverse().forEach(add);
+  return [...selected.values()].sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
 }
 
 async function requestStudioPathScout(thread, profiles) {
@@ -2014,7 +2493,9 @@ async function requestStudioPathScout(thread, profiles) {
   if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
   const systemPrompt = [
     "당신은 '생각의 텃밭'에서 사용자가 글을 쓰기 전에 선택적으로 부르는 길안내자다.",
-    "지금 보는 것은 Thread 안 생각들의 짧은 프로필과 부모·자식 연결 정보다. 이 단계의 목적은 원문을 다시 읽어볼 후보 갈래를 좁히는 것이며, 글의 목차·결론·문장을 만들지 않는다.",
+    "지금 보는 것은 Thread 안 생각들의 다층 색인과 부모·자식 연결 정보다. 이 단계의 목적은 원문을 다시 읽어볼 후보 갈래를 좁히는 것이며, 글의 목차·결론·문장을 만들지 않는다.",
+    "core/themes/events/claims/keyPhrases는 직접 내용에 가깝고, inferredIntents·valuesOrNeeds·emotions·tensions·shifts·openLoops·alternateReadings는 근거와 confidence가 붙은 해석 후보다. 추론 하나를 정답처럼 고정하지 않는다.",
+    "같은 요약이나 주제만 보지 말고 사건, 주장, 작성 의도, 가치, 양가감정, 관점 변화, 미해결 문제의 여러 축으로 후보를 살핀다. uncertainty가 큰 색인은 약한 근거로 취급한다.",
     `최대 ${STUDIO_PATH_SCOUT_COUNT}개의 후보 갈래를 고른다. 한 갈래는 2~6개의 생각으로 구성한다. 글감을 완성하려 하지 말고 글쓰기를 시작할 중심 나뭇가지만 찾는다.`,
     "Thread 전체에 하나의 선형 서사가 있다고 가정하지 않는다. 같은 소재 안의 다른 맥락, 새끼 생각, 갈라진 가지, 시간이 지나도 반복되는 관점이 함께 있을 수 있다.",
     "좋은 후보는 변화, 반복, 긴장·모순, 확장, 직접 이어짐 중 하나가 원문 확인 가치가 있을 만큼 구체적으로 보이는 묶음이다.",
@@ -2108,6 +2589,7 @@ async function requestStudioPathDeep(thread, candidates, recordMap) {
   }));
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 글쓰기 길안내자다. 이제 후보 갈래에 포함된 생각의 실제 원문·맥락·외부 인용과 출처를 다시 읽는다.",
+    "원문 안의 줄바꿈된 '…'는 긴 글의 가운데 일부가 생략됐다는 표시다. 생략된 내용을 추정하지 않는다.",
     `원문에 근거해 글을 시작할 만한 갈래만 최대 ${STUDIO_PATH_RESULT_COUNT}개 남긴다. 약하거나 억지스러운 후보는 버린다. 하나만 좋으면 하나만 반환하고, 없으면 빈 배열을 반환한다.`,
     "갈래는 완성된 글감 묶음이나 목차가 아니다. 사용자가 쓰기 시작할 중심 나뭇가지다. 재료가 2개든 3개든 4개든 실제로 필요한 만큼만 남긴다.",
     "Thread 전체를 하나의 시간순 서사로 만들지 않는다. 변화가 없어도 반복·긴장·확장으로 글을 시작할 수 있다.",
@@ -2197,8 +2679,8 @@ exports.studioThreadPaths = onCall(
   {
     region: "us-central1",
     secrets: ["OPENAI_API_KEY"],
-    timeoutSeconds: 90,
-    memory: "256MiB",
+    timeoutSeconds: 180,
+    memory: "512MiB",
     maxInstances: 3,
   },
   async (request) => {
@@ -2225,6 +2707,7 @@ exports.studioThreadPaths = onCall(
     if (allRows.length < 2) return { ok: true, items: [], reason: "not-enough-context" };
 
     const signature = sha256(JSON.stringify({
+      thoughtIndexVersion: THOUGHT_INDEX_VERSION,
       title: String(threadData.title || ""), question: String(threadData.question || ""),
       fragments: allRows.map((x) => ({
         id: x.id, thought: String(x.data.thought || x.data.text || ""), context: String(x.data.context || ""),
@@ -2248,7 +2731,7 @@ exports.studioThreadPaths = onCall(
     sourceSnaps.forEach((snap, i) => { if (snap.exists) sourceMap.set(sourceIds[i], snap.data() || {}); });
     const records = selectedRows.map((x) => betweenThoughtFullRecord(x.id, x.data, sourceMap.get(String(x.data.sourceId || "")) || null));
     const recordMap = new Map(records.map((x) => [x.id, x]));
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records, { usageScope: "studioPath" });
+    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
     const childCount = new Map();
     selectedRows.forEach((x) => (Array.isArray(x.data.continuedFrom) ? x.data.continuedFrom : []).forEach((pid) => {
       const id = String(pid); if (selectedIds.has(id)) childCount.set(id, (childCount.get(id) || 0) + 1);
@@ -2267,15 +2750,16 @@ exports.studioThreadPaths = onCall(
     const scout = await requestStudioPathScout(thread, profiles);
     let deep = { paths: [], inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
     if (scout.candidates.length) deep = await requestStudioPathDeep(thread, scout.candidates, recordMap);
-    // 갈래 찾기에 필요해 새로 만든 프로필 토큰도 갈래 찾기 사용량으로만 합산한다.
-    // 두 생각 사이의 프로필 생성 횟수와 중복 집계하지 않는다.
-    const totalInputTokens = ensured.usage.inputTokens + scout.inputTokens + deep.inputTokens;
-    const totalCachedInputTokens = ensured.usage.cachedInputTokens + scout.cachedInputTokens + deep.cachedInputTokens;
-    const totalOutputTokens = ensured.usage.outputTokens + scout.outputTokens + deep.outputTokens;
+    // 공통 생각 색인은 별도 항목으로 한 번만 집계한다.
+    // 이 기능의 사용량에는 실제 후보 선정과 원문 검토 토큰만 포함한다.
+    const totalInputTokens = scout.inputTokens + deep.inputTokens;
+    const totalCachedInputTokens = scout.cachedInputTokens + deep.cachedInputTokens;
+    const totalOutputTokens = scout.outputTokens + deep.outputTokens;
     const usageRef = userRef.collection("aiUsage").doc(koreaDateKey());
     const batch = db.batch();
     batch.set(cacheRef, {
       threadId, signature, items: deep.paths, model: STUDIO_GARDENER_MODEL,
+      thoughtIndexVersion: THOUGHT_INDEX_VERSION,
       selectedFragmentCount: selectedRows.length, totalFragmentCount: allRows.length,
       generatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -2347,21 +2831,27 @@ exports.studioGardenerUsage = onCall(
     const betweenThoughtsInputTokens = Math.max(0, Number(data.betweenThoughtsInputTokens || 0));
     const betweenThoughtsCachedInputTokens = Math.max(0, Number(data.betweenThoughtsCachedInputTokens || 0));
     const betweenThoughtsOutputTokens = Math.max(0, Number(data.betweenThoughtsOutputTokens || 0));
+    // v50 이전의 생각 프로필 사용량도 새 공통 생각 색인 항목에 합쳐 보여준다.
     const betweenThoughtsProfileGenerations = Math.max(0, Number(data.betweenThoughtsProfileGenerations || 0));
     const betweenThoughtsProfileInputTokens = Math.max(0, Number(data.betweenThoughtsProfileInputTokens || 0));
     const betweenThoughtsProfileCachedInputTokens = Math.max(0, Number(data.betweenThoughtsProfileCachedInputTokens || 0));
     const betweenThoughtsProfileOutputTokens = Math.max(0, Number(data.betweenThoughtsProfileOutputTokens || 0));
+    const thoughtIndexGenerations = Math.max(0, Number(data.thoughtIndexGenerations || 0)) + betweenThoughtsProfileGenerations;
+    const thoughtIndexInputTokens = Math.max(0, Number(data.thoughtIndexInputTokens || 0)) + betweenThoughtsProfileInputTokens;
+    const thoughtIndexCachedInputTokens = Math.max(0, Number(data.thoughtIndexCachedInputTokens || 0)) + betweenThoughtsProfileCachedInputTokens;
+    const thoughtIndexOutputTokens = Math.max(0, Number(data.thoughtIndexOutputTokens || 0)) + betweenThoughtsProfileOutputTokens;
     const betweenThoughtsCurationEstimatedCostUsd = studioEstimatedCostUsd(
       betweenThoughtsInputTokens,
       betweenThoughtsCachedInputTokens,
       betweenThoughtsOutputTokens
     );
-    const betweenThoughtsProfileEstimatedCostUsd = studioEstimatedCostUsd(
-      betweenThoughtsProfileInputTokens,
-      betweenThoughtsProfileCachedInputTokens,
-      betweenThoughtsProfileOutputTokens
+    const thoughtIndexEstimatedCostUsd = studioEstimatedCostUsd(
+      thoughtIndexInputTokens,
+      thoughtIndexCachedInputTokens,
+      thoughtIndexOutputTokens
     );
-    const betweenThoughtsEstimatedCostUsd = betweenThoughtsCurationEstimatedCostUsd + betweenThoughtsProfileEstimatedCostUsd;
+    const betweenThoughtsProfileEstimatedCostUsd = thoughtIndexEstimatedCostUsd;
+    const betweenThoughtsEstimatedCostUsd = betweenThoughtsCurationEstimatedCostUsd;
 
     const studioPathDiscoveries = Math.max(0, Number(data.studioPathCompletedAnalyses || 0));
     const studioPathInputTokens = Math.max(0, Number(data.studioPathInputTokens || 0));
@@ -2376,7 +2866,7 @@ exports.studioGardenerUsage = onCall(
     const embeddingTokens = fragmentEmbeddingTokens + studioMaterialEmbeddingTokens;
     const embeddingEstimatedCostUsd =
       (embeddingTokens / 1_000_000) * EMBEDDING_INPUT_USD_PER_M;
-    const totalEstimatedCostUsd = gardenerEstimatedCostUsd + bloomingInterviewEstimatedCostUsd + betweenThoughtsEstimatedCostUsd + studioPathEstimatedCostUsd + embeddingEstimatedCostUsd;
+    const totalEstimatedCostUsd = gardenerEstimatedCostUsd + bloomingInterviewEstimatedCostUsd + betweenThoughtsEstimatedCostUsd + thoughtIndexEstimatedCostUsd + studioPathEstimatedCostUsd + embeddingEstimatedCostUsd;
 
     return {
       ok: true,
@@ -2400,10 +2890,18 @@ exports.studioGardenerUsage = onCall(
       betweenThoughtsInputTokens,
       betweenThoughtsCachedInputTokens,
       betweenThoughtsOutputTokens,
+      // 구버전 필드는 화면 호환을 위해 유지한다.
       betweenThoughtsProfileGenerations,
       betweenThoughtsProfileInputTokens,
       betweenThoughtsProfileCachedInputTokens,
       betweenThoughtsProfileOutputTokens,
+      thoughtIndexGenerations,
+      thoughtIndexInputTokens,
+      thoughtIndexCachedInputTokens,
+      thoughtIndexOutputTokens,
+      thoughtIndexEstimatedCostUsd: Number(thoughtIndexEstimatedCostUsd.toFixed(8)),
+      thoughtIndexModel: String(data.thoughtIndexModel || data.betweenThoughtsProfileModel || THOUGHT_INDEX_MODEL),
+      thoughtIndexVersion: THOUGHT_INDEX_VERSION,
       betweenThoughtsCurationEstimatedCostUsd: Number(betweenThoughtsCurationEstimatedCostUsd.toFixed(8)),
       betweenThoughtsProfileEstimatedCostUsd: Number(betweenThoughtsProfileEstimatedCostUsd.toFixed(8)),
       betweenThoughtsEstimatedCostUsd: Number(betweenThoughtsEstimatedCostUsd.toFixed(8)),
@@ -3181,7 +3679,7 @@ exports.openAiOfficialUsage = onCall(
 
     return {
       ok: true,
-      officialUsageVersion: "v49-cumulative",
+      officialUsageVersion: "v51-unified-thought-index",
       timezone: "UTC",
       projectScoped: true,
       currency: monthCost.currency || todayCost.currency || "usd",
