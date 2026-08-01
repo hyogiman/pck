@@ -98,7 +98,7 @@
     .title{font-family:var(--serif);font-size:1.1rem;font-weight:700;letter-spacing:-.01em;line-height:1.4}
     .body{color:#43473c;font-size:.9rem;line-height:1.68;white-space:pre-wrap;overflow-wrap:anywhere}
     .date{font-size:.72rem;color:var(--muted)}
-    .helper{margin-top:6px;color:var(--muted);font-size:.73rem;line-height:1.5}
+    .helper{margin-top:6px;color:var(--muted);font-size:.73rem;line-height:1.5;word-break:keep-all;overflow-wrap:break-word;text-wrap:pretty}
 
     .btn{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:.8rem;transition:transform .12s ease,box-shadow .12s ease,background .12s,border-color .12s;box-shadow:var(--card-shadow)}
     .btn:hover{border-color:#cdd8cd;transform:translateY(-1px)}
@@ -145,6 +145,7 @@
       font-size:clamp(.71rem,3.1vw,.8rem)}
     .empty{text-align:center;padding:34px 18px;border:1px dashed var(--line);border-radius:20px;color:var(--muted);background:rgba(253,252,247,.5);width:100%;grid-column:1/-1}
     .empty .emoji{display:block;font-size:2rem;margin-bottom:8px;opacity:.85}
+    .empty>strong,.empty>.helper,.pool-empty,.pool-more,.ai-recommend-wait,.app-confirm-message,.interview-loading,.garden-discovery-next b,.toast{word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
 
     .note{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:19px 20px;box-shadow:var(--card-shadow);margin-bottom:12px;transition:box-shadow .14s ease,transform .14s ease}
     .cont-line{display:inline-flex;align-items:center;gap:5px;border:0;background:var(--accent3,#eef4ef);color:var(--accent);
@@ -207,10 +208,10 @@
     .between-thought-expand{margin-top:8px;border:0;background:none;padding:0;color:#6a7f70;font-size:.7rem;font-weight:800;cursor:pointer}
     .between-thought-bridge{position:relative;display:flex;align-items:center;justify-content:center;height:54px;margin-left:18px}
     .between-thought-bridge span{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#eff6ef;border:1px solid #d8e5da;font-size:1rem;box-shadow:0 2px 8px rgba(55,78,61,.06);z-index:1}
-    .between-thought-prompt{text-align:center;margin:15px 6px 0;font-size:.88rem;line-height:1.55;color:#45524b;font-weight:760}
+    .between-thought-prompt{text-align:center;max-width:320px;margin:15px auto 0;font-size:.88rem;line-height:1.55;color:#45524b;font-weight:760;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     .between-thought-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:11px}
     .between-thought-actions .btn.primary{min-width:210px}
-    .between-thought-loading,.between-thought-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.6}
+    .between-thought-loading,.between-thought-empty{padding:20px 12px;text-align:center;color:var(--muted);font-size:.82rem;line-height:1.6;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     .between-thought-source{margin-bottom:10px;padding:10px 11px;border-radius:12px;background:#f5f7f2;border:1px solid #e1e6de}
     .between-thought-source-head{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;color:#5d6f62;font-size:.69rem;font-weight:800}
     .between-thought-source-title{color:#344d3b}
@@ -637,7 +638,7 @@
     .garden-discovery-candidate .btn{white-space:nowrap;padding:8px 11px;font-size:.69rem}
     .garden-discovery-next{margin-top:14px;padding:13px 14px;border:1px solid #d5e4d8;border-radius:14px;background:linear-gradient(145deg,#f9fcf8,#eef6ef);text-align:center}
     .garden-discovery-next b{display:block;font-size:.78rem;color:#41614c;margin-bottom:8px}
-    .garden-discovery-empty{padding:14px 4px 4px;text-align:center;color:var(--muted);font-size:.74rem;line-height:1.55}
+    .garden-discovery-empty{padding:14px 4px 4px;text-align:center;color:var(--muted);font-size:.74rem;line-height:1.55;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     @media(max-width:560px){
       .stem-walk-branch{grid-template-columns:1fr;gap:5px}.stem-walk-arrow{height:18px}.stem-walk-arrow:after{content:"↓"}.stem-walk-arrow{font-size:0}
       .garden-discovery-actions{grid-template-columns:1fr}.garden-discovery-find{grid-column:auto}
@@ -770,7 +771,7 @@
     .cont-line{margin:0}
     .cont-child{border-color:#cfe0d3!important;color:#477258!important;background:#f1f7f2!important}
     .stem-modal{max-width:760px}
-    .stem-intro{margin:2px 0 14px;padding:11px 13px;border:1px solid #d5e4d8;border-radius:13px;background:linear-gradient(145deg,#f8fbf7,#eef6ef);font-size:.72rem;line-height:1.55;color:#5c7564}
+    .stem-intro{margin:2px 0 14px;padding:11px 13px;border:1px solid #d5e4d8;border-radius:13px;background:linear-gradient(145deg,#f8fbf7,#eef6ef);font-size:.72rem;line-height:1.55;color:#5c7564;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     .stem-root-group{margin-top:13px}
     .stem-node{position:relative}
     .stem-children{margin-left:15px;padding-left:14px;border-left:1.5px solid #cddfd1}
@@ -829,11 +830,11 @@
     @keyframes studioPathDot{0%,70%,100%{transform:translateY(0) scale(.78);opacity:.38;box-shadow:0 0 0 0 rgba(54,108,77,0)}35%{transform:translateY(-7px) scale(1.08);opacity:1;box-shadow:0 0 0 7px rgba(54,108,77,.08)}}
     .studio-path-loading-title{display:block;max-width:min(430px,82vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--serif);font-size:1.06rem;color:#365e46;line-height:1.45}
     .studio-path-loading-step{display:block;margin-top:5px;color:#365e46;font-size:.86rem;font-weight:780;line-height:1.45}
-    .studio-path-loading p{max-width:440px;margin:17px 0 0;color:var(--muted);font-size:.7rem;line-height:1.65;word-break:keep-all}
+    .studio-path-loading p{max-width:440px;margin:17px 0 0;color:var(--muted);font-size:.7rem;line-height:1.65;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     @media (prefers-reduced-motion:reduce){.studio-path-loader span{animation-duration:2.4s;transform:none}}
     .studio-path-result-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px;padding-bottom:12px;border-bottom:1px solid var(--line)}
     .studio-path-result-head h3{margin:0;font-family:var(--serif);font-size:1.05rem}
-    .studio-path-result-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem;line-height:1.5}
+    .studio-path-result-head p{margin:4px 0 0;color:var(--muted);font-size:.67rem;line-height:1.5;word-break:keep-all;overflow-wrap:break-word;text-wrap:balance}
     .studio-path-list{display:grid;gap:12px}
     .studio-path-card{border:1px solid #d6e2d8;border-radius:17px;background:linear-gradient(145deg,#fffefa,#f7faf6);padding:15px;box-shadow:0 4px 15px rgba(52,77,57,.045)}
     .studio-path-shape{display:inline-flex;padding:4px 8px;border-radius:999px;background:#e5f0e7;color:#35664a;font-size:.59rem;font-weight:900;letter-spacing:.02em}
@@ -2842,7 +2843,7 @@ function openThoughtStem(startId){
   const liveCount=component.filter(f=>!f.deletedAt).length;
   const trashCount=component.length-liveCount;
   $("thoughtStemSummary").textContent=`${liveCount}개의 생각이 하나의 줄기로 이어져 있어요.${trashCount?` · 휴지통 ${trashCount}개 포함`:""}`;
-  $("thoughtStemBody").innerHTML=`<div class="stem-intro">Thread로 분류하지 않아도, 직접 이어둔 생각은 여기서 하나의 줄기로 다시 볼 수 있어요.</div>${body}`;
+  $("thoughtStemBody").innerHTML=`<div class="stem-intro">직접 이어둔 생각은<br>Thread가 없어도 하나의 줄기로 볼 수 있어요.</div>${body}`;
   $("thoughtStemDialog").showModal();
   setTimeout(()=>{$("thoughtStemDialog")?.querySelector(".modal")?.scrollTo?.(0,0)},0);
 }
@@ -3261,21 +3262,21 @@ function renderBetweenThoughts(){
   const item=currentBetweenThoughtItem();
   const pair=(item?.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(betweenThoughtEligible);
   if(pair.length===2&&item?.question){
-    box.innerHTML=`<div class="between-thoughts-shell">${renderBetweenThoughtCard(pair[0],0)}<div class="between-thought-bridge"><span>🌱</span></div>${renderBetweenThoughtCard(pair[1],1)}<div style="text-align:center"><span class="between-curated-badge">✨ AI가 여러 생각 중 골라본 조합</span></div><div class="between-thought-prompt">이 두 생각을 함께 놓았을 때, 아직 적지 않았던 생각이 있을까요?</div><div class="between-thought-actions"><button class="btn primary" data-between-question type="button">✨ 이 두 생각 사이에서 질문 받기</button></div></div>`;
+    box.innerHTML=`<div class="between-thoughts-shell">${renderBetweenThoughtCard(pair[0],0)}<div class="between-thought-bridge"><span>🌱</span></div>${renderBetweenThoughtCard(pair[1],1)}<div style="text-align:center"><span class="between-curated-badge">✨ AI가 여러 생각 중 골라본 조합</span></div><div class="between-thought-prompt">두 생각 사이에 아직 쓰지 않은 이야기가 있을까요?</div><div class="between-thought-actions"><button class="btn primary" data-between-question type="button">✨ 이 두 생각 사이에서 질문 받기</button></div></div>`;
     next?.classList.remove("hidden");return;
   }
   next?.classList.add("hidden");
   const eligible=state.fragments.filter(betweenThoughtEligible);
-  if(eligible.length<2){box.innerHTML=`<div class="between-thought-empty">생각이 조금 더 쌓이면, 함께 놓을 이유가 있는 두 생각을 찾아볼게요.</div>`;return}
+  if(eligible.length<2){box.innerHTML=`<div class="between-thought-empty">생각이 조금 더 쌓이면,<br>함께 읽을 두 생각을 찾아볼게요.</div>`;return}
   const sig=betweenThoughtCandidateSignature();
   if(sig!==state.betweenThoughts.candidateSignature){
     state.betweenThoughts.candidateSignature=sig;
     if(!state.betweenThoughts.items?.length){state.betweenThoughts.noPair=false;state.betweenThoughts.index=0}
   }
-  if(state.betweenThoughts.loading){box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 생각의 다층 색인을 먼저 훑고, 가능성 있는 조합만 원문과 출처까지 다시 읽고 있어요…</div>`;return}
+  if(state.betweenThoughts.loading){box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다층 색인으로 후보를 고른 뒤,<br>원문과 출처를 다시 읽고 있어요…</div>`;return}
   if(state.betweenThoughts.noPair){box.innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>새로운 생각이 더 쌓이면 다시 찾아볼게요.</div>`;return}
   if(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous){requestBetweenThoughtCuration();return}
-  box.innerHTML=`<div class="between-thought-empty">두 생각 사이는 Google 계정 연결 후 AI가 여러 생각을 함께 읽고 골라드려요.</div>`;
+  box.innerHTML=`<div class="between-thought-empty">Google 계정을 연결하면,<br>AI가 함께 읽을 두 생각을 골라드려요.</div>`;
 }
 async function requestBetweenThoughtCuration(forceRefresh=false){
   const bt=state.betweenThoughts;if(bt.loading)return;
@@ -3283,7 +3284,7 @@ async function requestBetweenThoughtCuration(forceRefresh=false){
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return renderBetweenThoughts();
   bt.loading=true;bt.expanded={};
   $("betweenThoughtsNext")?.classList.add("hidden");
-  $("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 생각의 다층 색인을 먼저 훑고, 가능성 있는 조합만 원문과 출처까지 다시 읽고 있어요…</div>`;
+  $("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다층 색인으로 후보를 고른 뒤,<br>원문과 출처를 다시 읽고 있어요…</div>`;
   try{
     const data=await callFn("betweenThoughtsCurate",{candidateIds,excludePairKeys:bt.seenPairKeys.slice(-12),forceRefresh:!!forceRefresh});
     const items=(data?.items||[]).filter(x=>Array.isArray(x?.fragmentIds)&&x.fragmentIds.length===2&&x.question).filter(x=>x.fragmentIds.every(id=>state.fragments.some(f=>f.id===id)));
@@ -3364,7 +3365,7 @@ function renderHome(){
   const published=state.projects.filter(p=>p.status==="published").length;
   $("homeProjects").innerHTML=working.length
     ? working.slice(0,2).map(x=>projectCard(x.p,{lounge:true})).join("")
-    : empty("📝","이어 쓰는 작업이 아직 없어요.",published?`지금까지 ${published}편을 글방에 보관했어요. 새 작업에서 한 문장이라도 쓰면 여기에 나타납니다.`:"Studio에서 한 문장이라도 쓰기 시작하면 여기에 이어서 보여드려요.");
+    : empty("📝","이어 쓰는 작업이 아직 없어요.",published?`글방에 ${published}편을 보관했어요. 새 작업을 쓰면 여기에 나타납니다.`:"Studio에서 글을 쓰기 시작하면 여기에 이어집니다.");
   renderResurface();
   renderBetweenThoughts();
 }
@@ -3602,7 +3603,7 @@ function openUnnamedStemDetail(startId){
   const group=unnamedStemGroupFor(startId);if(!group)return toast("이 줄기는 이미 Thread가 되었거나 찾을 수 없어요.");
   state.unnamedStemIds=group.ids.slice();
   $("unnamedStemsSummary").textContent="먼저 흐름을 바라보고, 정말 하나의 주제라고 느껴질 때만 이름을 붙여보세요.";
-  $("unnamedStemsBody").innerHTML=`<div class="unnamed-stem-detail-head"><button class="unnamed-stem-back" data-back-unnamed-stems type="button">← 줄기 목록</button><span class="unnamed-stem-detail-count">생각 ${group.fragments.length}개</span></div><div class="stem-intro">Thread는 생각을 미리 분류하는 상자가 아니라, 이미 자란 흐름에 뒤늦게 붙이는 이름이어도 됩니다.</div>${unnamedStemTreeHTML(group)}<div class="unnamed-stem-name-actions"><button class="btn primary" data-name-unnamed-stem type="button">🌱 이 줄기에 이름 붙이기</button></div>`;
+  $("unnamedStemsBody").innerHTML=`<div class="unnamed-stem-detail-head"><button class="unnamed-stem-back" data-back-unnamed-stems type="button">← 줄기 목록</button><span class="unnamed-stem-detail-count">생각 ${group.fragments.length}개</span></div><div class="stem-intro">Thread는 미리 나누는 상자가 아니에요.<br>자란 흐름에 뒤늦게 이름을 붙여도 됩니다.</div>${unnamedStemTreeHTML(group)}<div class="unnamed-stem-name-actions"><button class="btn primary" data-name-unnamed-stem type="button">🌱 이 줄기에 이름 붙이기</button></div>`;
 }
 function nameUnnamedStem(){
   const ids=(state.unnamedStemIds||[]).filter(id=>state.fragments.some(f=>f.id===id));if(ids.length<2)return toast("이름 붙일 생각의 줄기를 찾지 못했습니다.");
@@ -4921,7 +4922,7 @@ function renderStudioPathPicker(){
   const threads=state.threads.map(t=>({t,fs:threadFragments(t.id)})).filter(x=>x.fs.length>=2).sort((a,b)=>String(threadActivity(b.t)||"").localeCompare(String(threadActivity(a.t)||"")));
   $("studioPathDialogTitle").textContent="어느 Thread에서 찾아볼까요?";
   body.innerHTML=threads.length
-    ? `<p class="helper" style="margin:0 0 10px">AI가 짧은 생각 프로필로 후보를 찾은 뒤, 가능성 있는 생각의 원문만 다시 읽습니다.</p><div class="studio-path-thread-list">${threads.map(({t,fs})=>`<button class="studio-path-thread" data-path-thread="${t.id}" type="button"><span class="studio-path-thread-main"><strong>${esc(t.title)}</strong><small>${t.question?esc(t.question):"연결된 생각에서 출발할 갈래를 찾습니다."}</small></span><span class="studio-path-thread-count">${fs.length}</span></button>`).join("")}</div>`
+    ? `<p class="helper" style="margin:0 0 10px">다층 색인으로 후보를 찾고,<br>선택된 생각의 원문을 다시 읽습니다.</p><div class="studio-path-thread-list">${threads.map(({t,fs})=>`<button class="studio-path-thread" data-path-thread="${t.id}" type="button"><span class="studio-path-thread-main"><strong>${esc(t.title)}</strong><small>${t.question?esc(t.question):"연결된 생각에서 출발할 갈래를 찾습니다."}</small></span><span class="studio-path-thread-count">${fs.length}</span></button>`).join("")}</div>`
     : empty("🌿","갈래를 찾을 Thread가 아직 없어요.","생각이 두 개 이상 연결된 Thread에서 사용할 수 있습니다.");
 }
 function openStudioPathDialog(threadId=""){
@@ -4934,16 +4935,16 @@ function renderStudioPathLoading(threadId){
   const t=state.threads.find(x=>x.id===threadId),body=$("studioPathDialogBody");
   $("studioPathDialogTitle").textContent="글의 갈래를 찾는 중";
   const threadTitle=String(t?.title||"Thread");
-  body.innerHTML=`<div class="studio-path-loading" aria-live="polite"><div class="studio-path-loader" role="status" aria-label="글의 갈래 분석 중"><span></span><span></span><span></span></div><strong class="studio-path-loading-title" title="${esc(threadTitle)}">${esc(threadTitle)}</strong><span class="studio-path-loading-step">생각들을 읽고 있어요.</span><p>생각 프로필로 후보를 좁힌 뒤, 선택된 생각의 원문과 출처를 다시 읽고 있습니다.</p></div>`;
+  body.innerHTML=`<div class="studio-path-loading" aria-live="polite"><div class="studio-path-loader" role="status" aria-label="글의 갈래 분석 중"><span></span><span></span><span></span></div><strong class="studio-path-loading-title" title="${esc(threadTitle)}">${esc(threadTitle)}</strong><span class="studio-path-loading-step">생각들을 읽고 있어요.</span><p>다층 색인으로 후보를 좁힌 뒤,<br>선택된 원문과 출처를 다시 읽고 있어요.</p></div>`;
 }
 function renderStudioPathResults(){
   const body=$("studioPathDialogBody"),tid=state.studioPath.threadId,t=state.threads.find(x=>x.id===tid),items=state.studioPath.items||[];
   $("studioPathDialogTitle").textContent="이 Thread에서 보이는 갈래";
   if(!items.length){
-    body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>원문까지 확인했지만 지금 바로 글로 시작할 만큼 선명한 갈래는 찾지 못했어요.</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">다시 살펴보기</button></div>${empty("🌿","뚜렷한 갈래가 아직 없어요.","그대로 닫고 평소처럼 직접 작업대를 만들면 됩니다.")}`;
+    body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>원문까지 읽었지만,<br>지금 시작할 선명한 갈래는 없었어요.</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">다시 살펴보기</button></div>${empty("🌿","뚜렷한 갈래가 아직 없어요.","그대로 닫고 평소처럼 직접 작업대를 만들면 됩니다.")}`;
     return;
   }
-  body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>${state.studioPath.cached?"Thread가 달라지지 않아 지난 결과를 다시 보여드려요.":"프로필로 후보를 찾고, 후보 원문을 다시 확인한 결과예요."}</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">↻ 다시 찾기</button></div><div class="studio-path-list">${items.map((path,i)=>{
+  body.innerHTML=`<div class="studio-path-result-head"><div><h3>${esc(t?.title||"Thread")}</h3><p>${state.studioPath.cached?"Thread가 그대로라 지난 결과를 보여드려요.":"다층 색인으로 찾고, 원문으로 확인한 결과예요."}</p></div><button class="btn soft" data-refresh-writing-path="${tid}" type="button">↻ 다시 찾기</button></div><div class="studio-path-list">${items.map((path,i)=>{
     const frags=(path.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(Boolean);
     return `<article class="studio-path-card"><span class="studio-path-shape">${esc(studioPathShapeLabel(path.shape))} · 출발 생각 ${frags.length}개</span><h3>${esc(path.title)}</h3><p class="studio-path-summary">${esc(path.summary||"")}</p>${path.guidingQuestion?`<div class="studio-path-question">${esc(path.guidingQuestion)}</div>`:""}<div class="studio-path-thoughts">${frags.slice(0,4).map(f=>`<div class="studio-path-thought">${esc(studioPathFragmentText(f))}</div>`).join("")}${frags.length>4?`<div class="helper">그 외 ${frags.length-4}개의 생각</div>`:""}</div><div class="actions"><button class="btn primary" data-start-writing-path="${i}" type="button">이 갈래에서 시작하기</button></div></article>`;
   }).join("")}</div>`;
