@@ -1,4 +1,4 @@
-// Thought Garden v57 · Expressive Photo Index
+// Thought Garden v58 · Photo Index Reliability
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -1835,6 +1835,14 @@ async function requestThoughtIndexes(records) {
   }
   userContent.push({ type: "text", text: "위 FRAGMENT들을 각각 독립적으로 분석해 indexes 배열로 반환하세요." });
 
+  const hasImageInput = records.some((record) => Array.isArray(record.images) && record.images.length > 0);
+  // v57에서 사진 생각 한 건의 출력 한도가 1,100토큰으로 너무 작아,
+  // 내용이 풍부한 생각은 구조화 JSON이 끝나기 전에 잘릴 수 있었다.
+  // 사진 생각은 필수 필드가 많으므로 여유 있게 잡고, 텍스트 묶음은 기존 배치 기준을 유지한다.
+  const completionTokenLimit = hasImageInput
+    ? Math.min(7600, Math.max(2600, records.length * 1400))
+    : Math.min(7600, Math.max(1100, records.length * 760));
+
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -1941,7 +1949,7 @@ async function requestThoughtIndexes(records) {
           },
         },
       },
-      max_completion_tokens: Math.min(7600, Math.max(1100, records.length * 760)),
+      max_completion_tokens: completionTokenLimit,
     }),
   });
 
@@ -1950,6 +1958,18 @@ async function requestThoughtIndexes(records) {
   if (!response.ok) {
     logger.error("OpenAI thought index HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
     throw new HttpsError("internal", "글과 사진의 생각 색인을 만들지 못했습니다.");
+  }
+  const finishReason = String(payload?.choices?.[0]?.finish_reason || "");
+  if (finishReason === "length") {
+    logger.warn("OpenAI thought index output truncated", {
+      recordIds: records.map((record) => record.id),
+      maxCompletionTokens: completionTokenLimit,
+      inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+      outputTokens: Number(payload?.usage?.completion_tokens || 0),
+    });
+    const truncatedError = new Error("생각 색인 응답이 길이 한도에서 잘렸습니다.");
+    truncatedError.code = "output-truncated";
+    throw truncatedError;
   }
   const raw = payload?.choices?.[0]?.message?.content;
   if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "생각 색인 결과가 비어 있습니다.");
@@ -2009,52 +2029,50 @@ async function ensureThoughtIndexes(uid, userRef, records) {
   }
   flushTextChunk();
 
-  for (let i = 0; i < chunks.length; i += 2) {
-    const group = chunks.slice(i, i + 2);
-    const generatedGroup = await Promise.all(group.map((chunk) => requestThoughtIndexes(chunk.map((item) => item.record))));
-    for (let g = 0; g < group.length; g++) {
-      const chunk = group[g];
-      const generated = generatedGroup[g];
-      const generatedMap = new Map(generated.indexes.map((item) => [item.id, item.index]));
-      const batch = db.batch();
-      let count = 0;
-      const divisor = Math.max(1, generated.indexes.length);
-      for (const item of chunk) {
-        const index = generatedMap.get(item.record.id);
-        if (!index) continue;
-        resultMap.set(item.record.id, index);
-        batch.set(item.ref, {
-          aiIndex: index,
-          aiIndexVersion: THOUGHT_INDEX_VERSION,
-          aiIndexModel: generated.model,
-          aiIndexFingerprint: item.fingerprint,
-          aiIndexInputTokens: Math.round(generated.inputTokens / divisor),
-          aiIndexCachedInputTokens: Math.round(generated.cachedInputTokens / divisor),
-          aiIndexOutputTokens: Math.round(generated.outputTokens / divisor),
-          aiIndexImageCount: Array.isArray(item.record.images) ? item.record.images.length : 0,
-          aiIndexTotalImageCount: Number(item.record.totalImageCount || 0),
-          aiIndexImageDetail: Array.isArray(item.record.images) && item.record.images.length ? THOUGHT_INDEX_IMAGE_DETAIL : "none",
-          aiIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
-          aiIndexUpdatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        count++;
-      }
-      if (count) {
-        batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
-          thoughtIndexGenerations: FieldValue.increment(count),
-          thoughtIndexInputTokens: FieldValue.increment(generated.inputTokens),
-          thoughtIndexCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
-          thoughtIndexOutputTokens: FieldValue.increment(generated.outputTokens),
-          thoughtIndexModel: THOUGHT_INDEX_MODEL,
-          thoughtIndexVersion: THOUGHT_INDEX_VERSION,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        await batch.commit();
-        usage.count += count;
-        usage.inputTokens += generated.inputTokens;
-        usage.cachedInputTokens += generated.cachedInputTokens;
-        usage.outputTokens += generated.outputTokens;
-      }
+  // 사진 요청을 둘씩 동시에 보내면 한 건의 오류가 Promise.all 전체를 무너뜨려
+  // 성공한 응답까지 저장하지 못하고 다시 호출할 수 있다. 비용 중복을 막기 위해
+  // 각 chunk를 독립적으로 순차 처리한다. 텍스트 전용 생각은 chunk 안에서 계속 묶인다.
+  for (const chunk of chunks) {
+    const generated = await requestThoughtIndexes(chunk.map((item) => item.record));
+    const generatedMap = new Map(generated.indexes.map((item) => [item.id, item.index]));
+    const batch = db.batch();
+    let count = 0;
+    const divisor = Math.max(1, generated.indexes.length);
+    for (const item of chunk) {
+      const index = generatedMap.get(item.record.id);
+      if (!index) continue;
+      resultMap.set(item.record.id, index);
+      batch.set(item.ref, {
+        aiIndex: index,
+        aiIndexVersion: THOUGHT_INDEX_VERSION,
+        aiIndexModel: generated.model,
+        aiIndexFingerprint: item.fingerprint,
+        aiIndexInputTokens: Math.round(generated.inputTokens / divisor),
+        aiIndexCachedInputTokens: Math.round(generated.cachedInputTokens / divisor),
+        aiIndexOutputTokens: Math.round(generated.outputTokens / divisor),
+        aiIndexImageCount: Array.isArray(item.record.images) ? item.record.images.length : 0,
+        aiIndexTotalImageCount: Number(item.record.totalImageCount || 0),
+        aiIndexImageDetail: Array.isArray(item.record.images) && item.record.images.length ? THOUGHT_INDEX_IMAGE_DETAIL : "none",
+        aiIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
+        aiIndexUpdatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      count++;
+    }
+    if (count) {
+      batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
+        thoughtIndexGenerations: FieldValue.increment(count),
+        thoughtIndexInputTokens: FieldValue.increment(generated.inputTokens),
+        thoughtIndexCachedInputTokens: FieldValue.increment(generated.cachedInputTokens),
+        thoughtIndexOutputTokens: FieldValue.increment(generated.outputTokens),
+        thoughtIndexModel: THOUGHT_INDEX_MODEL,
+        thoughtIndexVersion: THOUGHT_INDEX_VERSION,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      await batch.commit();
+      usage.count += count;
+      usage.inputTokens += generated.inputTokens;
+      usage.cachedInputTokens += generated.cachedInputTokens;
+      usage.outputTokens += generated.outputTokens;
     }
   }
   return { profiles: resultMap, indexes: resultMap, usage };
