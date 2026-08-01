@@ -2196,6 +2196,13 @@ exports.backfillThoughtIndexes = onCall(
     if (!uid) throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
     const requested = Number(request.data?.limit || THOUGHT_INDEX_MAX_BATCH);
     const limit = Math.max(1, Math.min(THOUGHT_INDEX_MAX_BATCH, Number.isFinite(requested) ? Math.floor(requested) : THOUGHT_INDEX_MAX_BATCH));
+    const excludeIds = new Set(
+      (Array.isArray(request.data?.excludeIds) ? request.data.excludeIds : [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+        .slice(0, 120)
+    );
+
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.collection("fragments").get();
     const rows = [];
@@ -2230,50 +2237,145 @@ exports.backfillThoughtIndexes = onCall(
       if (!embeddingCurrent || !indexCurrent) pending.push({ ...row, record, embeddingText, embeddingHash, embeddingCurrent, indexCurrent });
     }
 
-    const items = pending.slice(0, limit);
-    if (!items.length) return { ok: true, processed: 0, remaining: 0, liveCount: rows.length, indexedNow: 0, embeddedNow: 0 };
+    const eligible = pending.filter((item) => !excludeIds.has(item.id));
+    const items = eligible.slice(0, limit);
+    if (!items.length) {
+      return {
+        ok: true,
+        attempted: 0,
+        processed: 0,
+        remaining: 0,
+        liveCount: rows.length,
+        indexedNow: 0,
+        embeddedNow: 0,
+        failedIds: [],
+        excludedPending: pending.filter((item) => excludeIds.has(item.id)).length,
+      };
+    }
 
-    const structureItems = items.filter((x) => !x.indexCurrent);
-    const structured = structureItems.length
-      ? await ensureBetweenThoughtProfiles(uid, userRef, structureItems.map((x) => x.record))
-      : { profiles: new Map(), indexes: new Map(), usage: { count: 0, migrated: 0, inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 } };
-    const embeddingItems = items.filter((x) => !x.embeddingCurrent && x.embeddingText);
+    const structuredSuccess = new Set(items.filter((x) => x.indexCurrent).map((x) => x.id));
+    const embeddingSuccess = new Set(items.filter((x) => x.embeddingCurrent || !x.embeddingText).map((x) => x.id));
+    const failureCodes = new Map();
+    let indexedNow = 0;
+    let migratedNow = 0;
     let embeddedNow = 0;
     let embeddingTokens = 0;
+
+    // 임베딩은 먼저 묶어서 처리하고, 묶음이 실패하면 생각별로 다시 시도한다.
+    const embeddingItems = items.filter((x) => !x.embeddingCurrent && x.embeddingText);
     if (embeddingItems.length) {
-      const result = await requestEmbeddings(embeddingItems.map((x) => x.embeddingText));
-      const batch = db.batch();
-      embeddingItems.forEach((item, i) => {
-        const vector = result.vectors[i];
-        batch.set(item.ref, {
-          embedding: FieldValue.vector(vector),
-          embeddingModel: EMBEDDING_MODEL,
-          embeddingVersion: EMBEDDING_VERSION,
-          embeddingTextHash: item.embeddingHash,
-          embeddingDimensions: vector.length,
-          embeddingInputTokens: 0,
-          embeddingUpdatedAt: FieldValue.serverTimestamp(),
+      try {
+        const result = await requestEmbeddings(embeddingItems.map((x) => x.embeddingText));
+        const batch = db.batch();
+        const perItemTokens = Math.round(result.totalTokens / Math.max(1, embeddingItems.length));
+        embeddingItems.forEach((item, i) => {
+          const vector = result.vectors[i];
+          batch.set(item.ref, {
+            embedding: FieldValue.vector(vector),
+            embeddingModel: EMBEDDING_MODEL,
+            embeddingVersion: EMBEDDING_VERSION,
+            embeddingTextHash: item.embeddingHash,
+            embeddingDimensions: vector.length,
+            embeddingInputTokens: perItemTokens,
+            embeddingUpdatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        });
+        batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
+          fragmentEmbeddingTokens: FieldValue.increment(result.totalTokens),
+          fragmentEmbeddingCount: FieldValue.increment(embeddingItems.length),
+          updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
-      });
-      batch.set(userRef.collection("aiUsage").doc(koreaDateKey()), {
-        fragmentEmbeddingTokens: FieldValue.increment(result.totalTokens),
-        fragmentEmbeddingCount: FieldValue.increment(embeddingItems.length),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      await batch.commit();
-      embeddedNow = embeddingItems.length;
-      embeddingTokens = result.totalTokens;
+        await batch.commit();
+        embeddingItems.forEach((item) => embeddingSuccess.add(item.id));
+        embeddedNow += embeddingItems.length;
+        embeddingTokens += result.totalTokens;
+      } catch (error) {
+        logger.warn("Thought-index backfill embedding batch failed; retrying one by one", {
+          uid,
+          count: embeddingItems.length,
+          code: error?.code || null,
+          message: error?.message || null,
+        });
+        for (const item of embeddingItems) {
+          try {
+            const result = await ensureFragmentEmbedding(uid, item.ref, item.data);
+            embeddingSuccess.add(item.id);
+            if (!result.skipped) embeddedNow += 1;
+            embeddingTokens += Number(result.inputTokens || 0);
+          } catch (singleError) {
+            failureCodes.set(item.id, String(singleError?.code || "embedding-failed"));
+            logger.warn("Thought-index backfill single embedding failed", {
+              uid,
+              fragmentId: item.id,
+              code: singleError?.code || null,
+              message: singleError?.message || null,
+            });
+          }
+        }
+      }
     }
+
+    // 다층 색인도 묶음을 우선 사용하되, 한 조각 때문에 전체가 멈추지 않도록 개별 재시도한다.
+    const structureItems = items.filter((x) => !x.indexCurrent);
+    if (structureItems.length) {
+      let missing = structureItems;
+      try {
+        const structured = await ensureBetweenThoughtProfiles(uid, userRef, structureItems.map((x) => x.record));
+        indexedNow += Number(structured.usage?.count || 0);
+        migratedNow += Number(structured.usage?.migrated || 0);
+        structureItems.forEach((item) => {
+          if (structured.indexes?.has(item.id)) structuredSuccess.add(item.id);
+        });
+        missing = structureItems.filter((item) => !structuredSuccess.has(item.id));
+      } catch (error) {
+        logger.warn("Thought-index backfill structured batch failed; retrying one by one", {
+          uid,
+          count: structureItems.length,
+          code: error?.code || null,
+          message: error?.message || null,
+        });
+      }
+
+      for (const item of missing) {
+        try {
+          const single = await ensureBetweenThoughtProfiles(uid, userRef, [item.record]);
+          if (single.indexes?.has(item.id)) {
+            structuredSuccess.add(item.id);
+            indexedNow += Number(single.usage?.count || 0);
+            migratedNow += Number(single.usage?.migrated || 0);
+          } else {
+            failureCodes.set(item.id, "index-empty");
+          }
+        } catch (singleError) {
+          failureCodes.set(item.id, String(singleError?.code || "index-failed"));
+          logger.warn("Thought-index backfill single structured index failed", {
+            uid,
+            fragmentId: item.id,
+            code: singleError?.code || null,
+            message: singleError?.message || null,
+          });
+        }
+      }
+    }
+
+    const completedIds = items
+      .filter((item) => structuredSuccess.has(item.id) && embeddingSuccess.has(item.id))
+      .map((item) => item.id);
+    const completedSet = new Set(completedIds);
+    const failedIds = items.filter((item) => !completedSet.has(item.id)).map((item) => item.id);
 
     return {
       ok: true,
-      processed: items.length,
-      remaining: Math.max(0, pending.length - items.length),
+      attempted: items.length,
+      processed: completedIds.length,
+      remaining: Math.max(0, eligible.length - items.length),
       liveCount: rows.length,
-      indexedNow: structured.usage.count,
-      migratedNow: structured.usage.migrated || 0,
+      indexedNow,
+      migratedNow,
       embeddedNow,
       embeddingTokens,
+      failedIds,
+      failureCodes: Object.fromEntries(failedIds.map((id) => [id, failureCodes.get(id) || "incomplete"])),
     };
   }
 );
