@@ -1,4 +1,4 @@
-// Thought Garden v56 · Multimodal Thought Index
+// Thought Garden v57 · Expressive Photo Index
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -16,7 +16,7 @@ const THOUGHT_INDEX_VERSION = 2;
 const THOUGHT_INDEX_MAX_BATCH = 8;
 const THOUGHT_INDEX_IMAGE_DETAIL = "high";
 const THOUGHT_INDEX_MAX_IMAGES_PER_FRAGMENT = 6;
-const THOUGHT_INDEX_VISION_VERSION = 1;
+const THOUGHT_INDEX_VISION_VERSION = 2;
 
 const STUDIO_GARDENER_MODEL = "gpt-5.4-mini";
 const BLOOMING_INTERVIEW_MODEL = STUDIO_GARDENER_MODEL;
@@ -228,10 +228,12 @@ function buildEmbeddingText(fragment) {
   const visual = normalizeThoughtIndex(fragment?.aiIndex)?.visualContext;
   if (visual?.hasImages) {
     const visualLines = [
-      visual.sceneSummary,
-      visual.observedElements.length ? `보이는 요소: ${visual.observedElements.join(", ")}` : "",
+      visual.visibleEvidence.length ? `사진에서 확인된 맥락: ${visual.visibleEvidence.join(" / ")}` : "",
       visual.visibleText.length ? `사진 속 문자: ${visual.visibleText.join(" / ")}` : "",
-      visual.relationEvidence ? `글과 사진의 관계: ${visual.relationEvidence}` : "",
+      visual.attachmentIntents.length ? `사진을 붙인 의도 후보: ${visual.attachmentIntents.map((x) => x.value).join(" / ")}` : "",
+      visual.emotionalFunctions.length ? `사진의 정서적 기능: ${visual.emotionalFunctions.map((x) => x.value).join(" / ")}` : "",
+      visual.relationExplanation ? `글과 사진의 관계: ${visual.relationExplanation}` : "",
+      visual.latentContexts.length ? `사진이 더한 말하지 않은 맥락: ${visual.latentContexts.map((x) => x.value).join(" / ")}` : "",
     ].filter(Boolean);
     if (visualLines.length) parts.push(`첨부 사진 색인:\n${visualLines.join("\n")}`);
   }
@@ -612,6 +614,7 @@ async function requestStudioQuestion(context) {
     "original이 있는 핵심 재료는 색인보다 우선한다. 질문의 구체적 근거와 사용자의 의도 판단은 원문에서 찾고, index는 어떤 부분을 살펴볼지 알려주는 지도와 배경 정보로만 쓴다.",
     "긴 원문 안의 줄바꿈된 '…'는 가운데 일부가 길이 때문에 생략됐다는 표시다. 생략된 내용을 추정해 채우지 않는다.",
     "index의 inferredIntents, valuesOrNeeds, emotions, tensions, alternateReadings는 근거와 confidence가 붙은 가설이다. 원문이 뒷받침하지 않으면 사실처럼 전제하거나 질문 속에 선언하지 않는다.",
+    "index의 visualAttachmentIntents·visualEmotionalFunctions·visualLatentContexts는 사용자가 사진을 비언어적 문장처럼 붙였다고 보고 만든 해석 후보다. 사진의 단순 사물 정보보다 글에 더해진 상황·대비·정서를 보되, confidence가 낮거나 원문과 어긋나면 질문의 전제로 쓰지 않는다.",
     "Thread의 넓은 배경 재료는 index만 들어올 수 있다. 이 경우 후보 방향을 참고할 수는 있지만, 색인만으로 사용자의 숨은 의도나 감정을 단정하지 않는다.",
     "가장 중요한 원칙은 중복 회피다. 질문을 만들기 전에 previousSlots와 currentDraft에서 이미 다룬 주장·원인·사례·감정·결론을 내부적으로 파악한다.",
     "이미 답이 적혀 있는 내용, 또는 앞선 문항에서 충분히 다룬 내용을 표현만 바꿔 다시 묻지 않는다.",
@@ -1303,7 +1306,7 @@ async function requestBetweenThoughtsQuestion(fragmentA, fragmentB) {
   const systemPrompt = [
     "당신은 '생각의 텃밭'에서 서로 다른 두 생각 사이를 비추는 인터뷰어다.",
     "사용자가 과거에 직접 남긴 생각 A와 생각 B를 함께 읽고, 둘 사이에서 사용자가 새로운 생각을 발견하도록 돕는 질문 딱 하나만 만든다.",
-    "각 생각의 visualContext가 있으면 첨부 사진을 고화질로 한 번 읽어 저장한 시각 색인이다. 실제 사진을 다시 보는 것은 아니므로 시각 색인의 불확실성을 존중하고, 글에 없는 작성자 의도를 사진만으로 단정하지 않는다.",
+    "각 생각의 visualContext가 있으면 사진을 비언어적 문장으로 보고, 보이는 근거와 함께 첨부 의도·정서적 기능·글에 쓰지 않은 맥락을 확신도별로 저장한 색인이다. 실제 사진을 다시 보는 것은 아니므로 해석 후보를 사실처럼 단정하지 않되, 글과 사진의 관계가 충분히 뒷받침되면 질문에 자연스럽게 반영한다.",
     "두 생각의 관계를 정답처럼 선언하거나 요약하지 않는다. 질문 자체가 사용자가 관계를 발견하게 해야 한다.",
     "답을 대신 쓰지 말고, 조언·평가·칭찬·진단·교훈을 하지 않는다.",
     "두 생각이 비슷하면 반복되는 가치·욕구·두려움·선택·긴장·패턴을 살펴볼 수 있고, 다르면 무엇이 달라졌는지·충돌하는지·함께 놓았을 때 무엇이 보이는지를 물을 수 있다.",
@@ -1420,7 +1423,7 @@ exports.betweenThoughtsQuestion = onCall(
       const visualContext = normalizeThoughtIndex(data.aiIndex)?.visualContext || null;
       return { text, visualContext: visualContext?.hasImages ? visualContext : null };
     });
-    if (thoughtInputs.some((item) => item.text.length < 4 && !item.visualContext?.sceneSummary)) {
+    if (thoughtInputs.some((item) => item.text.length < 4 && !item.visualContext?.visibleEvidence?.length)) {
       return { ok: true, question: null, reason: "not-enough-context" };
     }
 
@@ -1588,6 +1591,15 @@ function betweenThoughtProfileFingerprint(record) {
   }));
 }
 
+function isThoughtIndexCurrentForRecord(data, record, fingerprint) {
+  const baseCurrent = data?.aiIndexVersion === THOUGHT_INDEX_VERSION &&
+    data?.aiIndexFingerprint === fingerprint &&
+    Boolean(normalizeThoughtIndex(data?.aiIndex));
+  if (!baseCurrent) return false;
+  const hasImages = Array.isArray(record?.images) && record.images.length > 0;
+  return !hasImages || Number(data?.aiIndexVisionVersion || 0) >= THOUGHT_INDEX_VISION_VERSION;
+}
+
 function normalizeStringList(value, maxItems, maxChars) {
   return Array.isArray(value)
     ? value.map((x) => String(x || "").trim().slice(0, maxChars)).filter(Boolean).slice(0, maxItems)
@@ -1615,6 +1627,21 @@ function isThoughtIndexV2(index) {
 
 function normalizeThoughtIndex(index) {
   if (!isThoughtIndexV2(index)) return null;
+  const rawVisual = index.visualContext || {};
+  const relation = String(rawVisual.relationToThought || "");
+  const relationToThought = [
+    "none", "supports", "expands", "contrasts", "contextualizes", "complements",
+    "symbolizes", "documents", "unclear",
+  ].includes(relation) ? relation : "none";
+
+  // v56의 사실 중심 시각 색인도 읽을 수 있게 유지한다. v57 재색인 뒤에는
+  // visibleEvidence·attachmentIntents·emotionalFunctions·latentContexts가 채워진다.
+  const legacyVisibleEvidence = [
+    String(rawVisual.sceneSummary || "").trim(),
+    ...normalizeStringList(rawVisual.observedElements, 4, 120),
+  ].filter(Boolean).slice(0, 5);
+  const legacyRelationEvidence = String(rawVisual.relationEvidence || "").trim();
+
   return {
     literal: {
       summary: String(index.literal?.summary || "").trim().slice(0, 380),
@@ -1649,15 +1676,25 @@ function normalizeThoughtIndex(index) {
         : "other",
     },
     visualContext: {
-      hasImages: Boolean(index.visualContext?.hasImages),
-      sceneSummary: String(index.visualContext?.sceneSummary || "").trim().slice(0, 320),
-      observedElements: normalizeStringList(index.visualContext?.observedElements, 8, 120),
-      visibleText: normalizeStringList(index.visualContext?.visibleText, 5, 160),
-      relationToThought: ["none", "supports", "expands", "contrasts", "contextualizes", "unclear"].includes(String(index.visualContext?.relationToThought || ""))
-        ? String(index.visualContext.relationToThought)
-        : "none",
-      relationEvidence: String(index.visualContext?.relationEvidence || "").trim().slice(0, 240),
-      uncertaintyNotes: normalizeStringList(index.visualContext?.uncertaintyNotes, 3, 180),
+      hasImages: Boolean(rawVisual.hasImages),
+      visibleEvidence: normalizeStringList(rawVisual.visibleEvidence, 5, 170).length
+        ? normalizeStringList(rawVisual.visibleEvidence, 5, 170)
+        : legacyVisibleEvidence,
+      visibleText: normalizeStringList(rawVisual.visibleText, 4, 160),
+      attachmentIntents: normalizeEvidenceList(
+        rawVisual.attachmentIntents,
+        2,
+        180,
+        220
+      ).length
+        ? normalizeEvidenceList(rawVisual.attachmentIntents, 2, 180, 220)
+        : (legacyRelationEvidence ? [{ value: legacyRelationEvidence.slice(0, 180), evidence: "이전 시각 색인의 글·사진 관계", confidence: "low" }] : []),
+      emotionalFunctions: normalizeEvidenceList(rawVisual.emotionalFunctions, 2, 160, 220),
+      relationToThought,
+      relationExplanation: String(rawVisual.relationExplanation || rawVisual.relationEvidence || "").trim().slice(0, 280),
+      latentContexts: normalizeEvidenceList(rawVisual.latentContexts, 2, 180, 220),
+      alternativeReadings: normalizeEvidenceList(rawVisual.alternativeReadings, 2, 180, 220),
+      uncertaintyNotes: normalizeStringList(rawVisual.uncertaintyNotes, 3, 180),
     },
   };
 }
@@ -1721,11 +1758,14 @@ function compactBetweenThoughtProfile(id, profile, date) {
     sourceRelation: index.sourceContext.relation,
     sourceAnchor: index.sourceContext.anchor,
     contextKind: index.sourceContext.contextKind,
-    visualSummary: index.visualContext.sceneSummary,
-    visualElements: index.visualContext.observedElements,
+    visualEvidence: index.visualContext.visibleEvidence,
     visibleText: index.visualContext.visibleText,
+    visualAttachmentIntents: compactEvidenceItems(index.visualContext.attachmentIntents, 2),
+    visualEmotionalFunctions: compactEvidenceItems(index.visualContext.emotionalFunctions, 2),
     visualRelation: index.visualContext.relationToThought,
-    visualRelationEvidence: index.visualContext.relationEvidence,
+    visualRelationExplanation: index.visualContext.relationExplanation,
+    visualLatentContexts: compactEvidenceItems(index.visualContext.latentContexts, 2),
+    visualAlternativeReadings: compactEvidenceItems(index.visualContext.alternativeReadings, 2),
     visualUncertaintyNotes: index.visualContext.uncertaintyNotes,
   };
 }
@@ -1739,19 +1779,21 @@ async function requestThoughtIndexes(records) {
     "이 색인은 원문과 사진을 대체하거나 사용자를 진단하는 결과가 아니다. 나중에 관련 생각을 찾고, 원문과 사진을 다시 검토할 후보를 고르기 위한 지도다.",
     "thought와 context는 사용자가 직접 쓴 내용이다. sourceExcerpt와 source는 외부의 책·영상·대화·타인의 말일 수 있으므로 사용자 생각과 절대 섞지 않는다.",
     "각 FRAGMENT 표식 뒤에 이어지는 이미지는 바로 그 fragment의 첨부 사진이다. 사진과 다른 fragment를 섞지 않는다.",
-    "사진은 high detail로 제공된다. 실제로 보이는 장면·사물·배치·읽을 수 있는 문자만 기록하고, 보이지 않는 사건이나 사진 밖의 맥락을 상상하지 않는다.",
-    "사진 속 사람의 신원, 정확한 나이, 관계, 직업, 건강 상태, 민감한 특성은 추정하지 않는다. 표정만으로 감정이나 작성자의 의도를 단정하지 않는다.",
-    "작성자의 생각과 의도는 글을 우선한다. 사진은 글을 지지·확장·대조·맥락화하는 시각 자료로 다루며, 관계가 불명확하면 unclear로 둔다.",
+    "사진은 high detail로 제공된다. 사진은 단순한 첨부 자료가 아니라 사용자가 이 생각 옆에 의도적으로 놓은 비언어적 문장으로 다룬다.",
+    "먼저 사진에서 직접 확인되는 최소한의 사실을 visibleEvidence에 짧게 적고, 분석의 중심은 왜 이 사진을 이 글에 붙였는지, 사진이 글에 쓰지 않은 현재 상황·대비·상징·정서적 온도를 어떻게 더하는지에 둔다.",
+    "사진 속 사람의 신원, 정확한 나이, 관계, 직업, 건강 상태, 민감한 특성은 추정하지 않는다. 표정만으로 감정을 단정하지 않는다. 다만 글과 사진을 함께 볼 때 드러나는 상황적·심리적 맥락은 evidence와 confidence를 붙여 해석 후보로 남길 수 있다.",
+    "글과 사진은 하나의 표현으로 읽되, 글에 직접 드러난 내용과 사진을 통해 추정한 첨부 의도를 구분한다. 사진은 글을 지지·확장·대조·맥락화·보완·상징화하거나 현재 상황을 기록할 수 있으며, 관계가 불명확하면 unclear로 둔다.",
     "긴 텍스트 안의 줄바꿈된 '…'는 가운데 일부가 길이 때문에 생략됐다는 표시다. 생략된 내용을 상상해 채우지 않는다.",
-    "literal에는 글과 사진에서 직접 확인되는 내용만 적는다. summary는 글의 핵심과 사진이 제공하는 실제 맥락을 1~2문장으로, topics는 표면 주제와 개념을, events와 claims는 실제 사건·판단을, keyPhrases는 작성자의 의미와 말투가 잘 남는 짧은 원문 표현을 적는다.",
+    "literal에는 글에서 직접 확인되는 내용만 적는다. summary는 글의 핵심을 1~2문장으로, topics는 표면 주제와 개념을, events와 claims는 실제 사건·판단을, keyPhrases는 작성자의 의미와 말투가 잘 남는 짧은 원문 표현을 적는다. 글이 없고 사진만 있으면 summary는 '사진으로 남긴 생각'처럼 중립적으로 적고, 사진의 사실과 해석은 visualContext에 둔다.",
     "authorPerspective의 explicitIntents는 사용자가 직접 밝힌 목적만 적는다. inferredIntents와 valuesOrNeeds는 추론일 수 있으므로 반드시 글 속 근거 표현과 confidence를 함께 적는다. 사진만으로 작성자의 내면을 추정하지 않는다.",
     "innerDynamics는 감정, 충돌하는 마음, 글 안의 관점 변화, 아직 닫히지 않은 문제를 다룬다. 근거가 없으면 빈 배열로 두고, 모순을 억지로 하나로 정리하지 않는다.",
     "alternateReadings에는 지배적인 해석과 다른 읽기가 실제 글이나 사진에 의해 가능할 때만 최대 2개를 적는다. 단순한 상상이나 심리 추측은 넣지 않는다.",
-    "모든 evidence는 사용자가 쓴 짧은 표현 또는 그 표현에 아주 가까운 구체적 근거여야 한다. 사진에서 본 사실은 visualContext에 기록하고 authorPerspective의 근거로 억지 사용하지 않는다.",
+    "글 분석의 evidence는 사용자가 쓴 짧은 표현 또는 그 표현에 아주 가까운 구체적 근거여야 한다. visualContext의 evidence는 글의 표현과 사진에서 직접 보이는 사실을 함께 짚어야 하며, 사진만으로 작성자의 마음을 확정하지 않는다.",
     "원문이 짧거나 애매해 의도와 감정을 판단하기 어렵다면 uncertainty.insufficientContext를 true로 하고 notes에 무엇을 단정할 수 없는지 적는다.",
     "질병, 성격 유형, 애착 유형 같은 진단을 하지 않는다. 사용자의 독특한 표현을 모두 일반적인 심리 용어로 바꾸지 않는다.",
     "sourceContext는 외부 재료와 사용자의 생각이 실제로 어떤 관계인지 기록한다. 외부 문장 자체를 사용자 신념처럼 취급하지 않는다.",
-    "visualContext에는 사진에서 직접 본 장면, 주요 요소, 실제로 읽히는 문자, 글과 사진의 관계, 시각적 불확실성을 기록한다. attachedImageCount가 providedImageCount보다 크면 제공되지 않은 사진은 분석하지 않았음을 uncertaintyNotes에 적는다. 사진이 없으면 hasImages=false이고 나머지는 빈 값으로 둔다.",
+    "visualContext에서 visibleEvidence는 해석의 근거가 되는 장면만 최대 5개로 짧게 적는다. 사물 목록을 길게 만들지 않는다. attachmentIntents는 작성자가 왜 이 사진을 붙였을지, emotionalFunctions는 사진이 글의 정서와 의미를 어떻게 강화하는지, latentContexts는 글에 직접 쓰지 않은 현재 상황이나 심리적 배경을 각각 evidence와 confidence를 붙여 기록한다. alternativeReadings에는 한 방향으로 굳히지 않기 위한 다른 가능성을 적는다.",
+    "사진이 단지 정보·증거·기록을 전달하는 경우에는 심리 해석을 억지로 만들지 않는다. attachedImageCount가 providedImageCount보다 크면 제공되지 않은 사진은 분석하지 않았음을 uncertaintyNotes에 적는다. 사진이 없으면 hasImages=false이고 나머지는 빈 값으로 둔다.",
     "각 항목은 짧고 평이한 한국어로 쓴다. 수를 채우기 위해 약한 항목을 만들지 않는다.",
   ].join("\n");
 
@@ -1805,7 +1847,7 @@ async function requestThoughtIndexes(records) {
       response_format: {
         type: "json_schema",
         json_schema: {
-          name: "thought_indexes_v2_multimodal",
+          name: "thought_indexes_v2_expressive_photos",
           strict: true,
           schema: {
             type: "object",
@@ -1875,14 +1917,17 @@ async function requestThoughtIndexes(records) {
                       type: "object",
                       properties: {
                         hasImages: { type: "boolean" },
-                        sceneSummary: { type: "string" },
-                        observedElements: { type: "array", minItems: 0, maxItems: 8, items: { type: "string" } },
-                        visibleText: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
-                        relationToThought: { type: "string", enum: ["none", "supports", "expands", "contrasts", "contextualizes", "unclear"] },
-                        relationEvidence: { type: "string" },
+                        visibleEvidence: { type: "array", minItems: 0, maxItems: 5, items: { type: "string" } },
+                        visibleText: { type: "array", minItems: 0, maxItems: 4, items: { type: "string" } },
+                        attachmentIntents: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                        emotionalFunctions: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                        relationToThought: { type: "string", enum: ["none", "supports", "expands", "contrasts", "contextualizes", "complements", "symbolizes", "documents", "unclear"] },
+                        relationExplanation: { type: "string" },
+                        latentContexts: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
+                        alternativeReadings: { type: "array", minItems: 0, maxItems: 2, items: evidenceItem },
                         uncertaintyNotes: { type: "array", minItems: 0, maxItems: 3, items: { type: "string" } },
                       },
-                      required: ["hasImages", "sceneSummary", "observedElements", "visibleText", "relationToThought", "relationEvidence", "uncertaintyNotes"],
+                      required: ["hasImages", "visibleEvidence", "visibleText", "attachmentIntents", "emotionalFunctions", "relationToThought", "relationExplanation", "latentContexts", "alternativeReadings", "uncertaintyNotes"],
                       additionalProperties: false,
                     },
                   },
@@ -1896,7 +1941,7 @@ async function requestThoughtIndexes(records) {
           },
         },
       },
-      max_completion_tokens: Math.min(7200, Math.max(1000, records.length * 700)),
+      max_completion_tokens: Math.min(7600, Math.max(1100, records.length * 760)),
     }),
   });
 
@@ -1935,11 +1980,7 @@ async function ensureThoughtIndexes(uid, userRef, records) {
     const fingerprint = betweenThoughtProfileFingerprint(record);
     const fragmentData = fragmentSnaps[i]?.exists ? fragmentSnaps[i].data() || {} : {};
     const currentIndex = normalizeThoughtIndex(fragmentData.aiIndex);
-    if (
-      fragmentData.aiIndexVersion === THOUGHT_INDEX_VERSION &&
-      fragmentData.aiIndexFingerprint === fingerprint &&
-      currentIndex
-    ) {
+    if (currentIndex && isThoughtIndexCurrentForRecord(fragmentData, record, fingerprint)) {
       resultMap.set(record.id, currentIndex);
       return;
     }
@@ -2019,7 +2060,7 @@ async function ensureThoughtIndexes(uid, userRef, records) {
   return { profiles: resultMap, indexes: resultMap, usage };
 }
 
-// 이전 함수명은 호출부 호환을 위해 유지하되 실제로는 v2 다층 색인을 보장한다.
+// 이전 함수명은 호출부 호환을 위해 유지하되 실제로는 다층 색인과 최신 사진 표현 색인을 보장한다.
 async function ensureBetweenThoughtProfiles(uid, userRef, records) {
   return ensureThoughtIndexes(uid, userRef, records);
 }
@@ -2085,6 +2126,7 @@ async function requestBetweenThoughtsScout(profileCandidates, excludePairKeys) {
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 1차 큐레이터다. 지금 보는 것은 각 생각의 원문이 아니라 여러 관점과 근거를 분리해 둔 다층 생각 색인이다.",
     "core/themes/events/claims/keyPhrases는 원문에 직접 나타난 내용에 가깝다. inferredIntents, valuesOrNeeds, emotions, tensions, shifts, openLoops, alternateReadings는 evidence와 confidence가 붙은 해석 후보이므로 사실처럼 단정하지 않는다.",
+    "visualAttachmentIntents·visualEmotionalFunctions·visualLatentContexts는 사진을 비언어적 문장으로 읽은 해석 후보다. 보이는 근거와 confidence를 함께 보고, 단순 사물 목록보다 글에 더해진 상황·대비·정서를 연결 후보에 반영한다.",
     "한 항목의 summary만 따라가지 말고 직접 진술, 의도, 가치, 긴장, 변화, 미완의 질문, 대안 해석을 서로 다른 렌즈로 살핀다. uncertainty가 크면 후보 점수를 낮춘다.",
     `최대 ${BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT}개의 조합만 원문 정밀 검토 대상으로 고른다. 이 단계에서는 질문을 만들지 않는다.`,
     "가장 비슷한 두 생각을 찾는 것이 목표가 아니다. 함께 놓았을 때 새로운 자기 이해가 생길 가능성이 있는 두 생각을 찾는다.",
@@ -2341,7 +2383,7 @@ exports.thoughtIndexFragment = onCall(
 
 /**
  * 기존 생각의 embedding과 공통 AI 색인을 함께 보완한다.
- * 현재 v2 색인이 원문과 일치하는 생각은 다시 호출하지 않는다.
+ * 글 전용 v2 색인은 유지하고, 사진이 있는 생각만 최신 사진 표현 색인 버전이 아닐 때 다시 호출한다.
  */
 exports.backfillThoughtIndexes = onCall(
   {
@@ -2390,11 +2432,7 @@ exports.backfillThoughtIndexes = onCall(
       const fingerprint = betweenThoughtProfileFingerprint(record);
       const canStructure = (record.thought || record.sourceExcerpt).trim().length >= 8 ||
         (Array.isArray(record.images) && record.images.length > 0);
-      const indexCurrent = !canStructure || (
-        row.data.aiIndexVersion === THOUGHT_INDEX_VERSION &&
-        row.data.aiIndexFingerprint === fingerprint &&
-        Boolean(normalizeThoughtIndex(row.data.aiIndex))
-      );
+      const indexCurrent = !canStructure || isThoughtIndexCurrentForRecord(row.data, record, fingerprint);
       if (!embeddingCurrent || !indexCurrent) pending.push({ ...row, record, embeddingText, embeddingHash, embeddingCurrent, indexCurrent });
     }
 
@@ -2801,6 +2839,7 @@ async function requestStudioPathScout(thread, profiles) {
     "당신은 '생각의 텃밭'에서 사용자가 글을 쓰기 전에 선택적으로 부르는 길안내자다.",
     "지금 보는 것은 Thread 안 생각들의 다층 색인과 부모·자식 연결 정보다. 이 단계의 목적은 원문을 다시 읽어볼 후보 갈래를 좁히는 것이며, 글의 목차·결론·문장을 만들지 않는다.",
     "core/themes/events/claims/keyPhrases는 직접 내용에 가깝고, inferredIntents·valuesOrNeeds·emotions·tensions·shifts·openLoops·alternateReadings는 근거와 confidence가 붙은 해석 후보다. 추론 하나를 정답처럼 고정하지 않는다.",
+    "visualAttachmentIntents·visualEmotionalFunctions·visualLatentContexts는 사진이 글에 더한 비언어적 의미 후보다. confidence와 근거를 함께 보고, 사진이 드러낸 현재 상황·대비·상징이 글의 갈래를 실제로 넓힐 때 활용한다.",
     "같은 요약이나 주제만 보지 말고 사건, 주장, 작성 의도, 가치, 양가감정, 관점 변화, 미해결 문제의 여러 축으로 후보를 살핀다. uncertainty가 큰 색인은 약한 근거로 취급한다.",
     `최대 ${STUDIO_PATH_SCOUT_COUNT}개의 후보 갈래를 고른다. 한 갈래는 2~6개의 생각으로 구성한다. 글감을 완성하려 하지 말고 글쓰기를 시작할 중심 나뭇가지만 찾는다.`,
     "Thread 전체에 하나의 선형 서사가 있다고 가정하지 않는다. 같은 소재 안의 다른 맥락, 새끼 생각, 갈라진 가지, 시간이 지나도 반복되는 관점이 함께 있을 수 있다.",
@@ -2904,7 +2943,7 @@ async function requestStudioPathDeep(thread, candidates, recordMap) {
   }));
   const systemPrompt = [
     "당신은 '생각의 텃밭'의 글쓰기 길안내자다. 이제 후보 갈래에 포함된 생각의 실제 원문·맥락·외부 인용과 출처를 다시 읽는다.",
-    "visualContext가 있으면 첨부 사진을 고화질로 한 번 읽어 저장한 시각 색인이다. 실제 사진을 다시 보는 것은 아니므로 사진에서 직접 확인된 맥락만 보조적으로 사용하고, 글에 없는 작성자 의도를 단정하지 않는다.",
+    "visualContext가 있으면 사진을 비언어적 문장으로 보고, 첨부 의도·정서적 기능·잠재 맥락을 근거와 확신도와 함께 저장한 색인이다. 실제 사진을 다시 보는 것은 아니므로 이를 사실로 확정하지 않되, 원문과 함께 충분히 뒷받침되는 해석은 갈래 판단에 적극적으로 활용한다.",
     "원문 안의 줄바꿈된 '…'는 긴 글의 가운데 일부가 생략됐다는 표시다. 생략된 내용을 추정하지 않는다.",
     `원문에 근거해 글을 시작할 만한 갈래만 최대 ${STUDIO_PATH_RESULT_COUNT}개 남긴다. 약하거나 억지스러운 후보는 버린다. 하나만 좋으면 하나만 반환하고, 없으면 빈 배열을 반환한다.`,
     "갈래는 완성된 글감 묶음이나 목차가 아니다. 사용자가 쓰기 시작할 중심 나뭇가지다. 재료가 2개든 3개든 4개든 실제로 필요한 만큼만 남긴다.",
