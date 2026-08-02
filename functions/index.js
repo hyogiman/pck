@@ -1,4 +1,4 @@
-// Thought Garden v61 · Cost-controlled Between Thoughts queue
+// Thought Garden v63 · Existing Between Thoughts answer context backfill
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -17,6 +17,7 @@ const THOUGHT_INDEX_MAX_BATCH = 8;
 const THOUGHT_INDEX_IMAGE_DETAIL = "high";
 const THOUGHT_INDEX_MAX_IMAGES_PER_FRAGMENT = 6;
 const THOUGHT_INDEX_VISION_VERSION = 2;
+const BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION = 1;
 
 const STUDIO_GARDENER_MODEL = "gpt-5.4-mini";
 const BLOOMING_INTERVIEW_MODEL = STUDIO_GARDENER_MODEL;
@@ -213,15 +214,53 @@ function sha256(text) {
   return crypto.createHash("sha256").update(text, "utf8").digest("hex");
 }
 
+// 두 생각 사이에서 나온 새 생각은 원문 두 개를 다시 보내지 않는다.
+// 질문을 만들 때 이미 생성된 연결 메모와 기존 다층 색인의 짧은 요약만
+// "사고를 촉발한 맥락"으로 재사용한다. 이 정보는 사용자의 주장과 구분된다.
+function thoughtPromptContext(fragment) {
+  if (Number(fragment?.betweenThoughtsPromptContextVersion || 0) < BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION) return null;
+  const question = balancedText(fragment?.betweenThoughtsQuestion, 420);
+  const connectionSummary = balancedText(
+    fragment?.betweenThoughtsContextSummary || fragment?.betweenThoughtsBridge,
+    620
+  );
+  const sourceSummaries = (Array.isArray(fragment?.betweenThoughtsSourceSummaries)
+    ? fragment.betweenThoughtsSourceSummaries
+    : [])
+    .map((value) => balancedText(value, 260))
+    .filter(Boolean)
+    .slice(0, 2);
+  if (!question && !connectionSummary && !sourceSummaries.length) return null;
+  return {
+    kind: "between_thoughts",
+    provenance: "ai_generated_prompt",
+    question,
+    connectionSummary,
+    sourceSummaries,
+  };
+}
+
 function buildEmbeddingText(fragment) {
   const parts = [];
   const thought = typeof fragment?.thought === "string" ? fragment.thought.trim() : "";
   const externalText = typeof fragment?.externalText === "string" ? fragment.externalText.trim() : "";
   const context = typeof fragment?.context === "string" ? fragment.context.trim() : "";
+  const promptContext = thoughtPromptContext(fragment);
 
   if (thought) parts.push(`내 생각:\n${thought}`);
   if (externalText) parts.push(`함께 남긴 문장·장면:\n${externalText}`);
-  if (context) parts.push(`기록 맥락:\n${context}`);
+  // AI 질문이 따로 구조화되어 있으면 화면 표시용 context를 중복 전송하지 않는다.
+  if (context && !promptContext) parts.push(`기록 맥락:\n${context}`);
+  if (promptContext) {
+    const promptLines = [
+      promptContext.question ? `AI가 제시한 질문: ${promptContext.question}` : "",
+      promptContext.connectionSummary ? `두 생각을 연결한 압축 맥락: ${promptContext.connectionSummary}` : "",
+      promptContext.sourceSummaries.length ? `출발 생각의 짧은 요약: ${promptContext.sourceSummaries.join(" / ")}` : "",
+    ].filter(Boolean);
+    if (promptLines.length) {
+      parts.push(`생각을 촉발한 맥락(사용자의 새 주장 아님):\n${promptLines.join("\n")}`);
+    }
+  }
 
   // 임베딩 모델은 이미지를 직접 받지 않으므로, 고화질 사진 분석에서 얻은
   // 시각 색인을 짧은 텍스트로 합쳐 사진의 의미도 관련 생각 검색에 반영한다.
@@ -1563,6 +1602,7 @@ function thoughtImageAttachments(data) {
 
 function betweenThoughtFullRecord(id, data, source) {
   const images = thoughtImageAttachments(data);
+  const promptContext = thoughtPromptContext(data);
   const totalImageCount = (Array.isArray(data?.attachments) ? data.attachments : [])
     .filter((item) => String(item?.type || "").toLowerCase().startsWith("image/"))
     .length;
@@ -1570,7 +1610,9 @@ function betweenThoughtFullRecord(id, data, source) {
     id,
     date: String(data.date || data.createdAt || "").slice(0, 10),
     thought: balancedText(data.thought || data.text, 4200),
-    context: balancedText(data.context, 900),
+    // promptContext가 있으면 context는 화면 표시용 AI 질문이므로 중복 입력하지 않는다.
+    context: promptContext ? "" : balancedText(data.context, 900),
+    promptContext,
     sourceExcerpt: balancedText(data.externalText, 2200),
     locator: String(data.locator || "").trim().slice(0, 200),
     sourceId: String(data.sourceId || ""),
@@ -1595,6 +1637,9 @@ function betweenThoughtProfileFingerprint(record) {
     sourceId: record.sourceId,
     source: record.source,
   };
+  // 기존 생각은 이전 fingerprint를 그대로 유지한다. v62 이후 새 답변처럼
+  // 압축 질문 맥락이 실제로 저장된 생각만 fingerprint에 추가한다.
+  if (record.promptContext) base.promptContext = record.promptContext;
   const images = Array.isArray(record.images) ? record.images : [];
   // 기존 텍스트 전용 생각은 v52 fingerprint를 그대로 유지해 불필요한 재색인을 막는다.
   if (!images.length && !Number(record.totalImageCount || 0)) return sha256(JSON.stringify(base));
@@ -1796,7 +1841,9 @@ async function requestThoughtIndexes(records) {
   const systemPrompt = [
     "당신은 '생각의 텃밭'에서 사용자가 남긴 글과 첨부 사진을 함께 읽고, 여러 기능이 재사용할 수 있는 다층 색인으로 정리한다.",
     "이 색인은 원문과 사진을 대체하거나 사용자를 진단하는 결과가 아니다. 나중에 관련 생각을 찾고, 원문과 사진을 다시 검토할 후보를 고르기 위한 지도다.",
-    "thought와 context는 사용자가 직접 쓴 내용이다. sourceExcerpt와 source는 외부의 책·영상·대화·타인의 말일 수 있으므로 사용자 생각과 절대 섞지 않는다.",
+    "thought는 사용자가 직접 쓴 현재의 생각이다. context는 사용자가 직접 덧붙인 맥락일 수 있다. promptContext는 AI가 만든 질문과 그 질문의 압축 배경이므로 사용자의 주장·감정·신념으로 취급하지 않는다.",
+    "promptContext가 있으면 질문과 연결 요약은 답변의 지시어와 배경을 이해하는 데만 사용한다. 색인의 중심은 thought에서 새로 드러난 의미이며, 출발 생각 요약을 사용자의 현재 주장으로 복사하지 않는다.",
+    "sourceExcerpt와 source는 외부의 책·영상·대화·타인의 말일 수 있으므로 사용자 생각과 절대 섞지 않는다.",
     "각 FRAGMENT 표식 뒤에 이어지는 이미지는 바로 그 fragment의 첨부 사진이다. 사진과 다른 fragment를 섞지 않는다.",
     "사진은 high detail로 제공된다. 사진은 단순한 첨부 자료가 아니라 사용자가 이 생각 옆에 의도적으로 놓은 비언어적 문장으로 다룬다.",
     "먼저 사진에서 직접 확인되는 최소한의 사실을 visibleEvidence에 짧게 적고, 분석의 중심은 왜 이 사진을 이 글에 붙였는지, 사진이 글에 쓰지 않은 현재 상황·대비·상징·정서적 온도를 어떻게 더하는지에 둔다.",
@@ -1837,6 +1884,7 @@ async function requestThoughtIndexes(records) {
         date: record.date,
         thought: record.thought,
         context: record.context,
+        ...(record.promptContext ? { promptContext: record.promptContext } : {}),
         sourceExcerpt: record.sourceExcerpt,
         locator: record.locator,
         source: record.source,
@@ -2073,6 +2121,7 @@ async function ensureThoughtIndexes(uid, userRef, records) {
         aiIndexTotalImageCount: Number(item.record.totalImageCount || 0),
         aiIndexImageDetail: Array.isArray(item.record.images) && item.record.images.length ? THOUGHT_INDEX_IMAGE_DETAIL : "none",
         aiIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
+        aiIndexPromptContextVersion: item.record.promptContext ? BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION : 0,
         aiIndexUpdatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       count++;
@@ -2145,6 +2194,17 @@ async function ensureUnifiedThoughtIndex(uid, fragmentId, options = {}) {
   }
 
   const index = structured.indexes.get(fragmentId);
+  const promptContextCompleted = Boolean(
+    record.promptContext &&
+    (!canStructure || index) &&
+    (!includeEmbedding || embedding?.ok)
+  );
+  if (promptContextCompleted) {
+    await fragmentRef.set({
+      betweenThoughtsPromptContextIndexedVersion: BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION,
+      betweenThoughtsPromptContextIndexedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
   return {
     ok: true,
     skipped: Boolean(embedding.skipped && !structured.usage.count),
@@ -2152,6 +2212,7 @@ async function ensureUnifiedThoughtIndex(uid, fragmentId, options = {}) {
     indexed: Boolean(index),
     indexGenerated: structured.usage.count > 0,
     indexMigrated: false,
+    promptContextUsed: Boolean(record.promptContext),
     aiIndexVersion: THOUGHT_INDEX_VERSION,
     model: THOUGHT_INDEX_MODEL,
   };
@@ -2291,6 +2352,7 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
     date: r.date,
     thought: r.thought,
     context: r.context,
+    ...(r.promptContext ? { promptContext: r.promptContext } : {}),
     sourceExcerpt: r.sourceExcerpt,
     locator: r.locator,
     source: r.source,
@@ -2304,7 +2366,7 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
     `최종적으로 사용자가 함께 바라볼 가치가 분명한 조합만 최대 ${BETWEEN_THOUGHTS_CURATION_PAIR_COUNT}개 남기고, 각 조합에 질문 하나를 만든다.`,
     "가장 중요한 기준은 사용자가 두 카드를 보는 순간 '왜 이 둘을 같이 보여줬는지 알 것 같다'고 느낄 가능성이다. 설명을 길게 해야만 연결되는 조합은 탈락시킨다.",
     "같은 책·같은 영상·같은 출처라는 이유만으로는 연결 근거가 되지 않는다. 두 기록에서 사용자가 붙잡은 생각의 변화·긴장·적용 방식이 실제로 이어져야 한다.",
-    "sourceExcerpt는 외부의 문장·장면이고 thought는 사용자의 생각이다. 외부 저자의 말을 사용자 신념처럼 취급하지 않는다. 다만 인용/장면이 사용자의 생각을 촉발한 핵심이라면 질문에 그 맥락을 자연스럽게 반영한다.",
+    "sourceExcerpt는 외부의 문장·장면이고 thought는 사용자의 생각이다. promptContext는 이전 AI 질문의 압축 배경이며 사용자의 주장으로 취급하지 않는다. 외부 저자의 말이나 이전 질문의 전제를 사용자 신념처럼 취급하지 않는다.",
     "직접 연결도 좋지만, 소재가 다른데 반복되는 가치·욕구·행동 패턴이 실제 문장에 드러나는 조합은 더 깊은 자기 이해를 만들 수 있다. 단, 추상적인 공통점만으로 묶지 않는다.",
     "질문은 'A는 이렇고 B는 저런데 왜 다른가요?', '공통점은 무엇인가요?', '차이는 무엇인가요?' 같은 비교 시험문제를 피한다.",
     "질문은 두 기록을 발판으로 아직 쓰지 않은 세 번째 생각을 떠올리게 해야 한다. 사용자가 자기 경험을 떠올리며 바로 답할 수 있는 자연스러운 한국어 한 문장이어야 한다.",
@@ -2472,7 +2534,27 @@ exports.thoughtIndexFragment = onCall(
     if (!uid) throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
     const fragmentId = safeId(request.data?.fragmentId, "생각 조각");
     const isAnonymous = request.auth?.token?.firebase?.sign_in_provider === "anonymous";
-    return ensureUnifiedThoughtIndex(uid, fragmentId, { includeEmbedding: true, includeStructured: !isAnonymous });
+    const runId = crypto.randomUUID();
+    logger.info("Thought index request started", { uid, fragmentId, runId, structured: !isAnonymous });
+    try {
+      const result = await ensureUnifiedThoughtIndex(uid, fragmentId, { includeEmbedding: true, includeStructured: !isAnonymous });
+      logger.info("Thought index request completed", {
+        uid, fragmentId, runId,
+        skipped: Boolean(result?.skipped),
+        indexGenerated: Boolean(result?.indexGenerated),
+        promptContextUsed: Boolean(result?.promptContextUsed),
+        embeddingSkipped: Boolean(result?.embedding?.skipped),
+        embeddingInputTokens: Number(result?.embedding?.inputTokens || 0),
+      });
+      return result;
+    } catch (error) {
+      logger.error("Thought index request failed", {
+        uid, fragmentId, runId,
+        code: error?.code || null,
+        message: error?.message || null,
+      });
+      throw error;
+    }
   }
 );
 
@@ -2499,6 +2581,17 @@ exports.backfillThoughtIndexes = onCall(
         .filter(Boolean)
         .slice(0, 120)
     );
+    const onlyIds = new Set(
+      (Array.isArray(request.data?.onlyIds) ? request.data.onlyIds : [])
+        .map((id) => String(id || "").trim())
+        .filter(Boolean)
+        .slice(0, 120)
+    );
+    const job = String(request.data?.job || "general").trim().slice(0, 80) || "general";
+    const runId = crypto.randomUUID();
+    logger.info("Thought-index backfill started", {
+      uid, runId, job, limit, onlyCount: onlyIds.size, excludeCount: excludeIds.size,
+    });
 
     const userRef = db.collection("users").doc(uid);
     const snap = await userRef.collection("fragments").get();
@@ -2515,6 +2608,7 @@ exports.backfillThoughtIndexes = onCall(
 
     const pending = [];
     for (const row of rows) {
+      if (onlyIds.size && !onlyIds.has(row.id)) continue;
       const embeddingText = buildEmbeddingText(row.data);
       const embeddingHash = embeddingText ? sha256(embeddingText) : "";
       const embeddingCurrent = !embeddingText || (
@@ -2534,12 +2628,18 @@ exports.backfillThoughtIndexes = onCall(
     const eligible = pending.filter((item) => !excludeIds.has(item.id));
     const items = eligible.slice(0, limit);
     if (!items.length) {
+      logger.info("Thought-index backfill completed", {
+        uid, runId, job, attempted: 0, processed: 0, remaining: 0, onlyCount: onlyIds.size,
+      });
       return {
         ok: true,
+        runId,
+        job,
         attempted: 0,
         processed: 0,
         remaining: 0,
         liveCount: rows.length,
+        targetCount: onlyIds.size || rows.length,
         indexedNow: 0,
         embeddedNow: 0,
         failedIds: [],
@@ -2695,12 +2795,40 @@ exports.backfillThoughtIndexes = onCall(
     const completedSet = new Set(completedIds);
     const failedIds = items.filter((item) => !completedSet.has(item.id)).map((item) => item.id);
 
-    return {
-      ok: true,
+    const promptContextCompletedItems = items.filter((item) =>
+      completedSet.has(item.id) && Boolean(item.record.promptContext)
+    );
+    if (promptContextCompletedItems.length) {
+      const completionBatch = db.batch();
+      promptContextCompletedItems.forEach((item) => {
+        completionBatch.set(item.ref, {
+          betweenThoughtsPromptContextIndexedVersion: BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION,
+          betweenThoughtsPromptContextIndexedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+      await completionBatch.commit();
+    }
+
+    const remaining = Math.max(0, eligible.length - items.length);
+    logger.info("Thought-index backfill completed", {
+      uid, runId, job,
       attempted: items.length,
       processed: completedIds.length,
-      remaining: Math.max(0, eligible.length - items.length),
+      remaining,
+      indexedNow,
+      embeddedNow,
+      failedCount: failedIds.length,
+      failureCodes: Object.fromEntries(failedIds.map((id) => [id, failureCodes.get(id) || "incomplete"])),
+    });
+    return {
+      ok: true,
+      runId,
+      job,
+      attempted: items.length,
+      processed: completedIds.length,
+      remaining,
       liveCount: rows.length,
+      targetCount: onlyIds.size || rows.length,
       indexedNow,
       migratedNow,
       embeddedNow,
@@ -3267,7 +3395,7 @@ async function requestStudioPathDeep(thread, candidates, recordMap) {
     `원문에 근거해 글을 시작할 만한 갈래만 최대 ${STUDIO_PATH_RESULT_COUNT}개 남긴다. 약하거나 억지스러운 후보는 버린다. 하나만 좋으면 하나만 반환하고, 없으면 빈 배열을 반환한다.`,
     "갈래는 완성된 글감 묶음이나 목차가 아니다. 사용자가 쓰기 시작할 중심 나뭇가지다. 재료가 2개든 3개든 4개든 실제로 필요한 만큼만 남긴다.",
     "Thread 전체를 하나의 시간순 서사로 만들지 않는다. 변화가 없어도 반복·긴장·확장으로 글을 시작할 수 있다.",
-    "thought/context는 사용자의 기록이고 sourceExcerpt는 외부 문장일 수 있다. 둘을 섞거나 외부 문장을 사용자의 생각으로 오해하지 않는다.",
+    "thought는 사용자의 기록이고 sourceExcerpt는 외부 문장일 수 있다. promptContext는 이전 AI 질문의 압축 배경이므로 사용자의 주장으로 오해하지 않는다.",
     "title은 글의 완성 제목을 대신 지어주는 것이 아니라 사용자가 어떤 방향인지 알아볼 수 있는 짧은 갈래 이름이다.",
     "summary는 왜 이 생각들이 함께 글의 출발점이 될 수 있는지 1~2문장으로만 설명한다. 사용자의 결론이나 숨은 심리를 단정하지 않는다.",
     "guidingQuestion은 이 갈래로 글을 시작할 때 생각해볼 올바른 질문 한 문장이다. 답이나 구성안을 주지 않는다.",
