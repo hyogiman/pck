@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v59 · On-demand Between Thoughts -->
+<!-- Thought Garden internal build: v60 · Prepared Pair Queue -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -1683,7 +1683,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   bloomingCloudDay:null,bloomingCloudSyncPromise:null,
   studioPath:{threadId:null,items:[],loading:false,cached:false,model:"",pendingProject:null},
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
-  betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false}};
+  betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false,manualReady:false,initialAttempted:false,errorMessage:""}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -3189,6 +3189,14 @@ function betweenThoughtText(f){return String(f?.thought||f?.text||f?.externalTex
 function betweenThoughtEligible(f){return !!f&&!f.deletedAt&&betweenThoughtText(f).length>=8}
 function betweenThoughtSource(f){return f?.sourceId?state.sources.find(s=>s.id===f.sourceId)||null:null}
 function betweenThoughtPairKey(ids){return [...ids].sort().join("|")}
+function answeredBetweenThoughtPairKeys(){
+  const keys=new Set();
+  state.fragments.forEach(f=>{
+    const ids=Array.isArray(f?.betweenThoughtsSourceIds)?f.betweenThoughtsSourceIds.map(String).filter(Boolean):[];
+    if(ids.length===2)keys.add(betweenThoughtPairKey(ids));
+  });
+  return keys;
+}
 function betweenThoughtExcerptText(text,max=220){const t=String(text||"").trim();return t.length>max?t.slice(0,max).trim()+"…":t}
 function betweenThoughtExcerpt(f,max=220){return betweenThoughtExcerptText(betweenThoughtText(f),max)}
 function betweenThoughtCandidateSignature(){return state.fragments.filter(betweenThoughtEligible).map(f=>`${f.id}:${f.updatedAt||f.createdAt||""}`).sort().join("|")}
@@ -3274,47 +3282,119 @@ function renderBetweenThoughtCard(f,slot){
   return `<div class="between-thought-card"><div class="between-thought-meta"><span class="between-thought-label">${slot===0?"어느 날의 생각":"또 다른 날의 생각"}</span><span>${esc(d)}</span></div>${renderBetweenThoughtSource(f,full)}${parts.thought?`<div class="between-thought-text">${esc(parts.thought)}</div>`:(!parts.src&&!parts.quote?`<div class="between-thought-text">${esc(shown)}</div>`:"")}${parts.hasMore?`<button class="between-thought-expand" data-between-expand="${f.id}" type="button">${full?"접기":"생각 전체 보기"}</button>`:""}</div>`;
 }
 function currentBetweenThoughtItem(){return state.betweenThoughts.items?.[state.betweenThoughts.index]||null}
+function setBetweenThoughtsNextButton(label="",show=false,disabled=false){
+  const next=$("betweenThoughtsNext");if(!next)return;
+  next.textContent=label||"↻ 다른 조합";
+  next.disabled=!!disabled;
+  next.classList.toggle("hidden",!show);
+}
 function renderBetweenThoughts(){
-  const box=$("betweenThoughtsBox"),next=$("betweenThoughtsNext");if(!box)return;
+  const box=$("betweenThoughtsBox"),bt=state.betweenThoughts;if(!box)return;
+  const answered=answeredBetweenThoughtPairKeys();
+
+  // 이미 답을 남긴 조합은 새로고침 뒤에도 다시 나타나지 않는다.
+  bt.items=(Array.isArray(bt.items)?bt.items:[]).filter(item=>{
+    const ids=Array.isArray(item?.fragmentIds)?item.fragmentIds.map(String):[];
+    return ids.length===2&&!answered.has(betweenThoughtPairKey(ids))&&ids.every(id=>state.fragments.some(f=>f.id===id&&!f.deletedAt));
+  });
+  if(bt.index>=bt.items.length)bt.index=0;
+
   const item=currentBetweenThoughtItem();
   const pair=(item?.fragmentIds||[]).map(id=>state.fragments.find(f=>f.id===id)).filter(betweenThoughtEligible);
   if(pair.length===2&&item?.question){
+    const key=betweenThoughtPairKey(item.fragmentIds);
+    if(key&&!bt.seenPairKeys.includes(key))bt.seenPairKeys.push(key);
     box.innerHTML=`<div class="between-thoughts-shell">${renderBetweenThoughtCard(pair[0],0)}<div class="between-thought-bridge"><span>🌱</span></div>${renderBetweenThoughtCard(pair[1],1)}<div style="text-align:center"><span class="between-curated-badge">✨ AI가 여러 생각 중 골라본 조합</span></div><div class="between-thought-prompt">두 생각 사이에 아직 쓰지 않은 이야기가 있을까요?</div><div class="between-thought-actions"><button class="btn primary" data-between-question type="button">✨ 이 두 생각 사이에서 질문 받기</button></div></div>`;
-    next?.classList.remove("hidden");return;
+    const remaining=Math.max(0,bt.items.length-bt.index-1);
+    setBetweenThoughtsNextButton(remaining?`다음 준비된 조합 (${remaining})`:"＋ 새 조합 찾기",true,false);
+    return;
   }
-  next?.classList.add("hidden");
+
+  setBetweenThoughtsNextButton("",false);
   const eligible=state.fragments.filter(betweenThoughtEligible);
   if(eligible.length<2){box.innerHTML=`<div class="between-thought-empty">생각이 조금 더 쌓이면,<br>함께 읽을 두 생각을 찾아볼게요.</div>`;return}
+
   const sig=betweenThoughtCandidateSignature();
-  if(sig!==state.betweenThoughts.candidateSignature){
-    state.betweenThoughts.candidateSignature=sig;
-    if(!state.betweenThoughts.items?.length){state.betweenThoughts.noPair=false;state.betweenThoughts.index=0}
+  if(sig!==bt.candidateSignature){
+    bt.candidateSignature=sig;
+    if(!bt.items.length){bt.noPair=false;bt.index=0}
   }
-  if(state.betweenThoughts.loading){box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다층 색인으로 후보를 고른 뒤,<br>원문과 출처를 다시 읽고 있어요…</div>`;return}
-  if(state.betweenThoughts.noPair){box.innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>새로운 생각이 더 쌓이면 다시 찾아볼게요.</div>`;return}
-  if(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous){requestBetweenThoughtCuration();return}
+
+  if(bt.loading){
+    box.innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다층 색인으로 후보를 고른 뒤,<br>원문과 출처를 다시 읽고 있어요…</div>`;
+    return;
+  }
+
+  if(bt.errorMessage){
+    box.innerHTML=`<div class="between-thought-empty">두 생각을 고르는 중 잠시 멈췄어요.<br>${esc(bt.errorMessage)}</div>`;
+    const exhausted=/오늘 여기까지|한도|resource-exhausted/i.test(bt.errorMessage);
+    setBetweenThoughtsNextButton(exhausted?"오늘 새 조합 한도 사용 완료":"＋ 새 조합 다시 찾기",true,exhausted);
+    return;
+  }
+
+  if(bt.manualReady){
+    box.innerHTML=`<div class="between-thought-empty">준비된 조합을 모두 봤어요.<br>새 조합은 원할 때만 하나씩 찾습니다.</div>`;
+    setBetweenThoughtsNextButton("＋ 새 조합 찾기",true,false);
+    return;
+  }
+
+  if(bt.noPair){
+    box.innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>원할 때 다시 찾아볼 수 있어요.</div>`;
+    setBetweenThoughtsNextButton("↻ 다시 찾아보기",true,false);
+    return;
+  }
+
+  if(state.firebase.connected&&state.firebase.user&&!state.firebase.user.isAnonymous){
+    if(!bt.initialAttempted){
+      bt.initialAttempted=true;
+      requestBetweenThoughtCuration(false);
+    }else{
+      bt.manualReady=true;
+      renderBetweenThoughts();
+    }
+    return;
+  }
   box.innerHTML=`<div class="between-thought-empty">Google 계정을 연결하면,<br>AI가 함께 읽을 두 생각을 골라드려요.</div>`;
 }
 async function requestBetweenThoughtCuration(forceRefresh=false){
   const bt=state.betweenThoughts;if(bt.loading)return;
   const candidateIds=betweenThoughtCandidateIds();if(candidateIds.length<2)return renderBetweenThoughts();
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return renderBetweenThoughts();
-  bt.loading=true;bt.expanded={};
-  $("betweenThoughtsNext")?.classList.add("hidden");
+
+  bt.loading=true;bt.initialAttempted=true;bt.expanded={};bt.errorMessage="";bt.manualReady=false;
+  setBetweenThoughtsNextButton("",false);
   $("betweenThoughtsBox").innerHTML=`<div class="between-thought-loading"><span class="ai-dot"></span> 다층 색인으로 후보를 고른 뒤,<br>원문과 출처를 다시 읽고 있어요…</div>`;
+
   try{
-    const data=await callFn("betweenThoughtsCurate",{candidateIds,excludePairKeys:bt.seenPairKeys.slice(-12),forceRefresh:!!forceRefresh});
-    const items=(data?.items||[]).filter(x=>Array.isArray(x?.fragmentIds)&&x.fragmentIds.length===2&&x.question).filter(x=>x.fragmentIds.every(id=>state.fragments.some(f=>f.id===id))).slice(0,1);
-    bt.items=items;bt.index=0;bt.curationId=String(data?.curationId||"");bt.model=String(data?.model||"");bt.curatedAtMs=Number(data?.generatedAtMs||Date.now());bt.noPair=!items.length;
-    if(!items.length){bt.items=[];$("betweenThoughtsBox").innerHTML=`<div class="between-thought-empty">지금은 억지로 두 생각을 이어 붙이지 않을게요.<br>새로운 생각이 더 쌓이면 다시 찾아볼게요.</div>`;return}
-    items.forEach(x=>{const k=betweenThoughtPairKey(x.fragmentIds);if(k&&!bt.seenPairKeys.includes(k))bt.seenPairKeys.push(k)});
-  }catch(e){console.error(e);bt.items=[];$("betweenThoughtsBox").innerHTML=`<div class="between-thought-empty">두 생각을 고르는 중 잠시 멈췄어요.<br>${esc(e?.message||"잠시 후 다시 시도해 주세요.")}</div>`;return}
-  finally{bt.loading=false}
+    const answered=[...answeredBetweenThoughtPairKeys()];
+    const excludePairKeys=[...new Set([...bt.seenPairKeys,...answered])].slice(-40);
+    const data=await callFn("betweenThoughtsCurate",{candidateIds,excludePairKeys,forceRefresh:!!forceRefresh});
+    const answeredSet=new Set(answered);
+    const items=(data?.items||[])
+      .filter(x=>Array.isArray(x?.fragmentIds)&&x.fragmentIds.length===2&&x.question)
+      .filter(x=>x.fragmentIds.every(id=>state.fragments.some(f=>f.id===id&&!f.deletedAt)))
+      .filter(x=>!answeredSet.has(betweenThoughtPairKey(x.fragmentIds)))
+      .slice(0,3);
+
+    bt.items=items;bt.index=0;bt.curationId=String(data?.curationId||"");bt.model=String(data?.model||"");
+    bt.curatedAtMs=Number(data?.generatedAtMs||Date.now());bt.noPair=!items.length;bt.manualReady=!items.length;
+    if(!items.length)bt.errorMessage="";
+  }catch(e){
+    console.error(e);
+    bt.items=[];
+    bt.noPair=false;
+    bt.manualReady=true;
+    bt.errorMessage=String(e?.message||"잠시 후 다시 시도해 주세요.");
+  }finally{
+    bt.loading=false;
+  }
   renderBetweenThoughts();
 }
 async function nextBetweenThoughtsPair(){
   const bt=state.betweenThoughts;if(bt.loading)return;
-  if(bt.items?.length&&bt.index<bt.items.length-1){bt.index++;bt.expanded={};renderBetweenThoughts();return}
+  if(bt.items?.length&&bt.index<bt.items.length-1){
+    bt.index++;bt.expanded={};bt.errorMessage="";renderBetweenThoughts();return;
+  }
   await requestBetweenThoughtCuration(true);
 }
 function renderBetweenMiniThought(f){
@@ -3340,7 +3420,11 @@ async function saveBetweenThoughtsAnswer(){
   const createdAt=new Date().toISOString();
   const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🌿 두 생각 사이\nQ. ${item.question}`,continuedFrom:[...new Set(ids)],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,betweenThoughtsSourceIds:[...new Set(ids)],betweenThoughtsQuestion:item.question,betweenThoughtsAnsweredAt:createdAt,betweenThoughtsModel:bt.model||"",betweenThoughtsBridgeType:item.bridgeType||"",betweenThoughtsCurationId:bt.curationId||""};
   state.fragments.unshift(f);await persist("fragments",f);requestFragmentIndex(f.id);
-  if(bt.index<bt.items.length-1){bt.index++;bt.noPair=false}else{bt.items=[];bt.index=0;bt.noPair=true}
+  const answeredKey=betweenThoughtPairKey(ids);
+  if(answeredKey&&!bt.seenPairKeys.includes(answeredKey))bt.seenPairKeys.push(answeredKey);
+  bt.items=bt.items.filter(x=>betweenThoughtPairKey(x.fragmentIds||[])!==answeredKey);
+  if(bt.index>=bt.items.length)bt.index=0;
+  bt.noPair=false;bt.manualReady=!bt.items.length;bt.errorMessage="";
   bt.candidateSignature=betweenThoughtCandidateSignature();bt.expanded={};renderAll();
 
   // 답은 이미 안전하게 저장됐다. Thread 연결은 그 다음의 선택일 뿐이다.
