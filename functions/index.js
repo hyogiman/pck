@@ -1,4 +1,4 @@
-// Thought Garden v58 · Photo Index Reliability
+// Thought Garden v59 · On-demand Between Thoughts
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
@@ -24,9 +24,9 @@ const BLOOMING_INTERVIEW_DAILY_LIMIT = 6;
 const BETWEEN_THOUGHTS_MODEL = STUDIO_GARDENER_MODEL;
 const BETWEEN_THOUGHTS_DAILY_LIMIT = 12;
 const BETWEEN_THOUGHTS_CURATION_DAILY_LIMIT = 4;
-const BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES = 36;
-const BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT = 6;
-const BETWEEN_THOUGHTS_CURATION_PAIR_COUNT = 3;
+const BETWEEN_THOUGHTS_CURATION_MAX_CANDIDATES = 18;
+const BETWEEN_THOUGHTS_SCOUT_PAIR_COUNT = 3;
+const BETWEEN_THOUGHTS_CURATION_PAIR_COUNT = 1;
 const BETWEEN_THOUGHTS_CURATION_CACHE_MS = 3 * 24 * 60 * 60 * 1000;
 const STUDIO_PATH_MAX_THREAD_FRAGMENTS = 36;
 const STUDIO_PATH_SCOUT_COUNT = 5;
@@ -1518,11 +1518,16 @@ async function reserveBetweenThoughtsCurationQuota(uid) {
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const data = snap.exists ? snap.data() || {} : {};
-    const used = Math.max(0, Number(data.betweenThoughtsCurations || 0));
+    // 이전 버전은 성공 여부와 무관하게 betweenThoughtsCurations를 먼저 올렸다.
+    // v59부터는 시도 횟수로 한도를 예약하고, 완료 횟수는 실제 처리가 끝난 뒤 기록한다.
+    const used = Math.max(0, Number(data.betweenThoughtsCurationAttempts ?? data.betweenThoughtsCurations ?? 0));
     if (used >= BETWEEN_THOUGHTS_CURATION_DAILY_LIMIT) {
       throw new HttpsError("resource-exhausted", "두 생각 사이의 새 큐레이션은 오늘 여기까지예요. 준비된 조합은 계속 볼 수 있어요.");
     }
-    tx.set(ref, { betweenThoughtsCurations: used + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    tx.set(ref, {
+      betweenThoughtsCurationAttempts: used + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     return used + 1;
   });
 }
@@ -2197,19 +2202,46 @@ async function requestBetweenThoughtsScout(profileCandidates, excludePairKeys) {
           },
         },
       },
-      max_completion_tokens: 1400,
+      max_completion_tokens: 1000,
     }),
   });
   let payload;
   try { payload = await response.json(); } catch (_) { payload = null; }
+  const requestId = String(response.headers.get("x-request-id") || "");
+  const finishReason = String(payload?.choices?.[0]?.finish_reason || "");
   if (!response.ok) {
-    logger.error("OpenAI Between Thoughts scout HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
+    logger.error("OpenAI Between Thoughts scout HTTP error", {
+      status: response.status,
+      requestId: requestId || null,
+      code: payload?.error?.code || null,
+      type: payload?.error?.type || null,
+      message: payload?.error?.message || null,
+    });
     throw new HttpsError("internal", "두 생각 사이의 후보를 고르지 못했습니다.");
   }
   const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "두 생각 사이 후보 결과가 비어 있습니다.");
+  if (typeof raw !== "string" || !raw.trim()) {
+    logger.error("OpenAI Between Thoughts scout empty response", {
+      requestId: requestId || null,
+      finishReason: finishReason || null,
+      inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+      outputTokens: Number(payload?.usage?.completion_tokens || 0),
+    });
+    throw new HttpsError("internal", "두 생각 사이 후보 결과가 비어 있습니다.");
+  }
   let parsed;
-  try { parsed = JSON.parse(raw); } catch (_) { throw new HttpsError("internal", "두 생각 사이 후보 형식이 올바르지 않습니다."); }
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    logger.error("OpenAI Between Thoughts scout JSON parse failed", {
+      requestId: requestId || null,
+      finishReason: finishReason || null,
+      inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+      outputTokens: Number(payload?.usage?.completion_tokens || 0),
+      message: error?.message || null,
+    });
+    throw new HttpsError("internal", "두 생각 사이 후보 형식이 올바르지 않습니다.");
+  }
   const validIds = new Set(profileCandidates.map((x) => x.id));
   const excluded = new Set(excludePairKeys || []);
   const seenPairs = new Set();
@@ -2228,6 +2260,8 @@ async function requestBetweenThoughtsScout(profileCandidates, excludePairKeys) {
   }
   return {
     shortlist,
+    requestId,
+    finishReason,
     inputTokens: Number(payload?.usage?.prompt_tokens || 0),
     cachedInputTokens: Number(payload?.usage?.prompt_tokens_details?.cached_tokens || 0),
     outputTokens: Number(payload?.usage?.completion_tokens || 0),
@@ -2263,7 +2297,7 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
     "질문은 두 생각의 관계를 정답처럼 먼저 선언하지 않는다. 조언·평가·진단·칭찬·교훈도 하지 않는다.",
     "bridge는 사용자에게 보여주지 않는 내부 메모다. 실제 원문에서 확인되는 연결 근거를 구체적으로 한 문장으로 적는다.",
     "confidence는 원문까지 읽은 뒤 사용자가 연결을 납득할 가능성을 0~100으로 평가한다. 78 미만은 반환하지 않는다.",
-    "가능하다면 최종 세 조합이 모두 같은 책/같은 주제에 몰리지 않게 한다. 단, 다양성을 위해 품질을 낮추지는 않는다.",
+    "최종 결과는 가장 가치가 분명한 한 조합만 남긴다. 약한 연결을 예비 결과로 채우지 않는다.",
   ].join("\n");
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -2307,19 +2341,46 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
           },
         },
       },
-      max_completion_tokens: 1500,
+      max_completion_tokens: 1000,
     }),
   });
   let payload;
   try { payload = await response.json(); } catch (_) { payload = null; }
+  const requestId = String(response.headers.get("x-request-id") || "");
+  const finishReason = String(payload?.choices?.[0]?.finish_reason || "");
   if (!response.ok) {
-    logger.error("OpenAI Between Thoughts deep curation HTTP error", { status: response.status, code: payload?.error?.code || null, type: payload?.error?.type || null });
+    logger.error("OpenAI Between Thoughts deep curation HTTP error", {
+      status: response.status,
+      requestId: requestId || null,
+      code: payload?.error?.code || null,
+      type: payload?.error?.type || null,
+      message: payload?.error?.message || null,
+    });
     throw new HttpsError("internal", "두 생각 사이를 깊게 살펴보지 못했습니다.");
   }
   const raw = payload?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw.trim()) throw new HttpsError("internal", "두 생각 사이 최종 결과가 비어 있습니다.");
+  if (typeof raw !== "string" || !raw.trim()) {
+    logger.error("OpenAI Between Thoughts deep curation empty response", {
+      requestId: requestId || null,
+      finishReason: finishReason || null,
+      inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+      outputTokens: Number(payload?.usage?.completion_tokens || 0),
+    });
+    throw new HttpsError("internal", "두 생각 사이 최종 결과가 비어 있습니다.");
+  }
   let parsed;
-  try { parsed = JSON.parse(raw); } catch (_) { throw new HttpsError("internal", "두 생각 사이 최종 형식이 올바르지 않습니다."); }
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    logger.error("OpenAI Between Thoughts deep curation JSON parse failed", {
+      requestId: requestId || null,
+      finishReason: finishReason || null,
+      inputTokens: Number(payload?.usage?.prompt_tokens || 0),
+      outputTokens: Number(payload?.usage?.completion_tokens || 0),
+      message: error?.message || null,
+    });
+    throw new HttpsError("internal", "두 생각 사이 최종 형식이 올바르지 않습니다.");
+  }
   const allowedPairs = new Set(shortlist.map((x) => x.fragmentIds.slice().sort().join("|")));
   const seenIds = new Set();
   const seenPairs = new Set();
@@ -2349,6 +2410,8 @@ async function requestBetweenThoughtsDeepCuration(shortlist, recordMap) {
   return {
     items,
     noPairReason: String(parsed?.noPairReason || "").trim().slice(0, 320),
+    requestId,
+    finishReason,
     inputTokens: Number(payload?.usage?.prompt_tokens || 0),
     cachedInputTokens: Number(payload?.usage?.prompt_tokens_details?.cached_tokens || 0),
     outputTokens: Number(payload?.usage?.completion_tokens || 0),
@@ -2636,9 +2699,10 @@ exports.backfillThoughtIndexes = onCall(
 
 /**
  * Home 라운지의 '두 생각 사이' 큐레이터.
- * 1) 재사용 가능한 짧은 생각 프로필로 넓게 후보를 고르고,
- * 2) 선택된 조합만 원문·출처·인용을 다시 읽어 최종 질문을 만든다.
- * 준비된 조합은 새 Fragment가 생겨도 3일 동안 재사용하고, 새 Fragment의 프로필만 백그라운드에서 갱신한다.
+ * 1) 의미 신호가 풍부한 생각과 의미상 가까운 짝을 중심으로 소수 후보만 고르고,
+ * 2) 최대 세 조합만 원문·출처·인용을 다시 읽어 가장 좋은 질문 하나를 만든다.
+ * 처음에는 한 조합만 준비하고, 다음 조합은 사용자가 직접 요청할 때 한 개씩 생성한다.
+ * 준비된 한 조합은 새 Fragment가 생겨도 3일 동안 재사용한다.
  */
 exports.betweenThoughtsCurate = onCall(
   {
@@ -2656,6 +2720,14 @@ exports.betweenThoughtsCurate = onCall(
     if (ids.length < 2) return { ok: true, items: [], reason: "not-enough-context" };
     const excludePairKeys = [...new Set((Array.isArray(request.data?.excludePairKeys) ? request.data.excludePairKeys : []).map((x) => String(x).slice(0, 180)).filter(Boolean))].slice(-20);
     const forceRefresh = Boolean(request.data?.forceRefresh);
+    const executionId = crypto.randomUUID();
+    logger.info("Between Thoughts curation started", {
+      uid,
+      executionId,
+      forceRefresh,
+      candidateCount: ids.length,
+      excludedPairCount: excludePairKeys.length,
+    });
 
     const userRef = db.collection("users").doc(uid);
     const col = userRef.collection("fragments");
@@ -2683,8 +2755,16 @@ exports.betweenThoughtsCurate = onCall(
         age >= 0 && age < BETWEEN_THOUGHTS_CURATION_CACHE_MS &&
         Array.isArray(cache.items)
       ) {
-        const validItems = cache.items.filter((item) => Array.isArray(item?.fragmentIds) && item.fragmentIds.length === 2 && item.fragmentIds.every((id) => validIds.has(String(id))));
+        const validItems = cache.items
+          .filter((item) => Array.isArray(item?.fragmentIds) && item.fragmentIds.length === 2 && item.fragmentIds.every((id) => validIds.has(String(id))))
+          .slice(0, BETWEEN_THOUGHTS_CURATION_PAIR_COUNT);
         if (validItems.length) {
+          logger.info("Between Thoughts curation cache hit", {
+            uid,
+            executionId,
+            itemCount: validItems.length,
+            cacheAgeMs: age,
+          });
           return {
             ok: true,
             cached: true,
@@ -2698,18 +2778,77 @@ exports.betweenThoughtsCurate = onCall(
       }
     }
 
-    await reserveBetweenThoughtsCurationQuota(uid);
-    const ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    let ensured;
+    try {
+      ensured = await ensureBetweenThoughtProfiles(uid, userRef, records);
+    } catch (error) {
+      logger.error("Between Thoughts profile preparation failed", {
+        uid,
+        executionId,
+        candidateCount: records.length,
+        code: error?.code || null,
+        message: error?.message || null,
+      });
+      throw error;
+    }
     records.forEach((record) => {
       const profile = ensured.profiles.get(record.id);
       if (profile?.visualContext) record.visualContext = profile.visualContext;
     });
     const profileCandidates = records.map((r) => compactBetweenThoughtProfile(r.id, ensured.profiles.get(r.id), r.date)).filter((x) => x.core);
-    if (profileCandidates.length < 2) return { ok: true, items: [], reason: "not-enough-profile-context" };
+    if (profileCandidates.length < 2) {
+      logger.info("Between Thoughts curation stopped before AI call", {
+        uid,
+        executionId,
+        reason: "not-enough-profile-context",
+        profileCandidateCount: profileCandidates.length,
+      });
+      return { ok: true, items: [], reason: "not-enough-profile-context" };
+    }
 
-    const scout = await requestBetweenThoughtsScout(profileCandidates, excludePairKeys);
-    let deep = { items: [], noPairReason: "", inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
-    if (scout.shortlist.length) deep = await requestBetweenThoughtsDeepCuration(scout.shortlist, recordMap);
+    const attemptNumber = await reserveBetweenThoughtsCurationQuota(uid);
+    let scout;
+    let deep = { items: [], noPairReason: "", requestId: "", finishReason: "", inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 };
+    try {
+      scout = await requestBetweenThoughtsScout(profileCandidates, excludePairKeys);
+      logger.info("Between Thoughts scout completed", {
+        uid,
+        executionId,
+        attemptNumber,
+        profileCandidateCount: profileCandidates.length,
+        shortlistCount: scout.shortlist.length,
+        requestId: scout.requestId || null,
+        finishReason: scout.finishReason || null,
+        inputTokens: scout.inputTokens,
+        cachedInputTokens: scout.cachedInputTokens,
+        outputTokens: scout.outputTokens,
+      });
+      if (scout.shortlist.length) {
+        deep = await requestBetweenThoughtsDeepCuration(scout.shortlist, recordMap);
+        logger.info("Between Thoughts deep curation completed", {
+          uid,
+          executionId,
+          attemptNumber,
+          shortlistCount: scout.shortlist.length,
+          itemCount: deep.items.length,
+          requestId: deep.requestId || null,
+          finishReason: deep.finishReason || null,
+          inputTokens: deep.inputTokens,
+          cachedInputTokens: deep.cachedInputTokens,
+          outputTokens: deep.outputTokens,
+        });
+      }
+    } catch (error) {
+      logger.error("Between Thoughts curation failed", {
+        uid,
+        executionId,
+        attemptNumber,
+        stage: scout ? "deep" : "scout",
+        code: error?.code || null,
+        message: error?.message || null,
+      });
+      throw error;
+    }
 
     const generatedAtMs = Date.now();
     const curationId = sha256(`${uid}:${generatedAtMs}:${deep.items.map((x) => x.fragmentIds.join("|")).join(",")}`).slice(0, 40);
@@ -2729,9 +2868,13 @@ exports.betweenThoughtsCurate = onCall(
       model: BETWEEN_THOUGHTS_MODEL,
       thoughtIndexVersion: THOUGHT_INDEX_VERSION,
       thoughtIndexVisionVersion: THOUGHT_INDEX_VISION_VERSION,
+      scoutRequestId: scout.requestId || "",
+      scoutFinishReason: scout.finishReason || "",
       scoutInputTokens: scout.inputTokens,
       scoutCachedInputTokens: scout.cachedInputTokens,
       scoutOutputTokens: scout.outputTokens,
+      deepRequestId: deep.requestId || "",
+      deepFinishReason: deep.finishReason || "",
       deepInputTokens: deep.inputTokens,
       deepCachedInputTokens: deep.cachedInputTokens,
       deepOutputTokens: deep.outputTokens,
@@ -2739,6 +2882,7 @@ exports.betweenThoughtsCurate = onCall(
       generatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     batch.set(usageRef, {
+      betweenThoughtsCurations: FieldValue.increment(1),
       betweenThoughtsQuestions: FieldValue.increment(deep.items.length),
       betweenThoughtsPreparedPairs: FieldValue.increment(deep.items.length),
       betweenThoughtsInputTokens: FieldValue.increment(totalInputTokens),
@@ -2749,7 +2893,35 @@ exports.betweenThoughtsCurate = onCall(
       betweenThoughtsModel: BETWEEN_THOUGHTS_MODEL,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    await batch.commit();
+    try {
+      await batch.commit();
+    } catch (error) {
+      logger.error("Between Thoughts curation storage failed", {
+        uid,
+        executionId,
+        attemptNumber,
+        itemCount: deep.items.length,
+        totalInputTokens,
+        totalCachedInputTokens,
+        totalOutputTokens,
+        scoutRequestId: scout.requestId || null,
+        deepRequestId: deep.requestId || null,
+        code: error?.code || null,
+        message: error?.message || null,
+      });
+      throw error;
+    }
+    logger.info("Between Thoughts curation stored", {
+      uid,
+      executionId,
+      attemptNumber,
+      itemCount: deep.items.length,
+      totalInputTokens,
+      totalCachedInputTokens,
+      totalOutputTokens,
+      scoutRequestId: scout.requestId || null,
+      deepRequestId: deep.requestId || null,
+    });
     return {
       ok: true,
       cached: false,
