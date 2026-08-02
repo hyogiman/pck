@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Thought Garden internal build: v60 · Prepared Pair Queue -->
+<!-- Thought Garden internal build: v63 · Existing Between Thoughts Context Backfill -->
 <html lang="ko">
 <head>
   <meta charset="utf-8" />
@@ -1618,6 +1618,11 @@
           <div class="setting-tool-head"><div><b>🧠 AI 데이터 관리</b><div class="helper" style="margin-top:4px">기존 생각의 글과 사진을 하나의 표현으로 읽어 다층 AI 색인과 의미 벡터를 보완합니다. 사진은 고화질로 분석해 보이는 정보뿐 아니라 왜 이 글에 붙였는지, 어떤 상황·대비·정서를 더하는지도 근거와 확신도와 함께 색인합니다.</div></div><button class="btn" id="backfillEmbeddings" type="button">다층 색인 만들기</button></div>
           <div class="ai-progress" id="embeddingBackfillStatus">새로 남기는 생각은 글과 첨부 사진을 함께 반영한 다층 AI 색인과 의미 벡터가 만들어집니다.</div>
         </div>
+
+        <div class="setting-tool-card">
+          <div class="setting-tool-head"><div><b>🌿 기존 두 생각 사이 답변 맥락</b><div class="helper" style="margin-top:4px">예전에 답한 두 생각 사이 기록만 골라, 질문과 출발 생각의 기존 요약을 압축 맥락으로 붙인 뒤 다시 색인합니다. 출발 원문 전체나 사진은 다시 보내지 않습니다.</div></div><button class="btn" id="backfillBetweenThoughtContexts" type="button">기존 답변 확인</button></div>
+          <div class="ai-progress" id="betweenThoughtContextBackfillStatus">대상 개수를 먼저 확인한 뒤, 해당 답변만 묶어서 처리합니다. 일반 생각과 원래 두 생각은 건너뜁니다.</div>
+        </div>
       </div>
     </details>
 
@@ -1666,7 +1671,7 @@
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script>
-/* Thought Garden v61 · Cost-controlled Between Thoughts queue */
+/* Thought Garden v63 · Existing Between Thoughts answer context backfill */
 const STORAGE_KEY="thoughtGarden_v02", FIREBASE_KEY="thoughtGarden_firebaseConfig", API_KEY_STORE="thoughtGarden_apiKeys", GOOGLE_LINK_PENDING="thoughtGarden_googleLinkPending";
 const STUDIO_GARDENER_KEY="thoughtGarden_studioGardener", BETWEEN_THOUGHTS_ENABLED_KEY="thoughtGarden_betweenThoughtsEnabled", BLOOMING_CUSTOM_KEY="thoughtGarden_customBlooming", BLOOMING_HISTORY_KEY="thoughtGarden_bloomingHistory";
 const BLOOMING_INTERVIEW_ENABLED_KEY="thoughtGarden_bloomingInterviewEnabled", BLOOMING_INTERVIEW_STATE_KEY="thoughtGarden_bloomingInterviewState";
@@ -3456,8 +3461,15 @@ async function saveBetweenThoughtsAnswer(){
   const bt=state.betweenThoughts,item=currentBetweenThoughtItem(),answer=($("betweenThoughtsAnswer")?.value||"").trim();if(!answer)return toast("떠오른 생각을 먼저 적어주세요.");
   const ids=(item?.fragmentIds||[]).filter(id=>state.fragments.some(f=>f.id===id));if(ids.length!==2||!item?.question)return toast("연결할 두 생각을 찾지 못했어요.");
   const sourcePair=ids.map(id=>state.fragments.find(x=>x.id===id)).filter(Boolean);
+  // 질문 생성 단계에서 이미 읽은 두 원문의 연결 메모와 기존 다층 색인의 짧은 요약만 저장한다.
+  // 답변 색인 때 원문 두 개를 다시 전송하지 않으므로 추가 AI 호출 없이 맥락을 보존한다.
+  const connectionSummary=betweenThoughtExcerptText(item.bridge||item.reason||"",460);
+  const sourceSummaries=sourcePair.map(source=>{
+    const indexed=String(source?.aiIndex?.literal?.summary||"").trim();
+    return betweenThoughtExcerptText(indexed||betweenThoughtText(source),260);
+  }).filter(Boolean).slice(0,2);
   const createdAt=new Date().toISOString();
-  const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🌿 두 생각 사이\nQ. ${item.question}`,continuedFrom:[...new Set(ids)],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,betweenThoughtsSourceIds:[...new Set(ids)],betweenThoughtsQuestion:item.question,betweenThoughtsAnsweredAt:createdAt,betweenThoughtsModel:bt.model||"",betweenThoughtsBridgeType:item.bridgeType||"",betweenThoughtsCurationId:bt.curationId||""};
+  const f={id:uid(),type:"thought",thought:answer,externalText:"",locator:"",context:`🌿 두 생각 사이\nQ. ${item.question}`,continuedFrom:[...new Set(ids)],threadIds:[],attachments:[],date:today(),createdAt,updatedAt:createdAt,betweenThoughtsSourceIds:[...new Set(ids)],betweenThoughtsQuestion:item.question,betweenThoughtsContextSummary:connectionSummary,betweenThoughtsSourceSummaries:sourceSummaries,betweenThoughtsPromptContextVersion:1,betweenThoughtsAnsweredAt:createdAt,betweenThoughtsModel:bt.model||"",betweenThoughtsBridgeType:item.bridgeType||"",betweenThoughtsCurationId:bt.curationId||""};
   state.fragments.unshift(f);await persist("fragments",f);requestFragmentIndex(f.id);
   const answeredKey=betweenThoughtPairKey(ids);
   if(answeredKey&&!bt.seenPairKeys.includes(answeredKey))bt.seenPairKeys.push(answeredKey);
@@ -3474,6 +3486,34 @@ async function saveBetweenThoughtsAnswer(){
   $("betweenThoughtsDialogActions").innerHTML=`<button class="btn" id="betweenThreadSkip" type="button">이대로 둘게요</button><button class="btn primary" id="betweenThreadContinue" type="button">🌱 Thread로 이어보기</button>`;
   $("betweenThreadSkip").onclick=()=>{$("betweenThoughtsDialog").close();toast("새 생각은 그대로 잘 남겨뒀어요. 🌿")};
   $("betweenThreadContinue").onclick=()=>{$("betweenThoughtsDialog").close();openLinkDialogForFragments(chain.map(x=>x.id))};
+}
+
+const BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION=1;
+function existingBetweenThoughtContextTargets(){
+  return state.fragments.filter(f=>{
+    const ids=Array.isArray(f?.betweenThoughtsSourceIds)?[...new Set(f.betweenThoughtsSourceIds.map(String).filter(Boolean))]:[];
+    const hasQuestion=Boolean(String(f?.betweenThoughtsQuestion||"").trim());
+    const prepared=Number(f?.betweenThoughtsPromptContextVersion||0)>=BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION;
+    const indexed=Number(f?.betweenThoughtsPromptContextIndexedVersion||0)>=BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION;
+    return !f?.deletedAt&&ids.length>=2&&hasQuestion&&(!prepared||!indexed);
+  });
+}
+function prepareExistingBetweenThoughtContext(f){
+  const ids=[...new Set((Array.isArray(f?.betweenThoughtsSourceIds)?f.betweenThoughtsSourceIds:[]).map(String).filter(Boolean))].slice(0,2);
+  const sourceSummaries=ids.map(id=>{
+    const source=state.fragments.find(x=>x.id===id);
+    if(!source)return "";
+    const indexed=String(source?.aiIndex?.literal?.summary||"").trim();
+    return betweenThoughtExcerptText(indexed||betweenThoughtText(source),260);
+  }).filter(Boolean).slice(0,2);
+  return {
+    ...f,
+    betweenThoughtsSourceIds:ids,
+    betweenThoughtsContextSummary:betweenThoughtExcerptText(f?.betweenThoughtsContextSummary||f?.betweenThoughtsBridge||"",460),
+    betweenThoughtsSourceSummaries:sourceSummaries,
+    betweenThoughtsPromptContextVersion:BETWEEN_THOUGHTS_PROMPT_CONTEXT_VERSION,
+    betweenThoughtsPromptContextPreparedAt:new Date().toISOString(),
+  };
 }
 
 function renderAll(){state.fragments.sort((a,b)=>String((b.date||b.createdAt||"")).localeCompare(String(a.date||a.createdAt||""))||String(b.createdAt||"").localeCompare(String(a.createdAt||"")));renderCapture();renderHome();renderLibrary();renderGarden();renderStudio();renderFragments();if($("trashDialog")?.open)renderTrash();renderSpark();refreshSelects();refreshOpenDetail();if($("todayDialog").open)renderTodayDialog();}
@@ -5788,6 +5828,96 @@ $("backfillEmbeddings").addEventListener("click",async()=>{
     toast(totalProcessed?`${totalProcessed}개까지 저장했고 나머지는 다음 실행에서 이어집니다.`:"일부 다층 생각 색인을 완료하지 못했습니다.");
   }finally{btn.disabled=false}
 });
+$("backfillBetweenThoughtContexts").addEventListener("click",async()=>{
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
+  const initialTargets=existingBetweenThoughtContextTargets();
+  const btn=$("backfillBetweenThoughtContexts"),status=$("betweenThoughtContextBackfillStatus");
+  if(!initialTargets.length){
+    status.textContent="확인 완료 · 기존 두 생각 사이 답변이 모두 새 압축 맥락 색인으로 정리되어 있습니다.";
+    return toast("갱신할 기존 두 생각 사이 답변이 없습니다. 🌱");
+  }
+  const count=initialTargets.length;
+  if(!await askAppConfirm(`기존 두 생각 사이 답변 ${count}개만 새 맥락으로 다시 색인할까요?\n출발 생각의 원문 전체와 사진은 다시 보내지 않고, 이미 저장된 짧은 요약과 질문만 사용합니다. 답변 ${count}개의 색인 호출 비용은 발생합니다.`,{title:"기존 답변 맥락 갱신",confirmText:`${count}개 갱신`,symbol:"🌿"}))return;
+  btn.disabled=true;
+  const targetIds=[];
+  const failedIds=new Set(),failureCodeById=new Map();
+  let totalProcessed=0,totalAttempted=0,lastRemaining=0,rounds=0;
+  const failureLabels={
+    "output-truncated":"AI 응답 길이 초과",
+    "index-empty":"색인 결과 누락",
+    "embedding-failed":"의미 벡터 생성 실패",
+    "resource-exhausted":"AI 사용 한도 도달",
+    "unavailable":"AI 일시 오류",
+    "internal":"색인 생성 오류",
+    "incomplete":"처리 미완료"
+  };
+  const failureSummary=()=>{
+    const counts=new Map();
+    failureCodeById.forEach(code=>counts.set(code,(counts.get(code)||0)+1));
+    return [...counts.entries()].map(([code,n])=>`${failureLabels[code]||code} ${n}개`).join(" · ");
+  };
+  try{
+    status.textContent=`기존 답변 ${count}개의 압축 맥락을 비용 없이 준비하고 있습니다…`;
+    for(const original of initialTargets){
+      const prepared=prepareExistingBetweenThoughtContext(original);
+      const i=state.fragments.findIndex(x=>x.id===prepared.id);
+      if(i>=0)state.fragments[i]=prepared;
+      const {api,db,uid}=state.firebase;
+      await api.setDoc(api.doc(db,"users",uid,"fragments",prepared.id),{
+        betweenThoughtsSourceIds:prepared.betweenThoughtsSourceIds,
+        betweenThoughtsContextSummary:prepared.betweenThoughtsContextSummary,
+        betweenThoughtsSourceSummaries:prepared.betweenThoughtsSourceSummaries,
+        betweenThoughtsPromptContextVersion:prepared.betweenThoughtsPromptContextVersion,
+        betweenThoughtsPromptContextPreparedAt:prepared.betweenThoughtsPromptContextPreparedAt,
+        updatedAtServer:api.serverTimestamp()
+      },{merge:true});
+      targetIds.push(prepared.id);
+    }
+    localSave();
+    status.textContent=`압축 맥락 준비 완료 · 답변 ${targetIds.length}개만 묶어서 다시 색인합니다…`;
+    while(rounds<100){
+      rounds++;
+      const res=await callFn("backfillThoughtIndexes",{
+        limit:8,
+        onlyIds:targetIds,
+        excludeIds:[...failedIds],
+        job:"between-thoughts-prompt-context-v1"
+      });
+      totalProcessed+=Number(res?.processed||0);
+      totalAttempted+=Number(res?.attempted||0);
+      (Array.isArray(res?.failedIds)?res.failedIds:[]).forEach(id=>failedIds.add(String(id)));
+      Object.entries(res?.failureCodes||{}).forEach(([id,code])=>failureCodeById.set(String(id),String(code||"incomplete")));
+      lastRemaining=Number(res?.remaining||0);
+      const parts=[`기존 답변 맥락 갱신 중… ${totalProcessed}개 완료`];
+      if(lastRemaining)parts.push(`${lastRemaining}개 남음`);
+      if(failedIds.size)parts.push(`${failedIds.size}개 확인 필요${failureSummary()?` (${failureSummary()})`:""}`);
+      status.textContent=parts.join(" · ");
+      if(!lastRemaining)break;
+    }
+    state.aiRelatedCache={};
+    await firebaseLoad();
+    if(lastRemaining){
+      status.textContent=`기존 답변 맥락 갱신이 ${totalProcessed}개 완료된 뒤 멈췄습니다. ${lastRemaining}개 남음${failedIds.size?` · ${failedIds.size}개 확인 필요${failureSummary()?` (${failureSummary()})`:""}`:""}`;
+      toast("완료된 답변은 다음 실행에서 건너뛰고 이어집니다.");
+    }else if(failedIds.size){
+      status.textContent=`기존 답변 맥락 부분 완료 · ${totalProcessed}개 완료 · ${failedIds.size}개 확인 필요${failureSummary()?` (${failureSummary()})`:""}`;
+      toast(`${totalProcessed}개를 완료했고 ${failedIds.size}개는 로그와 원인을 확인할 수 있습니다.`);
+    }else if(!totalAttempted){
+      status.textContent="확인 완료 · 이미 모든 기존 두 생각 사이 답변이 최신 상태입니다.";
+      toast("갱신할 답변이 없었습니다. 🌱");
+    }else{
+      status.textContent=`기존 두 생각 사이 답변 맥락 갱신 완료 · ${totalProcessed}개 처리`;
+      toast(`기존 답변 ${totalProcessed}개의 압축 맥락 색인을 갱신했습니다. 🌿`);
+    }
+  }catch(e){
+    console.warn(e);
+    status.textContent=totalProcessed
+      ? `기존 답변 ${totalProcessed}개 완료 후 멈췄습니다. 다시 누르면 완료된 답변은 건너뜁니다.`
+      : "기존 두 생각 사이 답변 맥락 갱신 중 오류가 있었습니다. 재시도 전 함수 로그를 확인해 주세요.";
+    toast(totalProcessed?`${totalProcessed}개까지 저장했습니다. 나머지는 다음 실행에서 이어집니다.`:"기존 답변 맥락 갱신을 완료하지 못했습니다.");
+  }finally{btn.disabled=false}
+});
+
 $("saveApiKeys").addEventListener("click",async()=>{
   const old=getApiKeys();
   const keys={...old,tmdb:$("tmdbKeyInput").value.trim(),youtube:$("youtubeKeyInput").value.trim()};
