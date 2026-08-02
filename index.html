@@ -2301,7 +2301,7 @@ async function refreshStudioUsage(){
 }
 function renderApiSettings(){
   const k=getApiKeys();
-  const summary=$("apiSettingState");if(summary)summary.textContent=(k.tmdb||k.youtube)?"일부 설정됨":"기본 연결";
+  const summary=$("apiSettingState");if(summary)summary.textContent=(k.tmdb&&k.youtube)?"설정 완료":(k.tmdb||k.youtube)?"일부 설정됨":"기본 연결";
   $("tmdbKeyInput").value=k.tmdb||"";
   $("youtubeKeyInput").value=k.youtube||"";
   $("apiStatus").innerHTML=`<span class="api-badge ok">알라딘 · Firebase Function</span><span class="api-badge ${k.youtube?"ok":""}">Google Books ${k.youtube?"키 설정됨":"Google API Key 필요"}</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
@@ -4592,10 +4592,60 @@ async function exportStudioSlotThought(pid,slotId,button=null){
 }
 function empty(icon,title,desc){return `<div class="empty"><span class="emoji">${icon}</span><strong>${esc(title)}</strong><div class="helper">${esc(desc)}</div></div>`}
 
-const CAPTURE_DRAFT_KEY="tg_capture_draft";
-function saveCaptureDraft(){try{localStorage.setItem(CAPTURE_DRAFT_KEY,JSON.stringify({t:$("captureText").value,e:$("captureExternal").value,l:$("captureLocator").value}))}catch(_){}}
-function clearCaptureDraft(){try{localStorage.removeItem(CAPTURE_DRAFT_KEY)}catch(_){}}
-function loadCaptureDraft(){try{return JSON.parse(localStorage.getItem(CAPTURE_DRAFT_KEY)||"null")}catch(_){return null}}
+const CAPTURE_DRAFT_KEY="tg_capture_drafts_v2", LEGACY_CAPTURE_DRAFT_KEY="tg_capture_draft";
+function captureDraftHash(value){
+  let h=2166136261;for(const ch of String(value||"")){h^=ch.codePointAt(0);h=Math.imul(h,16777619)}
+  return (h>>>0).toString(36);
+}
+function captureDraftContextKey(ctx=state.pendingSlot){
+  if(!ctx)return "plain";
+  const kind=String(ctx.kind||"context");
+  if(kind==="spark")return `spark:${ctx.sparkKey||captureDraftHash(ctx.prompt)}`;
+  if(kind==="thread")return `thread:${ctx.threadId||captureDraftHash(ctx.prompt)}`;
+  if(kind==="continue")return `continue:${ctx.fromId||captureDraftHash(ctx.prompt)}`;
+  if(kind==="thread-child")return `thread-child:${ctx.fromId||""}:${ctx.threadId||""}`;
+  if(ctx.projectId||ctx.slotId)return `${kind}:${ctx.projectId||""}:${ctx.slotId||""}`;
+  return `${kind}:${ctx.fromId||ctx.threadId||captureDraftHash(ctx.prompt)}`;
+}
+function captureDraftStore(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(CAPTURE_DRAFT_KEY)||"{}");
+    return raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{};
+  }catch(_){return {}}
+}
+function writeCaptureDraftStore(store){
+  try{
+    const rows=Object.entries(store||{}).filter(([,v])=>v&&typeof v==="object").sort((a,b)=>Number(b[1].at||0)-Number(a[1].at||0)).slice(0,30);
+    if(rows.length)localStorage.setItem(CAPTURE_DRAFT_KEY,JSON.stringify(Object.fromEntries(rows)));
+    else localStorage.removeItem(CAPTURE_DRAFT_KEY);
+  }catch(_){}
+}
+function saveCaptureDraft(ctx=state.pendingSlot){
+  try{
+    const key=captureDraftContextKey(ctx),store=captureDraftStore();
+    const draft={t:$("captureText").value,e:$("captureExternal").value,l:$("captureLocator").value,d:$("captureDate").value||today(),at:Date.now()};
+    if(draft.t||draft.e||draft.l)store[key]=draft;else delete store[key];
+    writeCaptureDraftStore(store);
+  }catch(_){}
+}
+function clearCaptureDraft(ctx=state.pendingSlot){
+  try{
+    const store=captureDraftStore();delete store[captureDraftContextKey(ctx)];writeCaptureDraftStore(store);
+    localStorage.removeItem(LEGACY_CAPTURE_DRAFT_KEY);
+  }catch(_){}
+}
+function loadCaptureDraft(ctx=state.pendingSlot){
+  try{
+    const key=captureDraftContextKey(ctx),store=captureDraftStore();
+    if(store[key])return store[key];
+    const legacy=JSON.parse(localStorage.getItem(LEGACY_CAPTURE_DRAFT_KEY)||"null");
+    if(legacy&&(legacy.t||legacy.e||legacy.l)){
+      const migrated={t:legacy.t||"",e:legacy.e||"",l:legacy.l||"",d:legacy.d||today(),at:Date.now()};
+      store[key]=migrated;writeCaptureDraftStore(store);localStorage.removeItem(LEGACY_CAPTURE_DRAFT_KEY);return migrated;
+    }
+  }catch(_){}
+  return null;
+}
 function bloomingAnswerMatches(f,ctx){
   if(!f||!ctx||ctx.kind!=="spark")return false;
   if(f.bloomingQuestionKey&&ctx.sparkKey&&f.bloomingQuestionKey===ctx.sparkKey)return true;
@@ -4658,7 +4708,13 @@ function openCapture(prefill="",ctx=null){
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
   $("captureDate").value=today();
-  if(!prefill&&!ctx){const d=loadCaptureDraft();if(d&&(d.t||d.e||d.l)){$("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";if(d.e)$("externalWrap").classList.remove("hidden");}}
+  if(!prefill){
+    const d=loadCaptureDraft(ctx);
+    if(d&&(d.t||d.e||d.l)){
+      $("captureText").value=d.t||"";$("captureExternal").value=d.e||"";$("captureLocator").value=d.l||"";$("captureDate").value=d.d||today();
+      if(d.e||d.l)$("externalWrap").classList.remove("hidden");
+    }
+  }
   $("captureDialog").showModal();
   setTimeout(growAll,0);
   setTimeout(()=>$("captureText").focus(),60);
@@ -4678,7 +4734,7 @@ async function saveCapture(){
   };
   try{
     if(state.pendingFiles.capture.length)f.attachments=await uploadFiles(state.pendingFiles.capture,f.id,"capture");
-    state.fragments.unshift(f);await persist("fragments",f);requestFragmentIndex(f.id);clearCaptureDraft();$("captureDialog").close();
+    state.fragments.unshift(f);await persist("fragments",f);requestFragmentIndex(f.id);clearCaptureDraft(ctx);$("captureDialog").close();
     state.pendingSlot=null;
     if(ctx){
       const p=state.projects.find(x=>x.id===ctx.projectId);
@@ -5648,7 +5704,7 @@ $("sheetSettings").addEventListener("click",()=>{
 });
 $("betweenThoughtsNext").addEventListener("click",nextBetweenThoughtsPair);
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());$("studioFindPath").addEventListener("click",()=>openStudioPathDialog());
-$("saveCapture").addEventListener("click",saveCapture);$("saveBloomingReflection").addEventListener("click",saveBloomingReflection);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",saveCaptureDraft));$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("saveCapture").addEventListener("click",saveCapture);$("saveBloomingReflection").addEventListener("click",saveBloomingReflection);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",()=>saveCaptureDraft()));$("captureDate").addEventListener("change",()=>saveCaptureDraft());$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
 $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});
