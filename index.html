@@ -1700,6 +1700,41 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   betweenThoughts:{items:[],index:0,loading:false,busy:false,expanded:{},seenPairKeys:[],curationId:"",model:"",candidateSignature:"",curatedAtMs:0,noPair:false,manualReady:false,initialAttempted:false,errorMessage:"",pendingCount:0,lastAction:"load",weakPairSkipped:false}};
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const esc=(v="")=>String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+// YouTube·Google Books 같은 외부 API는 제목에 &quot;, &#39;, &amp; 같은 HTML 엔티티를 돌려줄 수 있다.
+// 화면에 넣기 전에 일반 문자로 되돌리고, 실제 출력 시에는 esc()로 다시 안전하게 이스케이프한다.
+function decodeHtmlEntities(v=""){
+  let out=String(v??"");
+  if(!out.includes("&"))return out;
+  const box=document.createElement("textarea");
+  for(let i=0;i<3;i++){
+    box.innerHTML=out;
+    const next=box.value;
+    if(next===out)break;
+    out=next;
+  }
+  return out;
+}
+function cleanExternalText(v=""){
+  return decodeHtmlEntities(v).replace(/[   ]/g," ").trim();
+}
+function normalizeSourceRecord(s){
+  if(!s||typeof s!=="object")return s;
+  return {...s,
+    title:cleanExternalText(s.title||""),
+    creator:cleanExternalText(s.creator||""),
+    platform:cleanExternalText(s.platform||""),
+    provider:cleanExternalText(s.provider||"")
+  };
+}
+function normalizeApiResult(r){
+  if(!r||typeof r!=="object")return r;
+  return {...r,
+    title:cleanExternalText(r.title||""),
+    creator:cleanExternalText(r.creator||""),
+    publisher:cleanExternalText(r.publisher||""),
+    provider:cleanExternalText(r.provider||"")
+  };
+}
 const uid=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const today=()=>new Date().toLocaleDateString("en-CA");
 const fmt=d=>d?new Intl.DateTimeFormat("ko-KR",{year:"numeric",month:"short",day:"numeric"}).format(new Date(`${d.slice(0,10)}T00:00:00`)):"";
@@ -2422,7 +2457,7 @@ function trashDaysLeft(f){
   const d=new Date(f.deletedAt);if(isNaN(d))return TRASH_DAYS;
   return Math.max(0,TRASH_DAYS-Math.floor((Date.now()-d.getTime())/86400000));
 }
-function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=d.sources||[];splitFragments(d.fragments||[]);state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
+function localLoad(){try{const d=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");state.sources=(d.sources||[]).map(normalizeSourceRecord);splitFragments(d.fragments||[]);state.threads=d.threads||[];state.projects=d.projects||[]}catch{}renderAll()}
 function localSave(){localStorage.setItem(STORAGE_KEY,JSON.stringify({sources:state.sources,fragments:allFragments(),threads:state.threads,projects:state.projects}))}
 function normalizeFirebaseConfig(raw){
   let s=raw.trim().replace(/^const\s+firebaseConfig\s*=\s*/,"").replace(/;\s*$/,"");
@@ -2700,7 +2735,8 @@ function attachRealtime(){
   const {api,db,uid}=state.firebase;
   realtimeUnsub=["sources","fragments","threads","projects"].map(key=>
     api.onSnapshot(api.collection(db,"users",uid,key),
-      snap=>{ const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+      snap=>{ let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+              if(key==="sources")rows=rows.map(normalizeSourceRecord);
               if(key==="fragments")splitFragments(rows);else state[key]=rows;
               localSave(); renderAll(); if(key==="fragments")autoPurgeTrash(); },
       err=>{ console.warn("실시간 동기화 오류("+key+")",err); }
@@ -2712,7 +2748,8 @@ async function firebaseLoad(){
   const {api,db,uid}=state.firebase;
   for(const key of ["sources","fragments","threads","projects"]){
     const snap=await api.getDocs(api.collection(db,"users",uid,key));
-    const rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    let rows=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(key==="sources")rows=rows.map(normalizeSourceRecord);
     if(key==="fragments")splitFragments(rows);else state[key]=rows;
   }
   localSave();renderAll();
@@ -4822,15 +4859,14 @@ function aladinJsonpSearch(query){
     document.head.appendChild(script);
   });
 }
-function cleanAladinTitle(v=""){
-  const d=document.createElement("div");d.innerHTML=v;return d.textContent||d.innerText||v;
-}
+function cleanAladinTitle(v=""){return cleanExternalText(v)}
 function normalizeIsbn(v=""){return String(v||"").replace(/[^0-9X]/gi,"")}
 function existingSourceByIsbn(isbn){
   const x=normalizeIsbn(isbn);if(!x)return null;
   return state.sources.find(s=>normalizeIsbn(s.isbn13||s.isbn)===x)||null;
 }
 function renderBookSearchResults(results,providerLabel){
+  results=(results||[]).map(normalizeApiResult);
   state.apiResults=results;
   const box=$("apiSearchResults");
   if(!results.length){
@@ -4865,8 +4901,8 @@ async function googleBooksSearch(query){
     const isbn13=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_13")?.identifier||"";
     const isbn10=(v.industryIdentifiers||[]).find(i=>i.type==="ISBN_10")?.identifier||"";
     return {
-      kind:"book",provider:"Google Books",externalId:x.id||"",title:v.title||"",
-      creator:(v.authors||[]).join(", "),publisher:v.publisher||"",pubDate:v.publishedDate||"",
+      kind:"book",provider:"Google Books",externalId:x.id||"",title:cleanExternalText(v.title||""),
+      creator:cleanExternalText((v.authors||[]).join(", ")),publisher:cleanExternalText(v.publisher||""),pubDate:v.publishedDate||"",
       image:(v.imageLinks?.thumbnail||v.imageLinks?.smallThumbnail||"").replace("http://","https://"),
       isbn13:isbn13||isbn10,link:v.infoLink||""
     };
@@ -4883,7 +4919,7 @@ async function aladinBookSearch(query){
   }
   return (d.items||[]).map(x=>({
     kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
-    creator:x.author||"",publisher:x.publisher||"",pubDate:x.pubDate||"",
+    creator:cleanExternalText(x.author||""),publisher:cleanExternalText(x.publisher||""),pubDate:x.pubDate||"",
     image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
   }));
 }
@@ -4902,6 +4938,7 @@ function mergeBookResults(aladin=[],google=[]){
   return merged;
 }
 function renderCombinedBookResults(results,status){
+  results=(results||[]).map(normalizeApiResult);
   state.apiResults=results;
   const box=$("apiSearchResults");
   const aladinText=status.aladinError
@@ -4965,7 +5002,7 @@ async function searchSourceApi(){
       if(!r.ok)throw new Error("TMDB 검색 실패");
       const d=await r.json();
       state.apiResults=(d.results||[]).filter(x=>["movie","tv"].includes(x.media_type)).slice(0,12).map(x=>({
-        kind:"media",provider:"TMDB",externalId:String(x.id||""),title:x.title||x.name||"",
+        kind:"media",provider:"TMDB",externalId:String(x.id||""),title:cleanExternalText(x.title||x.name||""),
         creator:"",publisher:"",pubDate:x.release_date||x.first_air_date||"",
         image:x.poster_path?`https://image.tmdb.org/t/p/w342${x.poster_path}`:"",isbn13:"",link:""
       }));
@@ -4976,8 +5013,8 @@ async function searchSourceApi(){
       if(!r.ok)throw new Error("YouTube 검색 실패");
       const d=await r.json();
       state.apiResults=(d.items||[]).map(x=>({
-        kind:"media",provider:"YouTube",externalId:x.id?.videoId||"",title:x.snippet?.title||"",
-        creator:x.snippet?.channelTitle||"",publisher:"유튜브",pubDate:x.snippet?.publishedAt||"",
+        kind:"media",provider:"YouTube",externalId:x.id?.videoId||"",title:cleanExternalText(x.snippet?.title||""),
+        creator:cleanExternalText(x.snippet?.channelTitle||""),publisher:"유튜브",pubDate:x.snippet?.publishedAt||"",
         image:x.snippet?.thumbnails?.medium?.url||x.snippet?.thumbnails?.default?.url||"",isbn13:"",
         link:x.id?.videoId?`https://www.youtube.com/watch?v=${x.id.videoId}`:""
       }));
@@ -5006,9 +5043,9 @@ async function applyApiResultByIndex(index){
     }
   }
   $("sourceType").value=r.kind==="book"?"book":(r.provider==="YouTube"||r.kind==="youtube"?"youtube":"video");
-  $("sourceTitleInput").value=r.title||"";
-  $("sourceCreator").value=r.creator||"";
-  $("sourcePlatform").value=r.publisher||"";
+  $("sourceTitleInput").value=cleanExternalText(r.title||"");
+  $("sourceCreator").value=cleanExternalText(r.creator||"");
+  $("sourcePlatform").value=cleanExternalText(r.publisher||"");
   $("sourceImage").value=r.image||"";
   $("sourceIsbn").value=r.isbn13||"";
   $("sourceProvider").value=r.provider||"";
@@ -5022,9 +5059,9 @@ function renderPlatformChips(){
   const type=$("sourceType").value==="book"?"book":"media",cur=$("sourcePlatform").value.trim();
   $("platformChips").innerHTML=PLATFORM_PICKS[type].map(p=>`<button class="pick-chip ${cur===p?"on":""}" data-platform-pick="${esc(p)}" type="button">${esc(p)}</button>`).join("");
 }
-function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=(s?.status==="done"?"done":"active");$("sourceTitleInput").value=s?.title||"";$("sourceCreator").value=s?.creator||"";$("sourcePlatform").value=s?.platform||"";$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=s?.provider||"";renderPlatformChips();$("sourceDialog").showModal()}
+function openSourceDialog(s=null){$("apiSearchResults").innerHTML="";$("apiSearchQuery").value="";state.apiResults=[];$("sourceDialog").dataset.externalId=s?.externalId||"";$("sourceDialog").dataset.externalLink=s?.externalLink||"";$("sourceId").value=s?.id||"";$("sourceDialogTitle").textContent=s?"작품정보 수정":"Library에 작품 추가";$("sourceType").value=s?.type||"book";$("sourceStatus").value=(s?.status==="done"?"done":"active");$("sourceTitleInput").value=cleanExternalText(s?.title||"");$("sourceCreator").value=cleanExternalText(s?.creator||"");$("sourcePlatform").value=cleanExternalText(s?.platform||"");$("sourceImage").value=s?.image||"";$("sourceIsbn").value=s?.isbn13||"";$("sourceProvider").value=cleanExternalText(s?.provider||"");renderPlatformChips();$("sourceDialog").showModal()}
 async function saveSource(){
-  const title=$("sourceTitleInput").value.trim();if(!title)return toast("작품 제목을 적어주세요.");
+  const title=cleanExternalText($("sourceTitleInput").value);if(!title)return toast("작품 제목을 적어주세요.");
   const old=state.sources.find(s=>s.id===$("sourceId").value);
   const isbn13=normalizeIsbn($("sourceIsbn").value);
   if(!old&&isbn13){
@@ -5043,8 +5080,8 @@ async function saveSource(){
   }
   const s={
     id:old?.id||uid(),type:$("sourceType").value,status:$("sourceStatus").value,title,
-    creator:$("sourceCreator").value.trim(),platform:$("sourcePlatform").value.trim(),
-    image:$("sourceImage").value.trim(),isbn13,provider:$("sourceProvider").value.trim(),
+    creator:cleanExternalText($("sourceCreator").value),platform:cleanExternalText($("sourcePlatform").value),
+    image:$("sourceImage").value.trim(),isbn13,provider:cleanExternalText($("sourceProvider").value),
     externalId:$("sourceDialog").dataset.externalId||old?.externalId||"",
     externalLink:$("sourceDialog").dataset.externalLink||old?.externalLink||"",
     createdAt:old?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
@@ -5535,7 +5572,7 @@ async function importData(file){try{
     merged[k]=[...m.values()];
   }
   splitFragments(merged.fragments);                       // deletedAt이 있으면 휴지통으로
-  state.sources=merged.sources;state.threads=merged.threads;state.projects=merged.projects;
+  state.sources=merged.sources.map(normalizeSourceRecord);state.threads=merged.threads;state.projects=merged.projects;
   if(Array.isArray(d.customBloomingQuestions)){
     const rows=customBloomingQuestions(),byText=new Map(rows.map(x=>[normalizeBloomingQuestion(x.q),x]));
     d.customBloomingQuestions.forEach(x=>{const q=normalizeBloomingQuestion(x?.q);if(q&&!byText.has(q))byText.set(q,{id:x.id||uid(),q,createdAt:x.createdAt||new Date().toISOString()})});
