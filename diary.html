@@ -122,10 +122,13 @@ input:focus,textarea:focus{outline-offset:0}
 .sheet-head{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;border-bottom:2.5px solid var(--accent);
   padding-bottom:10px;margin-bottom:6px}
 .sheet-title{font-family:'Jua';font-size:1.7rem;color:var(--accent);font-weight:400}
-.note-wrap{flex:1;min-width:220px;display:flex;align-items:baseline;gap:8px}
+.note-wrap{flex:1;min-width:200px;display:flex;align-items:flex-start;gap:8px}
+.note-label{padding-top:4px}
 .note-label{font-family:'Jua';color:var(--accent);font-size:1.02rem;white-space:nowrap}
-#dayNote{flex:1;border:none;background:transparent;border-bottom:1.5px dashed var(--rule);
-  font-family:var(--hand);font-size:calc(1.3rem * var(--hand-size));color:var(--blue);padding:2px 4px}
+#dayNote{flex:1;min-width:0;border:none;background:transparent;border-bottom:1.5px dashed var(--rule);
+  font-family:var(--hand);font-size:calc(1.3rem * var(--hand-size));color:var(--blue);padding:2px 4px;
+  line-height:1.45;resize:none;overflow:hidden;white-space:pre-wrap;word-break:break-word;
+  min-height:calc(1.3rem * var(--hand-size) * 1.45 + 6px)}
 
 .section-star{font-family:'Jua';color:var(--accent-deep);font-size:1.12rem;margin:20px 0 10px;
   display:flex;align-items:center;gap:8px}
@@ -613,7 +616,8 @@ body[data-theme="plum"] .goal-tag{background:#26433A;border-color:#3E6B58;color:
   font-family:"Pretendard Variable",Pretendard,sans-serif;position:relative}
 .a4 .a4-head{display:flex;align-items:flex-end;gap:16px;border-bottom:3px solid #E5762E;padding-bottom:10px}
 .a4 .a4-title{font-family:'Jua';font-size:30px;color:#E5762E}
-.a4 .a4-note{flex:1;font-family:var(--hand);font-size:calc(22px * var(--hand-size));color:#3A57C8}
+.a4 .a4-note{flex:1;font-family:var(--hand);font-size:calc(22px * var(--hand-size));color:#3A57C8;
+  line-height:1.5;white-space:pre-wrap;word-break:break-word}
 .a4 .a4-date{font-size:14px;font-weight:700;color:#8A705A}
 .a4 .a4-star{font-family:'Jua';font-size:18px;color:#C95F1D;margin:22px 0 8px}
 .a4 table{width:100%;border-collapse:collapse}
@@ -875,7 +879,7 @@ body[data-theme="plum"] #topbar{background:rgba(44,35,51,.92)}
         <div class="sheet-head" style="border-bottom-width:2px">
           <div class="note-wrap">
             <span class="note-label">남김말 :</span>
-            <input id="dayNote" placeholder="오늘 하루를 한 줄로" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" name="dayNote-nofill">
+            <textarea id="dayNote" rows="1" placeholder="오늘 하루를 한 줄로" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
           </div>
           <div class="actions" style="display:flex;gap:6px;flex:none">
             <button class="mini-btn" id="carryBtn">↩ 미완료 가져오기</button>
@@ -1408,10 +1412,13 @@ window.addEventListener('beforeunload', () => { if(dirty){ saveNow(); } });
 /* ───────── 시트 렌더 ───────── */
 function renderSheet(){
   $('dayNote').value = day.note;
+  grow($('dayNote'), 0);
   $('memoText').value = day.memo;
   renderCats(); renderInbox(); renderPriv(); renderNotes(); renderMemoFiles();
 }
-$('dayNote').addEventListener('input', e => { day.note = e.target.value; markDirty(); });
+$('dayNote').addEventListener('input', e => { day.note = e.target.value; markDirty(); grow(e.target, 0); });
+$('dayNote').addEventListener('focus', e => grow(e.target, 0));
+$('dayNote').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); } });
 $('memoText').addEventListener('input', e => { day.memo = e.target.value; markDirty(); autoGrow(e.target); });
 $('memoText').addEventListener('focus', e => autoGrow(e.target));
 $('memoText').addEventListener('click', e => autoGrow(e.target));
