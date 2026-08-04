@@ -630,11 +630,16 @@
     .garden-discovery-candidates-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:10px}
     .garden-discovery-candidates-head strong{font-size:.82rem;color:#365843}
     .garden-discovery-candidates-head small{font-size:.62rem;color:var(--muted)}
-    .garden-discovery-candidate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:11px;align-items:center;padding:11px 0;border-top:1px solid #e2e8e0}
+    .garden-discovery-candidate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:13px;align-items:start;padding:14px 0;border-top:1px solid #e2e8e0}
     .garden-discovery-candidate:first-of-type{border-top:0}
     .garden-discovery-candidate-main{min-width:0}
-    .garden-discovery-candidate-meta{display:block;margin-bottom:4px;font-size:.61rem;font-weight:800;color:#7a877e}
-    .garden-discovery-candidate-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--serif);font-size:.82rem;line-height:1.5;color:#353d38}
+    .garden-discovery-candidate-meta-row{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-bottom:7px}
+    .garden-discovery-candidate-meta{display:block;font-size:.61rem;font-weight:800;color:#7a877e}
+    .garden-discovery-candidate-source{font-size:.61rem;font-weight:760;color:#698071;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .garden-discovery-candidate-quote{margin:0 0 9px;padding:9px 10px;border-left:2px solid #a9c8b1;background:#fffefa;font-family:var(--serif);font-size:.74rem;line-height:1.58;color:#5d665e;white-space:pre-wrap;word-break:break-word}
+    .garden-discovery-candidate-question{margin:0 0 9px;padding:9px 10px;border-radius:10px;background:#edf5ef;color:#496152;font-size:.71rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+    .garden-discovery-candidate-text{display:block;overflow:visible;font-family:var(--serif);font-size:.84rem;line-height:1.62;color:#353d38;white-space:pre-wrap;word-break:break-word}
+    .garden-discovery-candidate-context{margin-top:8px;color:var(--muted);font-size:.7rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
     .garden-discovery-candidate .btn{white-space:nowrap;padding:8px 11px;font-size:.69rem}
     .garden-discovery-next{margin-top:14px;padding:13px 14px;border:1px solid #d5e4d8;border-radius:14px;background:linear-gradient(145deg,#f9fcf8,#eef6ef);text-align:center}
     .garden-discovery-next b{display:block;font-size:.78rem;color:#41614c;margin-bottom:8px}
@@ -3692,15 +3697,38 @@ async function loadGardenDiscoveryCandidates(){
   }catch(e){console.warn("Garden discovery candidate search fallback",e?.code||e?.message||e);renderGardenDiscoveryCandidates(localPairCandidates(a,b,8).filter(x=>!excluded.has(x.f.id)).slice(0,3));}
   finally{state.gardenDiscovery.loading=false;btn.disabled=false}
 }
+function gardenDiscoveryCandidateHTML(f){
+  const ago=daysAgo(f.date||f.createdAt),when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;
+  const src=f.sourceId?state.sources.find(x=>x.id===f.sourceId):null;
+  const quote=String(f.externalText||"").trim();
+  const text=String(f.thought||f.text||"").trim();
+  const question=String(f.betweenThoughtsQuestion||f.bloomingInterviewQuestion||"").trim();
+  const context=!question?String(f.context||"").trim():"";
+  return `<div class="garden-discovery-candidate"><div class="garden-discovery-candidate-main">
+    <div class="garden-discovery-candidate-meta-row"><span class="garden-discovery-candidate-meta">${when}</span>${src?`<span class="garden-discovery-candidate-source">${sourceIcon(src.type)} ${esc(src.title)}</span>`:""}</div>
+    ${quote?`<blockquote class="garden-discovery-candidate-quote">${esc(quote)}${f.locator?`<cite>${esc(f.locator)}</cite>`:""}</blockquote>`:""}
+    ${question?`<div class="garden-discovery-candidate-question">${f.betweenThoughtsQuestion?"🌿 두 생각 사이의 질문":"🎙️ 질문"}<br>${esc(question)}</div>`:""}
+    ${text?`<div class="garden-discovery-candidate-text">${esc(text)}</div>`:quote?"":`<div class="garden-discovery-candidate-text" style="color:var(--muted)">(내용 없음)</div>`}
+    ${context?`<div class="garden-discovery-candidate-context">${esc(context)}</div>`:""}
+  </div><button class="btn soft" data-connect-discovery="${f.id}" type="button">연결하기</button></div>`;
+}
 function renderGardenDiscoveryCandidates(items){
   const box=$("gardenDiscoveryCandidates");if(!items.length){box.innerHTML=`<div class="garden-discovery-candidates"><div class="garden-discovery-empty">지금 두 생각과 자연스럽게 이어질 만한 다른 조각을 찾지 못했어요.<br>여기서 멈추는 것도 좋은 끝입니다.</div></div>`;return}
-  box.innerHTML=`<div class="garden-discovery-candidates"><div class="garden-discovery-candidates-head"><strong>닿아 있는 생각 ${items.length}개</strong><small>두 생각의 의미를 함께 봤어요</small></div>${items.map(({f})=>{const ago=daysAgo(f.date||f.createdAt),when=ago>=365?`${Math.floor(ago/365)}년 전`:ago>=30?`${Math.floor(ago/30)}개월 전`:`${ago}일 전`;return `<div class="garden-discovery-candidate"><div class="garden-discovery-candidate-main"><span class="garden-discovery-candidate-meta">${when}</span><span class="garden-discovery-candidate-text">${esc(f.thought||f.text||f.externalText||"")}</span></div><button class="btn soft" data-connect-discovery="${f.id}" type="button">연결하기</button></div>`}).join("")}</div>`;
+  box.innerHTML=`<div class="garden-discovery-candidates"><div class="garden-discovery-candidates-head"><strong>닿아 있는 생각 ${items.length}개</strong><small>원문을 끝까지 읽고 연결해보세요</small></div>${items.map(({f})=>gardenDiscoveryCandidateHTML(f)).join("")}</div>`;
 }
 async function connectGardenDiscovery(fid){
   const chain=state.gardenDiscovery.chain||[],tailId=chain[chain.length-1],f=state.fragments.find(x=>x.id===fid);if(!f||!tailId)return;
   if(fragmentAncestorIds(tailId).has(fid))return toast("이미 앞쪽에 있는 생각이라 다시 연결하지 않았어요.");
+  const before=unnamedStemStats();
   f.continuedFrom=[...new Set([...(f.continuedFrom||[]),tailId])];f.updatedAt=new Date().toISOString();await persist("fragments",f);
-  state.gardenDiscovery.chain=[...chain,f.id];$("gardenDiscoveryCandidates").innerHTML=`<div class="garden-discovery-next"><b>한 조각이 더 이어졌어요. 🌱</b><button class="btn soft" data-discovery-next type="button">한 조각 더 찾아보기</button></div>`;renderGardenDiscovery();renderGarden();toast("생각 하나를 더 이어두었습니다. 🌱");
+  state.gardenDiscovery.chain=[...chain,f.id];
+  const after=unnamedStemStats(),unnamed=unnamedStemGroupFor(f.id),chainHasThread=state.gardenDiscovery.chain.some(id=>(state.fragments.find(x=>x.id===id)?.threadIds||[]).length);
+  let result="생각 하나를 더 이어두었습니다. 🌱";
+  if(after.stemCount<before.stemCount)result="서로 다른 이름 없는 줄기 두 개가 하나로 이어졌어요. 🌱";
+  else if(after.stemCount>before.stemCount)result="새로운 이름 없는 생각의 줄기가 생겼어요. 🌱";
+  else if(unnamed&&after.thoughtCount>before.thoughtCount)result=`기존 이름 없는 줄기에 생각이 하나 늘었어요. 지금 ${unnamed.fragments.length}개의 생각이 이어져 있습니다. 🌱`;
+  else if(chainHasThread)result="연결은 저장됐어요. 이미 Thread가 포함된 흐름이라 ‘이름 없는 줄기’ 수에는 더해지지 않습니다. 🌱";
+  $("gardenDiscoveryCandidates").innerHTML=`<div class="garden-discovery-next"><b>${esc(result)}</b><button class="btn soft" data-discovery-next type="button">한 조각 더 찾아보기</button></div>`;renderGardenDiscovery();renderGarden();toast(result);
 }
 function openGardenDiscoveryThreadLink(){const ids=(state.gardenDiscovery.chain||[]).filter(id=>state.fragments.some(f=>f.id===id));if(!ids.length)return;$("gardenDiscoveryDialog").close();openLinkDialogForFragments(ids)}
 
@@ -3800,15 +3828,20 @@ function unnamedStemGroups(){
   }
   return groups.sort((a,b)=>String(b.latest).localeCompare(String(a.latest)));
 }
+function unnamedStemStats(){
+  const groups=unnamedStemGroups(),ids=new Set();
+  groups.forEach(g=>(g.ids||[]).forEach(id=>ids.add(id)));
+  return {groups,stemCount:groups.length,thoughtCount:ids.size};
+}
 function unnamedStemGroupFor(startId){return unnamedStemGroups().find(g=>g.ids.includes(startId))||null}
 function unnamedStemPreviewText(f){
   const text=(f?.thought||f?.text||f?.externalText||f?.context||"").trim();
   return text||"(내용 없음)";
 }
 function renderUnnamedStemsList(){
-  const groups=unnamedStemGroups(),box=$("unnamedStemsBody");if(!box)return;
+  const {groups,thoughtCount}=unnamedStemStats(),box=$("unnamedStemsBody");if(!box)return;
   state.unnamedStemIds=[];
-  $("unnamedStemsSummary").textContent=groups.length?`${groups.length}개의 줄기가 아직 이름 없이 자라고 있어요. 눌러서 흐름을 먼저 살펴보세요.`:"지금은 이름을 기다리는 생각의 줄기가 없어요.";
+  $("unnamedStemsSummary").textContent=groups.length?`${groups.length}개의 줄기에서 ${thoughtCount}개의 생각이 아직 이름 없이 이어져 있어요. 눌러서 흐름을 먼저 살펴보세요.`:"지금은 이름을 기다리는 생각의 줄기가 없어요.";
   if(!groups.length){box.innerHTML=empty("🌿","아직 이름 없는 줄기가 없어요.","생각이 서로 이어지면 이곳에 나타납니다.");return}
   box.innerHTML=`<div class="unnamed-stems-list">${groups.map(g=>{
     const first=g.fragments[0],last=g.fragments[g.fragments.length-1];
@@ -3873,9 +3906,9 @@ function renderGarden(){
         q?"다른 이름으로 검색해보세요.":"지금 붙잡고 싶은 흐름이 생길 때만 다시 이어가면 돼요."
       );
 
-  const unnamedStems=unnamedStemGroups();
-  $("gardenUnnamedStemCount").textContent=`${unnamedStems.length}줄기`;
-  $("gardenUnnamedStemSummary").classList.toggle("hidden",!unnamedStems.length);
+  const unnamedStats=unnamedStemStats();
+  $("gardenUnnamedStemCount").textContent=`${unnamedStats.stemCount}줄기 · ${unnamedStats.thoughtCount}생각`;
+  $("gardenUnnamedStemSummary").classList.toggle("hidden",!unnamedStats.stemCount);
 }
 function threadFragments(id){return state.fragments.filter(f=>(f.threadIds||[]).includes(id)).sort((a,b)=>String(a.createdAt).localeCompare(String(b.createdAt)))}
 function threadCard(t,compact=false){
