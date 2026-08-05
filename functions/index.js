@@ -5,7 +5,7 @@ const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 
-if (!getApps().length) initializeApp();
+const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
@@ -4398,6 +4398,352 @@ function summarizeCostBuckets(buckets, rangeStart, rangeEnd) {
   return { value, currency };
 }
 
+
+function requireCostDashboardOwner(request) {
+  const uid = request.auth?.uid;
+  if (!uid) {
+    throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
+  }
+
+  const allowed = String(process.env.COST_DASHBOARD_ALLOWED_EMAIL || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+
+  if (!allowed.length) {
+    throw new HttpsError(
+      "failed-precondition",
+      "COST_DASHBOARD_ALLOWED_EMAIL 설정이 필요합니다."
+    );
+  }
+
+  const email = String(request.auth?.token?.email || "").trim().toLowerCase();
+  const verified = request.auth?.token?.email_verified !== false;
+  if (!email || !verified || !allowed.includes(email)) {
+    throw new HttpsError(
+      "permission-denied",
+      "비용 대시보드는 등록된 관리자 계정에서만 확인할 수 있습니다."
+    );
+  }
+
+  return { uid, email };
+}
+
+function parseBillingExportTable(rawValue) {
+  const value = String(rawValue || "").trim().replace(/^`|`$/g, "");
+  const parts = value.split(".");
+  if (
+    parts.length !== 3 ||
+    parts.some((part) => !/^[A-Za-z0-9_-]+$/.test(part))
+  ) {
+    throw new HttpsError(
+      "failed-precondition",
+      "GCP_BILLING_EXPORT_TABLE은 project.dataset.table 형식이어야 합니다."
+    );
+  }
+  return {
+    fullName: parts.join("."),
+    projectId: parts[0],
+    datasetId: parts[1],
+    tableId: parts[2],
+  };
+}
+
+async function googleCloudAccessToken() {
+  const credential = adminApp?.options?.credential;
+  if (credential && typeof credential.getAccessToken === "function") {
+    const token = await credential.getAccessToken();
+    if (token?.access_token) return token.access_token;
+  }
+
+  const response = await fetch(
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+    { headers: { "Metadata-Flavor": "Google" } }
+  );
+  if (!response.ok) {
+    throw new HttpsError("internal", "Google Cloud 인증 토큰을 가져오지 못했습니다.");
+  }
+  const body = await response.json();
+  if (!body?.access_token) {
+    throw new HttpsError("internal", "Google Cloud 인증 토큰이 비어 있습니다.");
+  }
+  return body.access_token;
+}
+
+async function bigQueryJson(url, options = {}) {
+  const token = await googleCloudAccessToken();
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const text = await response.text();
+  let body = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = {};
+  }
+
+  if (!response.ok) {
+    const message =
+      body?.error?.message || text?.slice?.(0, 500) || `HTTP ${response.status}`;
+    logger.error("BigQuery billing query error", {
+      status: response.status,
+      message,
+    });
+    throw new HttpsError("internal", `Firebase 비용 조회 실패: ${message}`);
+  }
+  return body;
+}
+
+function bigQueryRows(body) {
+  const fields = Array.isArray(body?.schema?.fields) ? body.schema.fields : [];
+  return (Array.isArray(body?.rows) ? body.rows : []).map((row) => {
+    const values = Array.isArray(row?.f) ? row.f : [];
+    const out = {};
+    fields.forEach((field, index) => {
+      out[field.name] = values[index]?.v ?? null;
+    });
+    return out;
+  });
+}
+
+async function runBigQuery({ projectId, location, query, queryParameters }) {
+  const base = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}`;
+  let body = await bigQueryJson(`${base}/queries`, {
+    method: "POST",
+    body: JSON.stringify({
+      query,
+      useLegacySql: false,
+      parameterMode: "NAMED",
+      queryParameters,
+      location,
+      timeoutMs: 10000,
+      maxResults: 1000,
+      useQueryCache: true,
+      maximumBytesBilled: "1073741824",
+    }),
+  });
+
+  const jobId = body?.jobReference?.jobId;
+  for (let attempt = 0; !body?.jobComplete && jobId && attempt < 5; attempt++) {
+    const url = new URL(`${base}/queries/${encodeURIComponent(jobId)}`);
+    url.searchParams.set("location", location);
+    url.searchParams.set("timeoutMs", "10000");
+    url.searchParams.set("maxResults", "1000");
+    body = await bigQueryJson(url.toString());
+  }
+
+  if (!body?.jobComplete) {
+    throw new HttpsError("deadline-exceeded", "Firebase 비용 집계가 아직 끝나지 않았습니다.");
+  }
+
+  return {
+    rows: bigQueryRows(body),
+    totalBytesProcessed: Number(body?.totalBytesProcessed || 0),
+    cacheHit: Boolean(body?.cacheHit),
+  };
+}
+
+function koreaBillingRange(nowMs = Date.now()) {
+  const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const shifted = new Date(nowMs + KST_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = shifted.getUTCMonth();
+  const day = shifted.getUTCDate();
+  const monthStartMs = Date.UTC(year, month, 1) - KST_OFFSET_MS;
+  const todayStartMs = Date.UTC(year, month, day) - KST_OFFSET_MS;
+  const tomorrowStartMs = Date.UTC(year, month, day + 1) - KST_OFFSET_MS;
+  const todayKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  return {
+    todayKey,
+    monthStartIso: new Date(monthStartMs).toISOString(),
+    todayStartIso: new Date(todayStartMs).toISOString(),
+    tomorrowStartIso: new Date(tomorrowStartMs).toISOString(),
+  };
+}
+
+function billingServiceCategory(serviceName, skuName) {
+  const service = String(serviceName || "기타");
+  const sku = String(skuName || "");
+  const haystack = `${service} ${sku}`.toLowerCase();
+  if (haystack.includes("firestore")) return "Cloud Firestore";
+  if (haystack.includes("cloud run functions") || haystack.includes("cloud functions")) return "Cloud Functions";
+  if (haystack.includes("firebase hosting")) return "Firebase Hosting";
+  if (haystack.includes("cloud storage")) return "Firebase Storage / Cloud Storage";
+  if (haystack.includes("artifact registry")) return "Artifact Registry";
+  if (haystack.includes("cloud build")) return "Cloud Build";
+  if (haystack.includes("secret manager")) return "Secret Manager";
+  if (haystack.includes("bigquery")) return "BigQuery";
+  if (haystack.includes("app engine")) return "App Engine";
+  return service;
+}
+
+function summarizeBillingRows(rows, predicate) {
+  const byService = new Map();
+  let grossCost = 0;
+  let credits = 0;
+  let netCost = 0;
+
+  rows.filter(predicate).forEach((row) => {
+    const gross = Number(row.gross_cost || 0);
+    const credit = Number(row.credits || 0);
+    const net = Number(row.net_cost || gross + credit);
+    const category = billingServiceCategory(row.service_name, row.sku_name);
+    grossCost += gross;
+    credits += credit;
+    netCost += net;
+    const current = byService.get(category) || {
+      name: category,
+      grossCost: 0,
+      credits: 0,
+      netCost: 0,
+    };
+    current.grossCost += gross;
+    current.credits += credit;
+    current.netCost += net;
+    byService.set(category, current);
+  });
+
+  const services = [...byService.values()]
+    .sort((a, b) => {
+      const scoreA = Math.max(Math.abs(a.netCost), Math.abs(a.grossCost));
+      const scoreB = Math.max(Math.abs(b.netCost), Math.abs(b.grossCost));
+      return scoreB - scoreA;
+    })
+    .slice(0, 10)
+    .map((item) => ({
+      ...item,
+      grossCost: Number(item.grossCost.toFixed(8)),
+      credits: Number(item.credits.toFixed(8)),
+      netCost: Number(item.netCost.toFixed(8)),
+    }));
+
+  return {
+    grossCost: Number(grossCost.toFixed(8)),
+    credits: Number(credits.toFixed(8)),
+    netCost: Number(netCost.toFixed(8)),
+    services,
+  };
+}
+
+let firebaseCostMemoryCache = null;
+
+/**
+ * Firebase/Google Cloud의 실제 프로젝트 비용을 Cloud Billing BigQuery 표준 내보내기에서 조회한다.
+ * 비용 자료는 민감하므로 COST_DASHBOARD_ALLOWED_EMAIL과 전용 런타임 서비스 계정으로 보호한다.
+ */
+exports.firebaseOfficialCost = onCall(
+  {
+    region: "us-central1",
+    secrets: [
+      "GCP_BILLING_EXPORT_TABLE",
+      "GCP_BILLING_EXPORT_LOCATION",
+      "COST_DASHBOARD_ALLOWED_EMAIL",
+    ],
+    serviceAccount: "thought-garden-cost-reader@idea-pocket-56063.iam.gserviceaccount.com",
+    timeoutSeconds: 60,
+    memory: "256MiB",
+    maxInstances: 2,
+  },
+  async (request) => {
+    requireCostDashboardOwner(request);
+
+    const table = parseBillingExportTable(process.env.GCP_BILLING_EXPORT_TABLE);
+    const location = String(process.env.GCP_BILLING_EXPORT_LOCATION || "US").trim();
+    const firebaseProjectId = "idea-pocket-56063";
+    const range = koreaBillingRange();
+    const force = request.data?.force === true;
+    const cacheKey = `${table.fullName}|${location}|${range.todayKey}`;
+
+    if (
+      !force &&
+      firebaseCostMemoryCache?.key === cacheKey &&
+      firebaseCostMemoryCache.expiresAt > Date.now()
+    ) {
+      return { ...firebaseCostMemoryCache.data, cached: true };
+    }
+
+    const query = `
+      SELECT
+        FORMAT_DATE('%Y-%m-%d', DATE(usage_start_time, 'Asia/Seoul')) AS usage_date,
+        service.description AS service_name,
+        sku.description AS sku_name,
+        ANY_VALUE(currency) AS currency,
+        SUM(CAST(cost AS NUMERIC)) AS gross_cost,
+        SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS credits,
+        SUM(CAST(cost AS NUMERIC))
+          + SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS net_cost,
+        FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E6SZ', MAX(export_time)) AS latest_export_time
+      FROM \`${table.fullName}\`
+      WHERE project.id = @firebaseProjectId
+        AND usage_start_time >= @monthStart
+        AND usage_start_time < @rangeEnd
+      GROUP BY usage_date, service_name, sku_name
+      ORDER BY usage_date DESC, ABS(net_cost) DESC
+    `;
+
+    const result = await runBigQuery({
+      projectId: table.projectId,
+      location,
+      query,
+      queryParameters: [
+        {
+          name: "firebaseProjectId",
+          parameterType: { type: "STRING" },
+          parameterValue: { value: firebaseProjectId },
+        },
+        {
+          name: "monthStart",
+          parameterType: { type: "TIMESTAMP" },
+          parameterValue: { value: range.monthStartIso },
+        },
+        {
+          name: "rangeEnd",
+          parameterType: { type: "TIMESTAMP" },
+          parameterValue: { value: range.tomorrowStartIso },
+        },
+      ],
+    });
+
+    const rows = result.rows;
+    const latestExportTime = rows
+      .map((row) => String(row.latest_export_time || ""))
+      .filter(Boolean)
+      .sort()
+      .at(-1) || null;
+    const currency =
+      rows.map((row) => String(row.currency || "").toUpperCase()).find(Boolean) || "USD";
+
+    const data = {
+      ok: true,
+      source: "cloud_billing_bigquery_standard_export",
+      projectId: firebaseProjectId,
+      timezone: "Asia/Seoul",
+      currency,
+      today: summarizeBillingRows(rows, (row) => row.usage_date === range.todayKey),
+      month: summarizeBillingRows(rows, () => true),
+      latestExportTime,
+      fetchedAt: new Date().toISOString(),
+      queryBytesProcessed: result.totalBytesProcessed,
+      queryCacheHit: result.cacheHit,
+      cached: false,
+    };
+
+    firebaseCostMemoryCache = {
+      key: cacheKey,
+      expiresAt: Date.now() + 15 * 60 * 1000,
+      data,
+    };
+    return data;
+  }
+);
+
 /**
  * OpenAI 공식 Usage API / Costs API를 서버에서 조회한다.
  *
@@ -4412,16 +4758,13 @@ function summarizeCostBuckets(buckets, rangeStart, rangeEnd) {
 exports.openAiOfficialUsage = onCall(
   {
     region: "us-central1",
-    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID"],
+    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID", "COST_DASHBOARD_ALLOWED_EMAIL"],
     timeoutSeconds: 45,
     memory: "256MiB",
     maxInstances: 5,
   },
   async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) {
-      throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
-    }
+    requireCostDashboardOwner(request);
 
     const projectId = String(process.env.OPENAI_PROJECT_ID || "").trim();
     if (!projectId) {
