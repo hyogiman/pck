@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
   <title>생각의 텃밭</title>
-  <!-- v72: OpenAI 공식 비용 조회 회귀 수정 -->
+  <!-- v73: Firebase 공식 비용 구조화 진단 로그 -->
   <link rel="manifest" href="manifest.json" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -553,6 +553,8 @@
     .official-cost-highlight{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border-radius:11px;background:#f2f5f2;color:#3f5d49;font-size:.76rem;font-weight:850}
     .official-usage-empty{padding:10px 0;font-size:.68rem;color:var(--muted);line-height:1.55}
     .official-usage-error{padding:10px 11px;border-radius:10px;background:#fff4f1;color:#8a5145;font-size:.68rem;line-height:1.55}
+    .official-cost-diagnostic{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-top:8px;padding-top:8px;border-top:1px dashed rgba(138,81,69,.28);font-size:.64rem}
+    .official-cost-diagnostic span{opacity:.82}.official-cost-diagnostic code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all;color:inherit}
     .ai-usage-note{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:.68rem;line-height:1.55;color:var(--muted)}
     .cost-overview{display:grid;gap:10px}
     .cost-overview-period{padding:11px 12px;border:1px solid #dfe7df;border-radius:12px;background:#f7faf7}
@@ -2418,6 +2420,66 @@ function renderFirebaseOfficialCost(data){
   </div><div class="official-usage-title" style="margin-top:12px">이번 달 서비스별</div><div class="cost-service-list">${serviceRows}</div>
   <div class="ai-usage-note" style="margin-top:9px">Cloud Billing 표준 내보내기의 프로젝트 비용에서 크레딧을 반영한 값입니다. 마지막 결제 자료: ${esc(latest)} · 조회량 ${humanSize(Number(data.queryBytesProcessed||0))}${data.cached?" · 15분 캐시":""}</div>`;
 }
+function sanitizeFirebaseCostClientMessage(value){
+  return String(value||"")
+    .replace(/^Firebase:\s*/i,"")
+    .replace(/\s*\(functions\/[a-z-]+\)\.?$/i,"")
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,"[이메일]")
+    .replace(/[A-Za-z0-9_-]+(?:\.|:)[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,"[Billing 표]")
+    .replace(/Bearer\s+\S+/gi,"Bearer [숨김]")
+    .trim()
+    .slice(0,260);
+}
+function firebaseCostErrorPresentation(error){
+  const fullCode=String(error?.code||"functions/unknown");
+  const code=fullCode.replace(/^functions\//,"");
+  const details=error?.details&&typeof error.details==="object"?error.details:{};
+  const diagnosticCode=String(details.diagnosticCode||"COST_UNKNOWN").replace(/[^A-Za-z0-9_-]/g,"").slice(0,80)||"COST_UNKNOWN";
+  const stage=String(details.stage||"unknown").replace(/[^A-Za-z0-9_-]/g,"").slice(0,80)||"unknown";
+  const runId=String(details.runId||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,80);
+  const operation=String(details.operation||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,80);
+  const httpStatus=Number(details.httpStatus);
+  const serverMessage=sanitizeFirebaseCostClientMessage(error?.message)||"서버가 정제된 오류 메시지를 보내지 않았습니다.";
+  const guide={
+    AUTH_REQUIRED:"Google 로그인 상태를 확인한 뒤 다시 불러와주세요.",
+    OWNER_CONFIG_MISSING:"비용 대시보드 관리자 Secret이 함수에 연결되지 않았습니다.",
+    OWNER_NOT_ALLOWED:"현재 Google 계정은 비용 대시보드 허용 계정과 일치하지 않습니다.",
+    BILLING_TABLE_CONFIG_INVALID:"Billing 내보내기 표 Secret의 형식이 올바르지 않습니다.",
+    BILLING_LOCATION_CONFIG_INVALID:"Billing 내보내기 Location Secret의 형식이 올바르지 않습니다.",
+    GCLOUD_TOKEN_ADMIN_CREDENTIAL_FAILED:"함수 런타임 자격 증명에서 토큰을 얻지 못했습니다.",
+    GCLOUD_TOKEN_NETWORK_ERROR:"Google Cloud 인증 서버 연결 단계에서 실패했습니다.",
+    GCLOUD_TOKEN_HTTP_ERROR:"Google Cloud 인증 토큰 요청이 거절됐습니다.",
+    GCLOUD_TOKEN_EMPTY:"Google Cloud 인증 토큰 응답이 비어 있습니다.",
+    BQ_JOB_CREATE_DENIED:"BigQuery 조회 작업 생성 권한 단계에서 실패했습니다.",
+    BQ_TABLE_READ_DENIED:"Billing 내보내기 표 읽기 권한 단계에서 실패했습니다.",
+    BQ_PERMISSION_DENIED:"BigQuery 권한 단계에서 실패했습니다.",
+    BQ_TABLE_OR_LOCATION_NOT_FOUND:"설정된 표가 없거나 데이터셋 Location이 다릅니다.",
+    BQ_LOCATION_MISMATCH:"데이터셋 Location과 함수 설정이 일치하지 않습니다.",
+    BQ_RESOURCE_NOT_FOUND:"Billing 표 또는 BigQuery 작업을 찾지 못했습니다.",
+    BQ_SQL_INVALID:"비용 집계 SQL 검증 또는 실행 단계에서 실패했습니다.",
+    BQ_BYTES_LIMIT:"안전하게 설정한 최대 조회량을 초과했습니다.",
+    BQ_RATE_LIMITED:"BigQuery 요청 한도에 도달했습니다.",
+    BQ_SERVICE_UNAVAILABLE:"BigQuery 서비스가 일시적으로 응답하지 않습니다.",
+    BQ_NETWORK_ERROR:"BigQuery API 연결 단계에서 실패했습니다.",
+    BQ_TIMEOUT:"BigQuery 작업이 제한 시간 안에 끝나지 않았습니다.",
+    BQ_JOB_FAILED:"BigQuery 작업 내부에서 실패했습니다.",
+    BQ_HTTP_ERROR:"BigQuery HTTP 요청이 실패했습니다.",
+    COST_UNKNOWN:"Firebase 공식 비용 조회 중 분류되지 않은 오류가 발생했습니다."
+  };
+  return {fullCode,code,diagnosticCode,stage,runId,operation,httpStatus:Number.isFinite(httpStatus)?httpStatus:null,serverMessage,headline:guide[diagnosticCode]||guide.COST_UNKNOWN};
+}
+function renderFirebaseCostError(error){
+  const info=firebaseCostErrorPresentation(error);
+  const rows=[
+    ["오류 코드",info.fullCode],
+    ["서버 진단",info.diagnosticCode],
+    ["실패 단계",info.stage],
+    ...(info.operation?[["세부 작업",info.operation]]:[]),
+    ...(info.httpStatus!==null?[["HTTP 상태",String(info.httpStatus)]]:[]),
+    ...(info.runId?[["실행 ID",info.runId]]:[])
+  ].map(([label,value])=>`<span>${esc(label)}</span><code>${esc(value)}</code>`).join("");
+  return `<div class="official-usage-error"><strong>${esc(info.headline)}</strong><br>${esc(info.serverMessage)}<div class="official-cost-diagnostic">${rows}</div></div>`;
+}
 async function refreshFirebaseOfficialCost({force=true}={}){
   const body=$("firebaseOfficialCostBody"),btn=$("firebaseOfficialRefresh");if(!body||!btn)return;
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous){body.innerHTML=`<div class="official-usage-error">Google 로그인 후 공식 비용을 확인할 수 있습니다.</div>`;return}
@@ -2427,11 +2489,19 @@ async function refreshFirebaseOfficialCost({force=true}={}){
     const data=await callFn("firebaseOfficialCost",{force});
     state.officialCost.firebase=data;state.officialCost.firebaseStatus="ready";renderFirebaseOfficialCost(data);
   }catch(e){
-    console.warn("Firebase official cost failed",e);state.officialCost.firebase=null;state.officialCost.firebaseStatus="error";
-    const msg=String(e?.message||"");
-    const setup=/GCP_BILLING_EXPORT_TABLE|COST_DASHBOARD_ALLOWED_EMAIL|형식|설정/.test(msg);
-    const permission=/permission|권한|Access Denied|denied/i.test(msg);
-    body.innerHTML=`<div class="official-usage-error">${setup?"Cloud Billing BigQuery 내보내기 또는 비용 대시보드 Secret 설정이 아직 끝나지 않았어요.":permission?"비용 조회 서비스 계정의 BigQuery 권한을 확인해주세요.":"Firebase 공식 비용을 불러오지 못했습니다. Billing 내보내기 표와 함수 로그를 확인해주세요."}</div>`;
+    const info=firebaseCostErrorPresentation(e);
+    console.warn("Firebase official cost failed",{
+      code:info.fullCode,
+      diagnosticCode:info.diagnosticCode,
+      stage:info.stage,
+      operation:info.operation||null,
+      httpStatus:info.httpStatus,
+      runId:info.runId||null,
+      message:info.serverMessage,
+      error:e
+    });
+    state.officialCost.firebase=null;state.officialCost.firebaseStatus="error";
+    body.innerHTML=renderFirebaseCostError(e);
   }finally{btn.disabled=false;btn.textContent=old;renderOfficialCostOverview()}
 }
 async function refreshAllOfficialCosts({force=true}={}){
