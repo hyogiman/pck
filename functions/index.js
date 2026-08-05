@@ -9,7 +9,7 @@ const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
-// v72: OpenAI 공식 비용 조회 회귀 수정
+// v73: Firebase 공식 비용 구조화 진단 로그
 const EMBEDDING_VERSION = 1;
 const MAX_EMBEDDING_TEXT_CHARS = 12000;
 const THOUGHT_INDEX_MODEL = "gpt-5.4-mini";
@@ -4400,10 +4400,122 @@ function summarizeCostBuckets(buckets, rangeStart, rangeEnd) {
 }
 
 
+function firebaseCostLog(level, stage, fields = {}) {
+  const payload = {
+    event: "firebaseOfficialCost",
+    diagnosticVersion: 1,
+    stage,
+    ...fields,
+  };
+  if (level === "error") logger.error("firebaseOfficialCost", payload);
+  else if (level === "warn") logger.warn("firebaseOfficialCost", payload);
+  else logger.info("firebaseOfficialCost", payload);
+}
+
+function costIdentityTag(uid, email) {
+  return crypto
+    .createHash("sha256")
+    .update(`${String(uid || "")}|${String(email || "").toLowerCase()}`)
+    .digest("hex")
+    .slice(0, 12);
+}
+
+function maskCostIdentifier(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  if (text.length <= 4) return "*".repeat(text.length);
+  return `${text.slice(0, 3)}…${text.slice(-3)}`;
+}
+
+function maskBillingTable(table) {
+  if (!table) return null;
+  return [table.projectId, table.datasetId, table.tableId]
+    .map(maskCostIdentifier)
+    .join(".");
+}
+
+function sanitizeCostLogText(value) {
+  let text = String(value || "").slice(0, 1000);
+  const configuredTable = String(process.env.GCP_BILLING_EXPORT_TABLE || "")
+    .trim()
+    .replace(/^`|`$/g, "");
+  const tableParts = configuredTable.split(".");
+  if (tableParts.length === 3) {
+    const [projectId, datasetId, tableId] = tableParts;
+    [
+      configuredTable,
+      `${projectId}:${datasetId}.${tableId}`,
+      `\`${configuredTable}\``,
+    ].forEach((candidate) => {
+      if (candidate) text = text.split(candidate).join("[billing-table]");
+    });
+    tableParts.forEach((part) => {
+      if (part) text = text.split(part).join(maskCostIdentifier(part));
+    });
+  }
+  return text
+    .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[email]")
+    .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, "Bearer [redacted]")
+    .replace(/(access[_-]?token|api[_-]?key|secret)\s*[:=]\s*\S+/gi, "$1=[redacted]");
+}
+
+function safeDiagnosticValue(value, fallback = null) {
+  const text = String(value || "").trim();
+  return /^[A-Za-z0-9_-]{1,80}$/.test(text) ? text : fallback;
+}
+
+function normalizeCostHttpsCode(value) {
+  const code = String(value || "").replace(/^functions\//, "");
+  const valid = new Set([
+    "cancelled", "unknown", "invalid-argument", "deadline-exceeded", "not-found",
+    "already-exists", "permission-denied", "resource-exhausted", "failed-precondition",
+    "aborted", "out-of-range", "unimplemented", "internal", "unavailable",
+    "data-loss", "unauthenticated",
+  ]);
+  return valid.has(code) ? code : "internal";
+}
+
+function costErrorDetails(error, context = {}) {
+  const source = error?.details && typeof error.details === "object" ? error.details : {};
+  const httpStatus = Number(source.httpStatus);
+  return {
+    diagnosticCode:
+      safeDiagnosticValue(source.diagnosticCode) ||
+      safeDiagnosticValue(context.diagnosticCode) ||
+      "COST_UNKNOWN",
+    runId: safeDiagnosticValue(source.runId) || safeDiagnosticValue(context.runId),
+    stage:
+      safeDiagnosticValue(source.stage) ||
+      safeDiagnosticValue(context.stage) ||
+      "unknown",
+    operation:
+      safeDiagnosticValue(source.operation) ||
+      safeDiagnosticValue(context.operation),
+    ...(Number.isFinite(httpStatus) ? { httpStatus } : {}),
+  };
+}
+
+function wrapCostError(error, context = {}) {
+  const code = normalizeCostHttpsCode(error?.code);
+  const details = costErrorDetails(error, context);
+  if (error instanceof HttpsError || String(error?.code || "").startsWith("functions/")) {
+    return new HttpsError(code, String(error?.message || "Firebase 공식 비용 조회에 실패했습니다."), details);
+  }
+  return new HttpsError(
+    "internal",
+    "Firebase 공식 비용 조회 중 예상하지 못한 오류가 발생했습니다.",
+    details
+  );
+}
+
 function requireCostDashboardOwner(request) {
   const uid = request.auth?.uid;
   if (!uid) {
-    throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
+    throw new HttpsError(
+      "unauthenticated",
+      "Google 로그인 후 사용할 수 있습니다.",
+      { diagnosticCode: "AUTH_REQUIRED", operation: "owner-check" }
+    );
   }
 
   const allowed = String(process.env.COST_DASHBOARD_ALLOWED_EMAIL || "")
@@ -4414,7 +4526,8 @@ function requireCostDashboardOwner(request) {
   if (!allowed.length) {
     throw new HttpsError(
       "failed-precondition",
-      "COST_DASHBOARD_ALLOWED_EMAIL 설정이 필요합니다."
+      "비용 대시보드 관리자 설정이 비어 있습니다.",
+      { diagnosticCode: "OWNER_CONFIG_MISSING", operation: "owner-check" }
     );
   }
 
@@ -4423,11 +4536,12 @@ function requireCostDashboardOwner(request) {
   if (!email || !verified || !allowed.includes(email)) {
     throw new HttpsError(
       "permission-denied",
-      "비용 대시보드는 등록된 관리자 계정에서만 확인할 수 있습니다."
+      "비용 대시보드는 등록된 관리자 계정에서만 확인할 수 있습니다.",
+      { diagnosticCode: "OWNER_NOT_ALLOWED", operation: "owner-check" }
     );
   }
 
-  return { uid, email };
+  return { uid, email, userTag: costIdentityTag(uid, email) };
 }
 
 function parseBillingExportTable(rawValue) {
@@ -4439,7 +4553,8 @@ function parseBillingExportTable(rawValue) {
   ) {
     throw new HttpsError(
       "failed-precondition",
-      "GCP_BILLING_EXPORT_TABLE은 project.dataset.table 형식이어야 합니다."
+      "Billing 내보내기 표 설정 형식이 올바르지 않습니다.",
+      { diagnosticCode: "BILLING_TABLE_CONFIG_INVALID", operation: "config-table" }
     );
   }
   return {
@@ -4450,37 +4565,183 @@ function parseBillingExportTable(rawValue) {
   };
 }
 
-async function googleCloudAccessToken() {
+function validateBillingLocation(rawValue) {
+  const location = String(rawValue || "US").trim();
+  if (!/^[A-Za-z0-9_-]{2,40}$/.test(location)) {
+    throw new HttpsError(
+      "failed-precondition",
+      "Billing 내보내기 Location 설정 형식이 올바르지 않습니다.",
+      { diagnosticCode: "BILLING_LOCATION_CONFIG_INVALID", operation: "config-location" }
+    );
+  }
+  return location;
+}
+
+async function googleCloudAccessToken(context = {}) {
   const credential = adminApp?.options?.credential;
   if (credential && typeof credential.getAccessToken === "function") {
-    const token = await credential.getAccessToken();
-    if (token?.access_token) return token.access_token;
+    try {
+      const token = await credential.getAccessToken();
+      if (token?.access_token) return token.access_token;
+    } catch (error) {
+      firebaseCostLog("warn", context.stage || "query-start", {
+        runId: context.runId || null,
+        operation: "access-token-admin-credential",
+        diagnosticCode: "GCLOUD_TOKEN_ADMIN_CREDENTIAL_FAILED",
+        errorName: String(error?.name || "Error"),
+        message: sanitizeCostLogText(error?.message || error),
+      });
+    }
   }
 
-  const response = await fetch(
-    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
-    { headers: { "Metadata-Flavor": "Google" } }
-  );
+  let response;
+  try {
+    response = await fetch(
+      "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+      { headers: { "Metadata-Flavor": "Google" } }
+    );
+  } catch (error) {
+    throw new HttpsError(
+      "unavailable",
+      "Google Cloud 인증 서버에 연결하지 못했습니다.",
+      {
+        diagnosticCode: "GCLOUD_TOKEN_NETWORK_ERROR",
+        runId: context.runId,
+        stage: context.stage,
+        operation: "access-token-metadata",
+      }
+    );
+  }
+
   if (!response.ok) {
-    throw new HttpsError("internal", "Google Cloud 인증 토큰을 가져오지 못했습니다.");
+    throw new HttpsError(
+      "internal",
+      "Google Cloud 인증 토큰을 가져오지 못했습니다.",
+      {
+        diagnosticCode: "GCLOUD_TOKEN_HTTP_ERROR",
+        runId: context.runId,
+        stage: context.stage,
+        operation: "access-token-metadata",
+        httpStatus: response.status,
+      }
+    );
   }
   const body = await response.json();
   if (!body?.access_token) {
-    throw new HttpsError("internal", "Google Cloud 인증 토큰이 비어 있습니다.");
+    throw new HttpsError(
+      "internal",
+      "Google Cloud 인증 토큰 응답이 비어 있습니다.",
+      {
+        diagnosticCode: "GCLOUD_TOKEN_EMPTY",
+        runId: context.runId,
+        stage: context.stage,
+        operation: "access-token-metadata",
+      }
+    );
   }
   return body.access_token;
 }
 
-async function bigQueryJson(url, options = {}) {
-  const token = await googleCloudAccessToken();
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+function classifyBigQueryFailure(status, reason, message) {
+  const haystack = `${String(reason || "")} ${String(message || "")}`.toLowerCase();
+  if (/bigquery\.jobs\.create|job.*create.*permission/.test(haystack)) return "BQ_JOB_CREATE_DENIED";
+  if (/bigquery\.tables\.getdata|read.*table|query.*table.*permission/.test(haystack)) return "BQ_TABLE_READ_DENIED";
+  if (status === 403 || /accessdenied|permissiondenied|forbidden|permission denied/.test(haystack)) return "BQ_PERMISSION_DENIED";
+  if (/not found in location/.test(haystack)) return "BQ_TABLE_OR_LOCATION_NOT_FOUND";
+  if (/location.*(mismatch|does not match)|job.*location/.test(haystack)) return "BQ_LOCATION_MISMATCH";
+  if (status === 404 || /notfound|not found/.test(haystack)) return "BQ_RESOURCE_NOT_FOUND";
+  if (/maximum bytes billed|bytes billed limit/.test(haystack)) return "BQ_BYTES_LIMIT";
+  if (status === 400 || /invalidquery|invalid query|syntax error|unrecognized name/.test(haystack)) return "BQ_SQL_INVALID";
+  if (status === 429 || /ratelimit|rate limit|quota exceeded/.test(haystack)) return "BQ_RATE_LIMITED";
+  if (status >= 500) return "BQ_SERVICE_UNAVAILABLE";
+  return "BQ_HTTP_ERROR";
+}
+
+function bigQueryPublicError(diagnosticCode) {
+  const errors = {
+    BQ_JOB_CREATE_DENIED: ["permission-denied", "BigQuery 조회 작업을 만들 권한이 없습니다."],
+    BQ_TABLE_READ_DENIED: ["permission-denied", "Billing 내보내기 표 데이터를 읽을 권한이 없습니다."],
+    BQ_PERMISSION_DENIED: ["permission-denied", "BigQuery 비용 조회 권한이 없습니다."],
+    BQ_TABLE_OR_LOCATION_NOT_FOUND: ["not-found", "설정된 Billing 표를 현재 Location에서 찾지 못했습니다."],
+    BQ_LOCATION_MISMATCH: ["failed-precondition", "Billing 데이터셋과 조회 Location이 일치하지 않습니다."],
+    BQ_RESOURCE_NOT_FOUND: ["not-found", "설정된 Billing 표 또는 BigQuery 작업을 찾지 못했습니다."],
+    BQ_SQL_INVALID: ["failed-precondition", "Billing 비용 조회 SQL을 실행하지 못했습니다."],
+    BQ_BYTES_LIMIT: ["resource-exhausted", "Billing 비용 조회량 안전 한도를 초과했습니다."],
+    BQ_RATE_LIMITED: ["resource-exhausted", "BigQuery 요청 한도에 도달했습니다."],
+    BQ_SERVICE_UNAVAILABLE: ["unavailable", "BigQuery 서비스가 일시적으로 응답하지 않습니다."],
+    BQ_NETWORK_ERROR: ["unavailable", "BigQuery API에 연결하지 못했습니다."],
+    BQ_JOB_FAILED: ["internal", "BigQuery 비용 조회 작업이 실패했습니다."],
+    BQ_HTTP_ERROR: ["internal", "BigQuery 비용 조회 요청이 실패했습니다."],
+  };
+  return errors[diagnosticCode] || errors.BQ_HTTP_ERROR;
+}
+
+function firstBigQueryError(body) {
+  const statusError = body?.status?.errorResult;
+  if (statusError) return statusError;
+  const errors = [
+    ...(Array.isArray(body?.errors) ? body.errors : []),
+    ...(Array.isArray(body?.status?.errors) ? body.status.errors : []),
+  ];
+  if (body?.jobComplete && !body?.schema && errors.length) return errors[0];
+  return null;
+}
+
+function throwBigQueryJobError(body, context = {}) {
+  const item = firstBigQueryError(body);
+  if (!item) return;
+  const rawMessage = String(item?.message || "BigQuery job failed");
+  const classifiedCode = classifyBigQueryFailure(200, item?.reason, rawMessage);
+  const diagnosticCode = classifiedCode === "BQ_HTTP_ERROR" ? "BQ_JOB_FAILED" : classifiedCode;
+  const [code, publicMessage] = bigQueryPublicError(diagnosticCode);
+  firebaseCostLog("error", context.stage || "query-start", {
+    runId: context.runId || null,
+    operation: context.operation || "query-job",
+    diagnosticCode,
+    apiReason: safeDiagnosticValue(item?.reason, "unknown"),
+    apiMessage: sanitizeCostLogText(rawMessage),
+    jobId: context.jobId || body?.jobReference?.jobId || null,
   });
+  throw new HttpsError(code, publicMessage, {
+    diagnosticCode,
+    runId: context.runId,
+    stage: context.stage,
+    operation: context.operation,
+  });
+}
+
+async function bigQueryJson(url, options = {}, context = {}) {
+  const token = await googleCloudAccessToken(context);
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    });
+  } catch (error) {
+    firebaseCostLog("error", context.stage || "query-start", {
+      runId: context.runId || null,
+      operation: context.operation || "bigquery-request",
+      diagnosticCode: "BQ_NETWORK_ERROR",
+      errorName: String(error?.name || "Error"),
+      message: sanitizeCostLogText(error?.message || error),
+      jobId: context.jobId || null,
+    });
+    throw new HttpsError(
+      "unavailable",
+      "BigQuery API에 연결하지 못했습니다.",
+      {
+        diagnosticCode: "BQ_NETWORK_ERROR",
+        runId: context.runId,
+        stage: context.stage,
+        operation: context.operation,
+      }
+    );
+  }
 
   const text = await response.text();
   let body = {};
@@ -4491,13 +4752,27 @@ async function bigQueryJson(url, options = {}) {
   }
 
   if (!response.ok) {
-    const message =
+    const rawMessage =
       body?.error?.message || text?.slice?.(0, 500) || `HTTP ${response.status}`;
-    logger.error("BigQuery billing query error", {
-      status: response.status,
-      message,
+    const reason = body?.error?.errors?.[0]?.reason || body?.error?.status || null;
+    const diagnosticCode = classifyBigQueryFailure(response.status, reason, rawMessage);
+    const [code, publicMessage] = bigQueryPublicError(diagnosticCode);
+    firebaseCostLog("error", context.stage || "query-start", {
+      runId: context.runId || null,
+      operation: context.operation || "bigquery-request",
+      diagnosticCode,
+      httpStatus: response.status,
+      apiReason: safeDiagnosticValue(reason, "unknown"),
+      apiMessage: sanitizeCostLogText(rawMessage),
+      jobId: context.jobId || null,
     });
-    throw new HttpsError("internal", `Firebase 비용 조회 실패: ${message}`);
+    throw new HttpsError(code, publicMessage, {
+      diagnosticCode,
+      runId: context.runId,
+      stage: context.stage,
+      operation: context.operation,
+      httpStatus: response.status,
+    });
   }
   return body;
 }
@@ -4514,7 +4789,7 @@ function bigQueryRows(body) {
   });
 }
 
-async function runBigQuery({ projectId, location, query, queryParameters }) {
+async function runBigQuery({ projectId, location, query, queryParameters, diagnostic = {} }) {
   const base = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}`;
   let body = await bigQueryJson(`${base}/queries`, {
     method: "POST",
@@ -4529,25 +4804,57 @@ async function runBigQuery({ projectId, location, query, queryParameters }) {
       useQueryCache: true,
       maximumBytesBilled: "1073741824",
     }),
+  }, {
+    ...diagnostic,
+    operation: "query-submit",
   });
 
-  const jobId = body?.jobReference?.jobId;
+  let jobId = body?.jobReference?.jobId || null;
+  throwBigQueryJobError(body, {
+    ...diagnostic,
+    operation: "query-submit",
+    jobId,
+  });
+
+  let pollCount = 0;
   for (let attempt = 0; !body?.jobComplete && jobId && attempt < 5; attempt++) {
     const url = new URL(`${base}/queries/${encodeURIComponent(jobId)}`);
     url.searchParams.set("location", location);
     url.searchParams.set("timeoutMs", "10000");
     url.searchParams.set("maxResults", "1000");
-    body = await bigQueryJson(url.toString());
+    pollCount = attempt + 1;
+    body = await bigQueryJson(url.toString(), {}, {
+      ...diagnostic,
+      operation: "query-poll",
+      jobId,
+    });
+    throwBigQueryJobError(body, {
+      ...diagnostic,
+      operation: "query-poll",
+      jobId,
+    });
   }
 
   if (!body?.jobComplete) {
-    throw new HttpsError("deadline-exceeded", "Firebase 비용 집계가 아직 끝나지 않았습니다.");
+    throw new HttpsError(
+      "deadline-exceeded",
+      "Firebase 비용 집계가 제한 시간 안에 끝나지 않았습니다.",
+      {
+        diagnosticCode: "BQ_TIMEOUT",
+        runId: diagnostic.runId,
+        stage: diagnostic.stage,
+        operation: "query-poll",
+      }
+    );
   }
 
   return {
     rows: bigQueryRows(body),
     totalBytesProcessed: Number(body?.totalBytesProcessed || 0),
+    totalBytesBilled: Number(body?.totalBytesBilled || 0),
     cacheHit: Boolean(body?.cacheHit),
+    jobId,
+    pollCount,
   };
 }
 
@@ -4653,95 +4960,192 @@ exports.firebaseOfficialCost = onCall(
     maxInstances: 2,
   },
   async (request) => {
-    requireCostDashboardOwner(request);
-
-    const table = parseBillingExportTable(process.env.GCP_BILLING_EXPORT_TABLE);
-    const location = String(process.env.GCP_BILLING_EXPORT_LOCATION || "US").trim();
-    const firebaseProjectId = "idea-pocket-56063";
-    const range = koreaBillingRange();
+    const runId = crypto.randomUUID();
+    const startedAt = Date.now();
     const force = request.data?.force === true;
-    const cacheKey = `${table.fullName}|${location}|${range.todayKey}`;
+    let currentStage = "request-start";
+    let userTag = null;
+    let maskedTable = null;
+    let location = null;
 
-    if (
-      !force &&
-      firebaseCostMemoryCache?.key === cacheKey &&
-      firebaseCostMemoryCache.expiresAt > Date.now()
-    ) {
-      return { ...firebaseCostMemoryCache.data, cached: true };
-    }
-
-    const query = `
-      SELECT
-        FORMAT_DATE('%Y-%m-%d', DATE(usage_start_time, 'Asia/Seoul')) AS usage_date,
-        service.description AS service_name,
-        sku.description AS sku_name,
-        ANY_VALUE(currency) AS currency,
-        SUM(CAST(cost AS NUMERIC)) AS gross_cost,
-        SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS credits,
-        SUM(CAST(cost AS NUMERIC))
-          + SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS net_cost,
-        FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E6SZ', MAX(export_time)) AS latest_export_time
-      FROM \`${table.fullName}\`
-      WHERE project.id = @firebaseProjectId
-        AND usage_start_time >= @monthStart
-        AND usage_start_time < @rangeEnd
-      GROUP BY usage_date, service_name, sku_name
-      ORDER BY usage_date DESC, ABS(net_cost) DESC
-    `;
-
-    const result = await runBigQuery({
-      projectId: table.projectId,
-      location,
-      query,
-      queryParameters: [
-        {
-          name: "firebaseProjectId",
-          parameterType: { type: "STRING" },
-          parameterValue: { value: firebaseProjectId },
-        },
-        {
-          name: "monthStart",
-          parameterType: { type: "TIMESTAMP" },
-          parameterValue: { value: range.monthStartIso },
-        },
-        {
-          name: "rangeEnd",
-          parameterType: { type: "TIMESTAMP" },
-          parameterValue: { value: range.tomorrowStartIso },
-        },
-      ],
+    firebaseCostLog("info", currentStage, {
+      runId,
+      authenticated: Boolean(request.auth?.uid),
+      force,
     });
 
-    const rows = result.rows;
-    const latestExportTime = rows
-      .map((row) => String(row.latest_export_time || ""))
-      .filter(Boolean)
-      .sort()
-      .at(-1) || null;
-    const currency =
-      rows.map((row) => String(row.currency || "").toUpperCase()).find(Boolean) || "USD";
+    try {
+      const owner = requireCostDashboardOwner(request);
+      userTag = owner.userTag;
+      currentStage = "owner-ok";
+      firebaseCostLog("info", currentStage, { runId, userTag });
 
-    const data = {
-      ok: true,
-      source: "cloud_billing_bigquery_standard_export",
-      projectId: firebaseProjectId,
-      timezone: "Asia/Seoul",
-      currency,
-      today: summarizeBillingRows(rows, (row) => row.usage_date === range.todayKey),
-      month: summarizeBillingRows(rows, () => true),
-      latestExportTime,
-      fetchedAt: new Date().toISOString(),
-      queryBytesProcessed: result.totalBytesProcessed,
-      queryCacheHit: result.cacheHit,
-      cached: false,
-    };
+      const table = parseBillingExportTable(process.env.GCP_BILLING_EXPORT_TABLE);
+      location = validateBillingLocation(process.env.GCP_BILLING_EXPORT_LOCATION || "US");
+      maskedTable = maskBillingTable(table);
+      const firebaseProjectId = "idea-pocket-56063";
+      const range = koreaBillingRange();
+      const cacheKey = `${table.fullName}|${location}|${range.todayKey}`;
 
-    firebaseCostMemoryCache = {
-      key: cacheKey,
-      expiresAt: Date.now() + 15 * 60 * 1000,
-      data,
-    };
-    return data;
+      currentStage = "config-ok";
+      firebaseCostLog("info", currentStage, {
+        runId,
+        userTag,
+        table: maskedTable,
+        location,
+        rangeStart: range.monthStartIso,
+        rangeEnd: range.tomorrowStartIso,
+      });
+
+      if (
+        !force &&
+        firebaseCostMemoryCache?.key === cacheKey &&
+        firebaseCostMemoryCache.expiresAt > Date.now()
+      ) {
+        currentStage = "response-ready";
+        firebaseCostLog("info", currentStage, {
+          runId,
+          userTag,
+          table: maskedTable,
+          location,
+          cached: true,
+          cacheSource: "memory",
+          durationMs: Date.now() - startedAt,
+        });
+        return { ...firebaseCostMemoryCache.data, cached: true, diagnosticRunId: runId };
+      }
+
+      const query = `
+        SELECT
+          FORMAT_DATE('%Y-%m-%d', DATE(usage_start_time, 'Asia/Seoul')) AS usage_date,
+          service.description AS service_name,
+          sku.description AS sku_name,
+          ANY_VALUE(currency) AS currency,
+          SUM(CAST(cost AS NUMERIC)) AS gross_cost,
+          SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS credits,
+          SUM(CAST(cost AS NUMERIC))
+            + SUM(IFNULL((SELECT SUM(CAST(c.amount AS NUMERIC)) FROM UNNEST(credits) c), 0)) AS net_cost,
+          FORMAT_TIMESTAMP('%Y-%m-%dT%H:%M:%E6SZ', MAX(export_time)) AS latest_export_time
+        FROM \`${table.fullName}\`
+        WHERE project.id = @firebaseProjectId
+          AND usage_start_time >= @monthStart
+          AND usage_start_time < @rangeEnd
+        GROUP BY usage_date, service_name, sku_name
+        ORDER BY usage_date DESC, ABS(net_cost) DESC
+      `;
+
+      currentStage = "query-start";
+      firebaseCostLog("info", currentStage, {
+        runId,
+        userTag,
+        table: maskedTable,
+        location,
+        maximumBytesBilled: 1073741824,
+      });
+
+      const result = await runBigQuery({
+        projectId: table.projectId,
+        location,
+        query,
+        queryParameters: [
+          {
+            name: "firebaseProjectId",
+            parameterType: { type: "STRING" },
+            parameterValue: { value: firebaseProjectId },
+          },
+          {
+            name: "monthStart",
+            parameterType: { type: "TIMESTAMP" },
+            parameterValue: { value: range.monthStartIso },
+          },
+          {
+            name: "rangeEnd",
+            parameterType: { type: "TIMESTAMP" },
+            parameterValue: { value: range.tomorrowStartIso },
+          },
+        ],
+        diagnostic: { runId, stage: currentStage },
+      });
+
+      currentStage = "query-complete";
+      firebaseCostLog("info", currentStage, {
+        runId,
+        userTag,
+        table: maskedTable,
+        location,
+        jobId: result.jobId,
+        pollCount: result.pollCount,
+        rowCount: result.rows.length,
+        totalBytesProcessed: result.totalBytesProcessed,
+        totalBytesBilled: result.totalBytesBilled,
+        queryCacheHit: result.cacheHit,
+        durationMs: Date.now() - startedAt,
+      });
+
+      const rows = result.rows;
+      const latestExportTime = rows
+        .map((row) => String(row.latest_export_time || ""))
+        .filter(Boolean)
+        .sort()
+        .at(-1) || null;
+      const currency =
+        rows.map((row) => String(row.currency || "").toUpperCase()).find(Boolean) || "USD";
+
+      const data = {
+        ok: true,
+        source: "cloud_billing_bigquery_standard_export",
+        projectId: firebaseProjectId,
+        timezone: "Asia/Seoul",
+        currency,
+        today: summarizeBillingRows(rows, (row) => row.usage_date === range.todayKey),
+        month: summarizeBillingRows(rows, () => true),
+        latestExportTime,
+        fetchedAt: new Date().toISOString(),
+        queryBytesProcessed: result.totalBytesProcessed,
+        queryCacheHit: result.cacheHit,
+        cached: false,
+        diagnosticRunId: runId,
+      };
+
+      firebaseCostMemoryCache = {
+        key: cacheKey,
+        expiresAt: Date.now() + 15 * 60 * 1000,
+        data,
+      };
+
+      currentStage = "response-ready";
+      firebaseCostLog("info", currentStage, {
+        runId,
+        userTag,
+        table: maskedTable,
+        location,
+        rowCount: rows.length,
+        currency,
+        latestExportTimePresent: Boolean(latestExportTime),
+        cached: false,
+        durationMs: Date.now() - startedAt,
+      });
+      return data;
+    } catch (error) {
+      const failedStage = currentStage;
+      const wrapped = wrapCostError(error, { runId, stage: failedStage });
+      const details = costErrorDetails(wrapped, { runId, stage: failedStage });
+      firebaseCostLog("error", "failed", {
+        runId,
+        failedStage,
+        userTag,
+        table: maskedTable,
+        location,
+        code: normalizeCostHttpsCode(wrapped.code),
+        diagnosticCode: details.diagnosticCode,
+        operation: details.operation,
+        httpStatus: details.httpStatus || null,
+        errorName: String(error?.name || "Error"),
+        message: sanitizeCostLogText(error?.message || wrapped.message),
+        durationMs: Date.now() - startedAt,
+      });
+      throw wrapped;
+    }
   }
 );
 
