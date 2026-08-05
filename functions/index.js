@@ -9,6 +9,7 @@ const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
+// v72: OpenAI 공식 비용 조회 회귀 수정
 const EMBEDDING_VERSION = 1;
 const MAX_EMBEDDING_TEXT_CHARS = 12000;
 const THOUGHT_INDEX_MODEL = "gpt-5.4-mini";
@@ -4758,13 +4759,18 @@ exports.firebaseOfficialCost = onCall(
 exports.openAiOfficialUsage = onCall(
   {
     region: "us-central1",
-    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID", "COST_DASHBOARD_ALLOWED_EMAIL"],
+    // OpenAI 공식 집계는 기존처럼 OpenAI 전용 Secret만 사용한다.
+    // Firebase 비용 대시보드의 관리자 이메일 Secret과 결합하지 않는다.
+    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID"],
     timeoutSeconds: 45,
     memory: "256MiB",
     maxInstances: 5,
   },
   async (request) => {
-    requireCostDashboardOwner(request);
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError("unauthenticated", "Google 로그인 후 사용할 수 있습니다.");
+    }
 
     const projectId = String(process.env.OPENAI_PROJECT_ID || "").trim();
     if (!projectId) {
