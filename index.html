@@ -553,6 +553,17 @@
     .official-usage-empty{padding:10px 0;font-size:.68rem;color:var(--muted);line-height:1.55}
     .official-usage-error{padding:10px 11px;border-radius:10px;background:#fff4f1;color:#8a5145;font-size:.68rem;line-height:1.55}
     .ai-usage-note{margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:.68rem;line-height:1.55;color:var(--muted)}
+    .cost-overview{display:grid;gap:10px}
+    .cost-overview-period{padding:11px 12px;border:1px solid #dfe7df;border-radius:12px;background:#f7faf7}
+    .cost-overview-period strong{display:block;font-size:.71rem;color:#4a6552;margin-bottom:7px}
+    .cost-overview-line{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:3px 0;font-size:.73rem}
+    .cost-overview-line b{font-variant-numeric:tabular-nums;text-align:right;color:#33483a}
+    .cost-overview-total{margin-top:5px;padding-top:8px;border-top:1px dashed #d7dfd7;font-weight:900}
+    .cost-service-list{display:grid;gap:7px;margin-top:9px}
+    .cost-service-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:8px 9px;border-radius:9px;background:#fafbf8;font-size:.68rem}
+    .cost-service-row b{font-variant-numeric:tabular-nums;white-space:nowrap;color:#405248}
+    .cost-credit{color:#687a70;font-size:.61rem;font-weight:700}
+
     .completion{display:flex;align-items:center;gap:11px}
     .completion strong{font-family:var(--serif);font-size:1.35rem;font-weight:700}
     .mini-bar{flex:1;height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
@@ -1653,11 +1664,19 @@
 
     <div class="settings-group-label">AI · 연결</div>
     <details class="setting-section" id="aiUsageSection">
-      <summary><span>📊 AI 사용량</span></summary>
+      <summary><span>📊 운영 비용</span></summary>
       <div class="setting-body">
-        <div class="helper">앱이 기록한 오늘의 사용량과 OpenAI 공식 집계를 나눠서 확인합니다.</div>
+        <div class="helper">생각의 텃밭이 쓰는 OpenAI와 Firebase/Google Cloud 비용을 한 화면에서 확인합니다.</div>
 
         <section class="usage-card" style="margin-top:13px">
+          <div class="usage-card-head">
+            <div><span class="usage-card-kicker">비용 요약</span><span class="usage-card-title">공식 운영비</span><span class="usage-card-sub">OpenAI + Firebase/Google Cloud</span></div>
+            <button class="btn soft usage-refresh" id="officialCostRefresh" type="button">전체 새로고침</button>
+          </div>
+          <div class="official-usage-body" id="officialCostOverviewBody"><div class="official-usage-empty">메뉴를 열면 공식 비용을 불러옵니다.</div></div>
+        </section>
+
+        <section class="usage-card">
           <div class="usage-card-head">
             <div><span class="usage-card-kicker">오늘</span><span class="usage-card-title">오늘 AI 사용량</span><span class="usage-card-sub">앱 기록 · KST 기준</span></div>
             <button class="btn soft usage-refresh" id="studioUsageRefresh" type="button">새로고침</button>
@@ -1676,6 +1695,16 @@
           </div>
           <div class="official-usage-box" id="openAiOfficialUsageBox">
             <div class="official-usage-body" id="openAiOfficialUsageBody"><div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div></div>
+          </div>
+        </section>
+
+        <section class="usage-card">
+          <div class="usage-card-head">
+            <div><span class="usage-card-kicker">공식 집계</span><span class="usage-card-title">Firebase / Google Cloud 비용</span><span class="usage-card-sub">Cloud Billing BigQuery 표준 내보내기 · KST 기준</span></div>
+            <button class="btn soft usage-refresh" id="firebaseOfficialRefresh" type="button">새로고침</button>
+          </div>
+          <div class="official-usage-box" id="firebaseOfficialCostBox">
+            <div class="official-usage-body" id="firebaseOfficialCostBody"><div class="official-usage-empty">새로고침을 누르면 Firebase 공식 비용을 불러옵니다.</div></div>
           </div>
         </section>
 
@@ -1759,6 +1788,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   unnamedStemIds:[],
   threadMatchCache:{},threadMatchLoading:{},
   studioMaterialCache:{},studioMaterialLoading:{},bloomingCompare:null,
+  officialCost:{openai:null,firebase:null,openaiStatus:"idle",firebaseStatus:"idle"},
   bloomingCloudDay:null,bloomingCloudSyncPromise:null,
   studioPath:{threadId:null,items:[],loading:false,cached:false,model:"",pendingProject:null},
   bloomingInterview:{sourceId:null,question:null,model:null,returnAfterSaveId:null,busy:false},
@@ -2337,6 +2367,77 @@ function formatOfficialUsd(n){
   if(v<0.01)return `$${v.toFixed(4)}`;
   return `$${v.toFixed(2)}`;
 }
+
+function formatOfficialMoney(value,currency="USD"){
+  const amount=Number(value||0),code=String(currency||"USD").toUpperCase();
+  if(code==="KRW"){
+    if(amount===0)return "₩0";
+    if(Math.abs(amount)<0.01)return `${amount<0?"−":""}< ₩0.01`;
+    return new Intl.NumberFormat("ko-KR",{style:"currency",currency:"KRW",minimumFractionDigits:Math.abs(amount)<1?3:0,maximumFractionDigits:Math.abs(amount)<1?3:0}).format(amount);
+  }
+  if(code==="USD")return formatOfficialUsd(amount);
+  try{return new Intl.NumberFormat("ko-KR",{style:"currency",currency:code,maximumFractionDigits:4}).format(amount)}catch(_){return `${amount.toFixed(4)} ${code}`}
+}
+function officialCostSourceLine(label,data,period){
+  if(!data)return `<span>${esc(label)}</span><b>불러오지 못함</b>`;
+  const item=data?.[period]||{},currency=String(data.currency||"USD").toUpperCase();
+  const value=label==="OpenAI"?Number(item.costUsd||0):Number(item.netCost||0);
+  return `<span>${esc(label)}</span><b>${formatOfficialMoney(value,currency)} ${esc(currency)}</b>`;
+}
+function renderOfficialCostOverview(){
+  const box=$("officialCostOverviewBody");if(!box)return;
+  const stateCost=state.officialCost||{},openai=stateCost.openai,firebase=stateCost.firebase;
+  const openaiLoading=stateCost.openaiStatus==="loading",firebaseLoading=stateCost.firebaseStatus==="loading";
+  if(openaiLoading||firebaseLoading){box.innerHTML=`<div class="official-usage-empty">OpenAI와 Firebase 공식 비용을 모으고 있어요…</div>`;return}
+  if(!openai&&!firebase){box.innerHTML=`<div class="official-usage-empty">전체 새로고침을 누르면 공식 비용을 불러옵니다.</div>`;return}
+  const sameCurrency=openai&&firebase&&String(openai.currency||"USD").toUpperCase()===String(firebase.currency||"USD").toUpperCase();
+  const currency=sameCurrency?String(openai.currency||"USD").toUpperCase():"";
+  const total=(period)=>Number(openai?.[period]?.costUsd||0)+Number(firebase?.[period]?.netCost||0);
+  const totalLine=(period)=>openai&&firebase?(sameCurrency?`<div class="cost-overview-line cost-overview-total"><span>합계</span><b>${formatOfficialMoney(total(period),currency)} ${esc(currency)}</b></div>`:`<div class="cost-overview-line cost-overview-total"><span>합계</span><b>통화가 달라 각각 표시</b></div>`):`<div class="cost-overview-line cost-overview-total"><span>합계</span><b>공식 데이터 일부 미확인</b></div>`;
+  box.innerHTML=`<div class="cost-overview">
+    <div class="cost-overview-period"><strong>오늘</strong><div class="cost-overview-line">${officialCostSourceLine("OpenAI",openai,"today")}</div><div class="cost-overview-line">${officialCostSourceLine("Firebase",firebase,"today")}</div>${totalLine("today")}</div>
+    <div class="cost-overview-period"><strong>이번 달 누적</strong><div class="cost-overview-line">${officialCostSourceLine("OpenAI",openai,"month")}</div><div class="cost-overview-line">${officialCostSourceLine("Firebase",firebase,"month")}</div>${totalLine("month")}</div>
+  </div><div class="ai-usage-note" style="margin-top:9px">두 서비스의 결제 통화가 다르면 환율을 임의로 적용하지 않고 각각 표시합니다. Firebase 비용은 BigQuery에 도착한 결제 자료까지만 반영됩니다.</div>`;
+}
+function renderFirebaseOfficialCost(data){
+  const box=$("firebaseOfficialCostBody");if(!box)return;
+  if(!data){box.innerHTML=`<div class="official-usage-empty">Firebase 공식 비용 데이터를 불러오지 못했습니다.</div>`;return}
+  const t=data.today||{},m=data.month||{},currency=String(data.currency||"USD").toUpperCase();
+  const serviceRows=(m.services||[]).length?(m.services||[]).map(item=>`<div class="cost-service-row"><span>${esc(item.name||"기타")}<br><span class="cost-credit">사용 전 비용 ${formatOfficialMoney(item.grossCost||0,currency)} · 크레딧 ${formatOfficialMoney(item.credits||0,currency)}</span></span><b>${formatOfficialMoney(item.netCost||0,currency)}</b></div>`).join(""):`<div class="official-usage-empty">이번 달 비용 항목이 아직 없습니다.</div>`;
+  const latest=data.latestExportTime?new Date(data.latestExportTime).toLocaleString("ko-KR",{timeZone:"Asia/Seoul"}):"아직 확인되지 않음";
+  box.innerHTML=`<div class="official-usage-grid">
+    <span class="official-usage-title">오늘 · KST</span>
+    <span>사용 전 비용</span><span class="value">${formatOfficialMoney(t.grossCost||0,currency)}</span>
+    <span>무료 한도·크레딧</span><span class="value">${formatOfficialMoney(t.credits||0,currency)}</span>
+    <span class="official-cost-highlight"><span>오늘 Firebase 공식 비용</span><strong>${formatOfficialMoney(t.netCost||0,currency)} ${esc(currency)}</strong></span>
+    <span class="official-usage-title">이번 달 누적 · KST</span>
+    <span>사용 전 비용</span><span class="value">${formatOfficialMoney(m.grossCost||0,currency)}</span>
+    <span>무료 한도·크레딧</span><span class="value">${formatOfficialMoney(m.credits||0,currency)}</span>
+    <span class="official-cost-highlight"><span>이번 달 Firebase 공식 비용</span><strong>${formatOfficialMoney(m.netCost||0,currency)} ${esc(currency)}</strong></span>
+  </div><div class="official-usage-title" style="margin-top:12px">이번 달 서비스별</div><div class="cost-service-list">${serviceRows}</div>
+  <div class="ai-usage-note" style="margin-top:9px">Cloud Billing 표준 내보내기의 프로젝트 비용에서 크레딧을 반영한 값입니다. 마지막 결제 자료: ${esc(latest)} · 조회량 ${humanSize(Number(data.queryBytesProcessed||0))}${data.cached?" · 15분 캐시":""}</div>`;
+}
+async function refreshFirebaseOfficialCost({force=true}={}){
+  const body=$("firebaseOfficialCostBody"),btn=$("firebaseOfficialRefresh");if(!body||!btn)return;
+  if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous){body.innerHTML=`<div class="official-usage-error">Google 로그인 후 공식 비용을 확인할 수 있습니다.</div>`;return}
+  const old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";state.officialCost.firebaseStatus="loading";renderOfficialCostOverview();
+  body.innerHTML=`<div class="official-usage-empty">Cloud Billing 비용을 조회하고 있어요…</div>`;
+  try{
+    const data=await callFn("firebaseOfficialCost",{force});
+    state.officialCost.firebase=data;state.officialCost.firebaseStatus="ready";renderFirebaseOfficialCost(data);
+  }catch(e){
+    console.warn("Firebase official cost failed",e);state.officialCost.firebase=null;state.officialCost.firebaseStatus="error";
+    const msg=String(e?.message||"");
+    const setup=/GCP_BILLING_EXPORT_TABLE|COST_DASHBOARD_ALLOWED_EMAIL|형식|설정/.test(msg);
+    const permission=/permission|권한|Access Denied|denied/i.test(msg);
+    body.innerHTML=`<div class="official-usage-error">${setup?"Cloud Billing BigQuery 내보내기 또는 비용 대시보드 Secret 설정이 아직 끝나지 않았어요.":permission?"비용 조회 서비스 계정의 BigQuery 권한을 확인해주세요.":"Firebase 공식 비용을 불러오지 못했습니다. Billing 내보내기 표와 함수 로그를 확인해주세요."}</div>`;
+  }finally{btn.disabled=false;btn.textContent=old;renderOfficialCostOverview()}
+}
+async function refreshAllOfficialCosts({force=true}={}){
+  const btn=$("officialCostRefresh");if(!btn)return;
+  const old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";
+  try{await Promise.allSettled([refreshOpenAiOfficialUsage(),refreshFirebaseOfficialCost({force})])}finally{btn.disabled=false;btn.textContent=old;renderOfficialCostOverview()}
+}
 function renderOpenAiOfficialUsage(data){
   const box=$("openAiOfficialUsageBody");if(!box)return;
   if(!data){
@@ -2344,6 +2445,7 @@ function renderOpenAiOfficialUsage(data){
     return;
   }
 
+  state.officialCost.openai=data;state.officialCost.openaiStatus="ready";
   const t=data.today||{},m=data.month||{};
   const currency=String(data.currency||"usd").toUpperCase();
   const projectLabel=data.projectScoped?"생각의 텃밭 OpenAI Project":"조직 전체";
@@ -2363,6 +2465,7 @@ function renderOpenAiOfficialUsage(data){
     <span class="official-cost-highlight"><span>이번 달 OpenAI 공식 비용</span><strong>${formatOfficialUsd(m.costUsd||0)} ${esc(currency)}</strong></span>
   </div>
   <div class="ai-usage-note" style="margin-top:9px">OpenAI 공식 Usage/Costs API에서 가져온 값입니다. 앱 자체 계기판은 KST, 이 공식 집계는 OpenAI 대시보드와 같은 UTC 기준입니다.</div>`;
+  renderOfficialCostOverview();
 }
 async function refreshOpenAiOfficialUsage(){
   const body=$("openAiOfficialUsageBody"),btn=$("openAiOfficialRefresh");
@@ -2372,20 +2475,20 @@ async function refreshOpenAiOfficialUsage(){
     return;
   }
 
-  const old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";
+  const old=btn.textContent;btn.disabled=true;btn.textContent="불러오는 중…";state.officialCost.openaiStatus="loading";renderOfficialCostOverview();
   body.innerHTML=`<div class="official-usage-empty">OpenAI 공식 Usage / Costs를 조회하고 있어요…</div>`;
   try{
     const data=await callFn("openAiOfficialUsage",{});
     renderOpenAiOfficialUsage(data);
   }catch(e){
-    console.warn("OpenAI official usage failed",e);
+    console.warn("OpenAI official usage failed",e);state.officialCost.openai=null;state.officialCost.openaiStatus="error";
     const msg=String(e?.message||"");
-    const setup=msg.includes("OPENAI_ADMIN_KEY")||msg.includes("OPENAI_PROJECT_ID")||msg.includes("설정");
+    const setup=msg.includes("OPENAI_ADMIN_KEY")||msg.includes("OPENAI_PROJECT_ID")||msg.includes("COST_DASHBOARD_ALLOWED_EMAIL")||msg.includes("설정");
     body.innerHTML=`<div class="official-usage-error">${setup
-      ?"OpenAI Admin Key 또는 Project ID 설정이 아직 끝나지 않았어요. 아래 배포 안내의 Secret 설정을 먼저 해주세요."
+      ?"OpenAI Admin Key, Project ID 또는 비용 대시보드 관리자 설정이 아직 끝나지 않았어요."
       :"OpenAI 공식 사용량을 불러오지 못했습니다. Admin Key 권한과 Project ID를 확인해주세요."}</div>`;
   }finally{
-    btn.disabled=false;btn.textContent=old;
+    btn.disabled=false;btn.textContent=old;renderOfficialCostOverview();
   }
 }
 async function refreshStudioUsage(){
@@ -5982,7 +6085,11 @@ $("signOutBtn").addEventListener("click",signOutGarden);
 $("sheetSettings").addEventListener("click",()=>{
   closeMenu();renderApiSettings();renderAccountStatus();renderSparkSettings();renderAiSettings();renderBetweenThoughtsSettings();renderBloomingInterviewSettings();renderBetweenThoughtContextBackfillTool();
   if($("studioUsageGrid"))$("studioUsageGrid").innerHTML='<span>사용량</span><span class="value">메뉴를 열면 불러옵니다.</span>';
-  if($("openAiOfficialUsageBody"))$("openAiOfficialUsageBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>`;
+  if(state.officialCost.openai)renderOpenAiOfficialUsage(state.officialCost.openai);
+  else if($("openAiOfficialUsageBody"))$("openAiOfficialUsageBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 OpenAI 공식 집계를 불러옵니다.</div>`;
+  if(state.officialCost.firebase)renderFirebaseOfficialCost(state.officialCost.firebase);
+  else if($("firebaseOfficialCostBody"))$("firebaseOfficialCostBody").innerHTML=`<div class="official-usage-empty">새로고침을 누르면 Firebase 공식 비용을 불러옵니다.</div>`;
+  renderOfficialCostOverview();
   $("settingsDialog")?.querySelectorAll("details.setting-section").forEach(d=>d.removeAttribute("open"));
   $("settingsDialog").showModal();
 });
@@ -6070,6 +6177,8 @@ $("gardenDiscoveryFind").addEventListener("click",loadGardenDiscoveryCandidates)
 $("gardenDiscoveryStop").addEventListener("click",()=>$("gardenDiscoveryDialog").close());
 $("gardenDiscoveryThread").addEventListener("click",openGardenDiscoveryThreadLink);
 $("openAiOfficialRefresh").addEventListener("click",refreshOpenAiOfficialUsage);
+$("firebaseOfficialRefresh").addEventListener("click",()=>refreshFirebaseOfficialCost({force:true}));
+$("officialCostRefresh").addEventListener("click",()=>refreshAllOfficialCosts({force:true}));
 $("studioLimitPlus10").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
   const btn=$("studioLimitPlus10");
@@ -6100,6 +6209,10 @@ $("aiUsageSection").addEventListener("toggle",async()=>{
     return;
   }
   await refreshStudioUsage();
+  const pending=[];
+  if(!state.officialCost.openai)pending.push(refreshOpenAiOfficialUsage());
+  if(!state.officialCost.firebase)pending.push(refreshFirebaseOfficialCost({force:false}));
+  if(pending.length)await Promise.allSettled(pending);
 });
 $("betweenThoughtsToggle").addEventListener("click",async()=>{
   if(!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return toast("Google 로그인 후 사용할 수 있습니다.");
