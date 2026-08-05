@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#f5f2e9" />
   <title>생각의 텃밭</title>
+  <!-- v72: OpenAI 공식 비용 조회 회귀 수정 -->
   <link rel="manifest" href="manifest.json" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2483,10 +2484,15 @@ async function refreshOpenAiOfficialUsage(){
   }catch(e){
     console.warn("OpenAI official usage failed",e);state.officialCost.openai=null;state.officialCost.openaiStatus="error";
     const msg=String(e?.message||"");
-    const setup=msg.includes("OPENAI_ADMIN_KEY")||msg.includes("OPENAI_PROJECT_ID")||msg.includes("COST_DASHBOARD_ALLOWED_EMAIL")||msg.includes("설정");
-    body.innerHTML=`<div class="official-usage-error">${setup
-      ?"OpenAI Admin Key, Project ID 또는 비용 대시보드 관리자 설정이 아직 끝나지 않았어요."
-      :"OpenAI 공식 사용량을 불러오지 못했습니다. Admin Key 권한과 Project ID를 확인해주세요."}</div>`;
+    const code=String(e?.code||"").replace(/^functions\//,"");
+    const setup=msg.includes("OPENAI_ADMIN_KEY")||msg.includes("OPENAI_PROJECT_ID")||msg.includes("설정");
+    const auth=code==="unauthenticated"||/로그인/.test(msg);
+    const text=setup
+      ?"OpenAI Admin Key 또는 Project ID 설정을 확인해주세요."
+      :auth
+        ?"Google 로그인 상태를 확인한 뒤 다시 불러와주세요."
+        :"OpenAI 공식 사용량을 불러오지 못했습니다. 함수 로그를 확인해주세요.";
+    body.innerHTML=`<div class="official-usage-error">${text}${code?`<br><small>오류 코드: ${esc(code)}</small>`:""}</div>`;
   }finally{
     btn.disabled=false;btn.textContent=old;renderOfficialCostOverview();
   }
