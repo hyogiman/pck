@@ -495,7 +495,13 @@
     .slot-prompt{color:var(--muted);font-size:.75rem;margin:6px 0 11px;line-height:1.5}
     .slot.done{border-color:#bcd0c0;background:#fbfefb}
     .slot .textarea{min-height:80px}
+    /* v70 · Studio 정원사 질문 로딩 중 화면 흔들림 방지 */
     .gardener-box{margin-top:10px;padding:12px 14px;border:1px solid #d3e2d5;background:var(--accent3);border-radius:13px;text-align:left}
+    .gardener-box:not(.hidden){min-height:76px;box-sizing:border-box}
+    .gardener-box.loading{opacity:.88}
+    .gardener-box.loading p{color:#587061}
+    .gardener-box.loading p::after{content:"";display:inline-block;width:1.15em;height:.8em;margin-left:5px;vertical-align:-.05em;background:radial-gradient(circle,currentColor 1.5px,transparent 2px) 0 50%/5px 5px repeat-x;animation:gardenerThinking 1s steps(3,end) infinite}
+    @keyframes gardenerThinking{0%{opacity:.3}50%{opacity:1}100%{opacity:.3}}
     .gardener-box .g-label{font-size:.64rem;font-weight:800;letter-spacing:.08em;color:var(--accent)}
     .gardener-box p{font-family:var(--serif);margin:6px 0 0;font-size:.94rem;line-height:1.58;color:#2c4a38}
     .studio-guidance-zone{margin-top:8px}
@@ -1747,7 +1753,7 @@ const state={sources:[],fragments:[],trash:[],threads:[],projects:[],view:"captu
   gardenUnlinked:false,pendingLinkFragmentId:null,pendingLinkFragmentIds:null,pendingSourceLinkFragmentId:null,
   firebase:{app:null,auth:null,db:null,storage:null,uid:null,connected:false,api:null,user:null,ready:false},
   pendingFiles:{capture:[],source:[],thread:[]},apiResults:[],
-  aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},
+  aiRelatedCache:{},aiRelatedLoading:{},studioQuestionCache:{},studioQuestionLoading:{},studioGardenerUiHold:{projectId:null,until:0},
   relatedPreview:{mode:null,currentId:null,targetId:null,threadId:null},
   gardenDiscovery:{chain:[],loading:false},
   unnamedStemIds:[],
@@ -2862,9 +2868,13 @@ function refreshOpenDetail(){
     }
     if(state.openThreadId&&state.threads.some(t=>t.id===state.openThreadId)) openThread(state.openThreadId);
     if(state.openProjectId&&state.projects.some(p=>p.id===state.openProjectId)){
-      const keep={};$$("[data-slot-text]").forEach(el=>{if(el.value)keep[el.dataset.slotText]=el.value});
-      openProject(state.openProjectId);
-      $$("[data-slot-text]").forEach(el=>{const v=keep[el.dataset.slotText];if(v)el.value=v});
+      // 정원사 호출 중 Firestore가 두 번 갱신되어도 작업대 전체를 다시 그리지 않는다.
+      // 질문 상자만 제자리에서 바뀌게 해 모바일 화면의 번쩍임·스크롤 점프를 막는다.
+      if(!studioGardenerUiLocked(state.openProjectId)){
+        const keep={};$$("[data-slot-text]").forEach(el=>{if(el.value)keep[el.dataset.slotText]=el.value});
+        openProject(state.openProjectId);
+        $$("[data-slot-text]").forEach(el=>{const v=keep[el.dataset.slotText];if(v)el.value=v});
+      }
     }
   }catch(e){console.warn("상세 화면 갱신 실패",e)}
 }
@@ -4667,6 +4677,16 @@ function slotHTML(p,s){
   </div>`;
 }
 function studioQuestionKey(pid,slotId){return `${pid}:${slotId}`}
+function holdStudioGardenerUi(pid,ms=1800){
+  state.studioGardenerUiHold={projectId:pid,until:Date.now()+ms};
+}
+function studioGardenerUiLocked(pid=state.openProjectId){
+  if(!pid)return false;
+  const prefix=`${pid}:`;
+  const loading=Object.entries(state.studioQuestionLoading||{}).some(([key,on])=>on&&key.startsWith(prefix));
+  const hold=state.studioGardenerUiHold||{};
+  return loading||(hold.projectId===pid&&Date.now()<Number(hold.until||0));
+}
 function nextEmptyStudioSlot(p){
   if(!p)return null;
   // 재료는 '답변'이 아니다. 텍스트를 실제로 쓴 칸만 완료로 본다.
@@ -4682,18 +4702,18 @@ function renderStudioGardenerBox(pid,slotId){
   const question=slot?.gardenerQuestion||cached?.question||"";
 
   if(!studioGardenerEnabled()||!question){
-    box.classList.add("hidden");box.classList.remove("persisted");box.innerHTML="";
+    box.classList.add("hidden");box.classList.remove("persisted","loading");box.removeAttribute("aria-busy");box.innerHTML="";
     return;
   }
 
   box.innerHTML=`<span class="g-label">🌿 정원사가 건네는 질문</span><p>${esc(question)}</p>`;
-  box.classList.remove("hidden");box.classList.add("persisted");
+  box.classList.remove("hidden","loading");box.classList.add("persisted");box.removeAttribute("aria-busy");
 }
 function showStudioGardenerLoading(pid,slotId){
   const box=document.querySelector(`[data-gardener-project="${CSS.escape(pid)}"][data-gardener-slot="${CSS.escape(slotId)}"]`);
   if(!box||!studioGardenerEnabled())return;
-  box.innerHTML=`<span class="g-label">🌿 정원사</span><p>이 문항에 맞는 질문을 고르는 중…</p>`;
-  box.classList.remove("hidden");box.classList.remove("persisted");
+  box.innerHTML=`<span class="g-label">🌿 정원사</span><p>이 문항에 맞는 질문을 고르는 중</p>`;
+  box.classList.remove("hidden","persisted");box.classList.add("loading");box.setAttribute("aria-busy","true");
 }
 async function requestStudioGardenerQuestion(pid,slotId,generate=false){
   if(!studioGardenerEnabled()||!state.firebase.connected||!state.firebase.user||state.firebase.user.isAnonymous)return;
@@ -4728,7 +4748,11 @@ async function requestStudioGardenerQuestion(pid,slotId,generate=false){
     const code=String(e?.code||"");
     if(code.includes("resource-exhausted"))console.info("Studio gardener daily limit reached");
     else console.warn("Studio gardener skipped",e?.code||e?.message||e);
-  }finally{state.studioQuestionLoading[key]=false}
+  }finally{
+    state.studioQuestionLoading[key]=false;
+    // 마지막 Firestore 실시간 반영이 조금 늦게 도착해도 화면 전체 재렌더를 잠시 막는다.
+    holdStudioGardenerUi(pid,2200);
+  }
 }
 async function ensureNextStudioGardenerQuestion(p,{generate=true}={}){
   if(!studioGardenerEnabled()||!p)return;
@@ -4745,6 +4769,9 @@ async function callStudioGardenerForSlot(pid,slotId,button=null){
 
   const original=button?.textContent||"정원사 질문 받기";
   if(button){button.disabled=true;button.textContent="질문을 고르는 중…";}
+  // 저장 요청보다 먼저 즉시 반응을 보여준다. 기존에는 저장이 끝날 때까지 아무 변화가 없어 보였다.
+  holdStudioGardenerUi(pid,12000);
+  showStudioGardenerLoading(pid,slotId);
 
   try{
     // 누른 순간까지 쓴 내용만 서버에 반영한 뒤, '이 슬롯' 질문만 요청한다.
@@ -4758,7 +4785,12 @@ async function callStudioGardenerForSlot(pid,slotId,button=null){
     const slot=projectSlots(p).find(s=>s.id===slotId);
     if(slot?.gardenerQuestion){
       toast(`'${slot.title}'에 정원사 질문을 놓았어요. 🌿`);
-      document.querySelector(`[data-slot-card="${CSS.escape(slotId)}"]`)?.scrollIntoView({behavior:"smooth",block:"center"});
+      // 사용자가 보고 있던 위치에서는 움직이지 않는다. 질문 상자가 완전히 화면 밖일 때만 최소 이동한다.
+      const questionBox=document.querySelector(`[data-gardener-project="${CSS.escape(pid)}"][data-gardener-slot="${CSS.escape(slotId)}"]`);
+      if(questionBox){
+        const rect=questionBox.getBoundingClientRect();
+        if(rect.bottom<72||rect.top>window.innerHeight-24)questionBox.scrollIntoView({behavior:"smooth",block:"nearest"});
+      }
     }
   }catch(err){
     console.warn("Studio gardener slot call",err);
