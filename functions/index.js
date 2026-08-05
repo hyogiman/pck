@@ -9,7 +9,7 @@ const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
-// v73: Firebase 공식 비용 구조화 진단 로그
+// v74: Firebase 공식 비용 진단 + BigQuery Location 자동 추론
 const EMBEDDING_VERSION = 1;
 const MAX_EMBEDDING_TEXT_CHARS = 12000;
 const THOUGHT_INDEX_MODEL = "gpt-5.4-mini";
@@ -4789,8 +4789,12 @@ function bigQueryRows(body) {
   });
 }
 
-async function runBigQuery({ projectId, location, query, queryParameters, diagnostic = {} }) {
+async function runBigQuery({ projectId, configuredLocation, query, queryParameters, diagnostic = {} }) {
   const base = `https://bigquery.googleapis.com/bigquery/v2/projects/${encodeURIComponent(projectId)}`;
+
+  // v74: 첫 쿼리에는 Location을 강제로 넣지 않는다.
+  // BigQuery가 SQL에 참조된 Billing 데이터셋의 실제 Location을 자동 추론하게 한다.
+  // 이전 Secret 값이 실제 데이터셋 Location과 다르면 jobs.query가 404를 반환할 수 있었다.
   let body = await bigQueryJson(`${base}/queries`, {
     method: "POST",
     body: JSON.stringify({
@@ -4798,7 +4802,6 @@ async function runBigQuery({ projectId, location, query, queryParameters, diagno
       useLegacySql: false,
       parameterMode: "NAMED",
       queryParameters,
-      location,
       timeoutMs: 10000,
       maxResults: 1000,
       useQueryCache: true,
@@ -4810,16 +4813,28 @@ async function runBigQuery({ projectId, location, query, queryParameters, diagno
   });
 
   let jobId = body?.jobReference?.jobId || null;
+  let resolvedLocation = String(body?.jobReference?.location || "").trim() || null;
   throwBigQueryJobError(body, {
     ...diagnostic,
     operation: "query-submit",
     jobId,
   });
 
+  firebaseCostLog("info", diagnostic.stage || "query-start", {
+    runId: diagnostic.runId || null,
+    operation: "query-location-resolved",
+    configuredLocation: configuredLocation || null,
+    resolvedLocation,
+    locationSource: resolvedLocation ? "bigquery-job" : "bigquery-auto",
+    jobId,
+  });
+
   let pollCount = 0;
   for (let attempt = 0; !body?.jobComplete && jobId && attempt < 5; attempt++) {
     const url = new URL(`${base}/queries/${encodeURIComponent(jobId)}`);
-    url.searchParams.set("location", location);
+    // 지역 단일 리전 작업은 polling 때 Location이 필요하므로,
+    // 사용자가 입력한 Secret이 아니라 BigQuery가 돌려준 실제 작업 Location만 사용한다.
+    if (resolvedLocation) url.searchParams.set("location", resolvedLocation);
     url.searchParams.set("timeoutMs", "10000");
     url.searchParams.set("maxResults", "1000");
     pollCount = attempt + 1;
@@ -4828,6 +4843,7 @@ async function runBigQuery({ projectId, location, query, queryParameters, diagno
       operation: "query-poll",
       jobId,
     });
+    resolvedLocation = String(body?.jobReference?.location || resolvedLocation || "").trim() || null;
     throwBigQueryJobError(body, {
       ...diagnostic,
       operation: "query-poll",
@@ -4855,6 +4871,7 @@ async function runBigQuery({ projectId, location, query, queryParameters, diagno
     cacheHit: Boolean(body?.cacheHit),
     jobId,
     pollCount,
+    resolvedLocation,
   };
 }
 
@@ -4985,7 +5002,8 @@ exports.firebaseOfficialCost = onCall(
       maskedTable = maskBillingTable(table);
       const firebaseProjectId = "idea-pocket-56063";
       const range = koreaBillingRange();
-      const cacheKey = `${table.fullName}|${location}|${range.todayKey}`;
+      // Location은 BigQuery가 표에서 자동 추론하므로 캐시 키에는 표와 날짜만 사용한다.
+      const cacheKey = `${table.fullName}|${range.todayKey}`;
 
       currentStage = "config-ok";
       firebaseCostLog("info", currentStage, {
@@ -5045,7 +5063,7 @@ exports.firebaseOfficialCost = onCall(
 
       const result = await runBigQuery({
         projectId: table.projectId,
-        location,
+        configuredLocation: location,
         query,
         queryParameters: [
           {
@@ -5072,7 +5090,8 @@ exports.firebaseOfficialCost = onCall(
         runId,
         userTag,
         table: maskedTable,
-        location,
+        configuredLocation: location,
+        resolvedLocation: result.resolvedLocation,
         jobId: result.jobId,
         pollCount: result.pollCount,
         rowCount: result.rows.length,
