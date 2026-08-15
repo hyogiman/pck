@@ -1,38 +1,77 @@
-/* Thought Garden storage compatibility patch · 2026-08-15
-   Firestore remains the source of truth when connected. localStorage keeps only
-   a lightweight offline snapshot so AI indexes / embeddings cannot exhaust the
-   browser quota. User-authored content is preserved in both online/offline mode. */
+/* Thought Garden local cache policy · 2026-08-15
+   Firebase/Firestore is the source of truth.
+   When Firebase mode is active, localStorage keeps only a small 3-day emergency
+   snapshot. In true local-only mode, the original full local save is preserved
+   so user-authored data is never silently discarded. */
 (function installThoughtGardenStorageFix(){
   if(typeof localSave!=="function"){
     console.warn("[storage-fix] localSave not found; patch skipped.");
     return;
   }
 
+  const originalLocalSave=localSave;
   const LOCAL_KEY="thoughtGarden_v02";
-  const HEAVY_FRAGMENT_FIELDS=new Set(["aiIndex","updatedAtServer"]);
+  const RETENTION_DAYS=3;
+  const RETENTION_MS=RETENTION_DAYS*86400000;
 
   function firebaseConnected(){
     try{return !!(state&&state.firebase&&state.firebase.connected&&state.firebase.db&&state.firebase.uid)}
     catch(_){return false}
   }
 
-  function leanFragment(fragment){
-    const out={...fragment};
-    for(const key of Object.keys(out)){
-      // AI indexes / vectors are derived data. Firestore can restore them after
-      // reconnecting, while the user's original text, links and attachments stay.
-      if(HEAVY_FRAGMENT_FIELDS.has(key)||/embedding/i.test(key))delete out[key];
-    }
-    return out;
+  function toMillis(value){
+    if(!value)return NaN;
+    try{
+      if(typeof value.toDate==="function")return value.toDate().getTime();
+      if(typeof value==="object"&&Number.isFinite(value.seconds))return value.seconds*1000;
+      const ms=Date.parse(String(value));
+      return Number.isFinite(ms)?ms:NaN;
+    }catch(_){return NaN}
   }
 
-  function leanSnapshotFromState(){
-    return {
-      sources:Array.isArray(state.sources)?state.sources:[],
-      fragments:(typeof allFragments==="function"?allFragments():[]).map(leanFragment),
-      threads:Array.isArray(state.threads)?state.threads:[],
-      projects:Array.isArray(state.projects)?state.projects:[]
-    };
+  function recordMillis(record){
+    if(!record)return NaN;
+    for(const value of [record.updatedAt,record.deletedAt,record.createdAt,record.date]){
+      const ms=toMillis(value);if(Number.isFinite(ms))return ms;
+    }
+    return NaN;
+  }
+
+  function isRecent(record){
+    const ms=recordMillis(record);
+    return Number.isFinite(ms)&&ms>=Date.now()-RETENTION_MS;
+  }
+
+  function derivedDataReplacer(key,value){
+    // These fields are generated from cloud data and can be restored/recreated.
+    if(key==="aiIndex"||key==="updatedAtServer"||/embedding/i.test(key))return undefined;
+    return value;
+  }
+
+  function recentSnapshotFromState(){
+    const all=typeof allFragments==="function"?allFragments():[];
+    const fragments=(Array.isArray(all)?all:[]).filter(isRecent);
+
+    // Keep only the small amount of metadata needed to make those recent records
+    // readable while offline. Old Library/Thread/Studio data stays in Firestore.
+    const sourceIds=new Set(fragments.map(f=>f&&f.sourceId).filter(Boolean));
+    const threadIds=new Set();
+    for(const f of fragments){
+      for(const id of (Array.isArray(f&&f.threadIds)?f.threadIds:[]))if(id)threadIds.add(id);
+    }
+
+    const sources=(Array.isArray(state.sources)?state.sources:[])
+      .filter(s=>sourceIds.has(s.id)||isRecent(s));
+    const threads=(Array.isArray(state.threads)?state.threads:[])
+      .filter(t=>threadIds.has(t.id)||isRecent(t));
+    const projects=(Array.isArray(state.projects)?state.projects:[])
+      .filter(isRecent);
+
+    return {sources,fragments,threads,projects};
+  }
+
+  function stringifyRecentSnapshot(){
+    return JSON.stringify(recentSnapshotFromState(),derivedDataReplacer);
   }
 
   function quotaError(error){
@@ -43,51 +82,39 @@
     );
   }
 
-  function compactExistingSnapshot(){
-    try{
-      const raw=localStorage.getItem(LOCAL_KEY);
-      if(!raw)return;
-      const saved=JSON.parse(raw);
-      if(Array.isArray(saved.fragments))saved.fragments=saved.fragments.map(leanFragment);
-      localStorage.setItem(LOCAL_KEY,JSON.stringify(saved));
-    }catch(error){
-      // Keep an unreadable/unknown snapshot untouched. Future normal saves will
-      // replace it after the app has successfully loaded its state.
-      console.warn("[storage-fix] legacy cache compaction skipped",error);
-    }
-  }
-
   localSave=function thoughtGardenSafeLocalSave(){
+    // No Firebase account/data mode: localStorage is still the user's real storage,
+    // so keep the original full-save behavior rather than pruning their only copy.
+    if(!firebaseConnected())return originalLocalSave();
+
+    const payload=stringifyRecentSnapshot();
     try{
-      localStorage.setItem(LOCAL_KEY,JSON.stringify(leanSnapshotFromState()));
+      localStorage.setItem(LOCAL_KEY,payload);
       return true;
     }catch(error){
       if(!quotaError(error))throw error;
 
-      // If Firestore is connected, persist() has already attempted the cloud write
-      // before localSave(). Do not misreport a cloud save as failed because only
-      // the disposable browser cache is full.
-      if(firebaseConnected()){
-        try{localStorage.removeItem(LOCAL_KEY)}catch(_){}
-        console.warn("[storage-fix] Firestore save succeeded; oversized local cache was cleared.",error);
+      // An old oversized snapshot may still be occupying the quota. It is only a
+      // cache in Firebase mode, so remove it and retry once with the 3-day payload.
+      try{
+        localStorage.removeItem(LOCAL_KEY);
+        localStorage.setItem(LOCAL_KEY,payload);
+        console.info("[storage-fix] oversized legacy cache replaced with 3-day cache.");
+        return true;
+      }catch(retryError){
+        console.warn("[storage-fix] cloud data is safe; local emergency cache could not be written.",retryError);
         return false;
       }
-
-      // In true offline/local-only mode this cache is the user's persistence layer,
-      // so the quota error must remain visible rather than silently losing a note.
-      throw error;
     }
   };
 
-  // Free space immediately, even if Firebase connection is still racing with this
-  // script or a previous startup already fell back to local mode.
-  compactExistingSnapshot();
+  // The injected patch can run while Firebase login is still starting. Once the
+  // connection becomes active, rewrite the old full snapshot down to 3 days even
+  // if the user does not immediately create/edit a record.
+  [500,1500,4000].forEach(ms=>setTimeout(()=>{
+    if(!firebaseConnected())return;
+    try{localSave()}catch(error){console.warn("[storage-fix] cache compaction failed",error)}
+  },ms));
 
-  // If state is already populated, rewrite once using the same lightweight shape.
-  try{
-    const hasState=(state.sources?.length||state.fragments?.length||state.trash?.length||state.threads?.length||state.projects?.length);
-    if(hasState)localSave();
-  }catch(error){console.warn("[storage-fix] initial lightweight snapshot failed",error)}
-
-  console.info("[storage-fix] lightweight local cache enabled.");
+  console.info(`[storage-fix] Firebase mode local cache limited to ${RETENTION_DAYS} days.`);
 })();
