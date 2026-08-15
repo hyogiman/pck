@@ -6,7 +6,7 @@
    이 패치는 Firestore 원본은 그대로 두고 localStorage에는 가벼운 오프라인
    스냅샷만 남겨 브라우저 quota 초과를 막습니다. */
 const CACHE = "garden-v2";
-const STORAGE_FIX_TAG = '<script src="./storage-fix.js?v=20260815-1"></script>';
+const STORAGE_FIX_TAG = '<script src="./storage-fix.js"></script>';
 const SHELL = ["./", "./index.html", "./storage-fix.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
