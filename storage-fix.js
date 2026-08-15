@@ -1,13 +1,13 @@
 /* Thought Garden storage compatibility patch · 2026-08-15
-   Firestore remains the source of truth. LocalStorage keeps only a lightweight
-   offline snapshot so AI indexes / embeddings cannot exhaust the browser quota. */
+   Firestore remains the source of truth when connected. localStorage keeps only
+   a lightweight offline snapshot so AI indexes / embeddings cannot exhaust the
+   browser quota. User-authored content is preserved in both online/offline mode. */
 (function installThoughtGardenStorageFix(){
   if(typeof localSave!=="function"){
     console.warn("[storage-fix] localSave not found; patch skipped.");
     return;
   }
 
-  const originalLocalSave=localSave;
   const LOCAL_KEY="thoughtGarden_v02";
   const HEAVY_FRAGMENT_FIELDS=new Set(["aiIndex","updatedAtServer"]);
 
@@ -19,13 +19,14 @@
   function leanFragment(fragment){
     const out={...fragment};
     for(const key of Object.keys(out)){
-      // Embeddings are derived server data and can be recreated from Firestore.
+      // AI indexes / vectors are derived data. Firestore can restore them after
+      // reconnecting, while the user's original text, links and attachments stay.
       if(HEAVY_FRAGMENT_FIELDS.has(key)||/embedding/i.test(key))delete out[key];
     }
     return out;
   }
 
-  function leanSnapshot(){
+  function leanSnapshotFromState(){
     return {
       sources:Array.isArray(state.sources)?state.sources:[],
       fragments:(typeof allFragments==="function"?allFragments():[]).map(leanFragment),
@@ -42,31 +43,51 @@
     );
   }
 
-  localSave=function thoughtGardenSafeLocalSave(){
-    // In true local/offline mode, preserve the original behavior: localStorage is
-    // the only source of truth, so a write failure must still surface to the user.
-    if(!firebaseConnected())return originalLocalSave();
-
+  function compactExistingSnapshot(){
     try{
-      localStorage.setItem(LOCAL_KEY,JSON.stringify(leanSnapshot()));
+      const raw=localStorage.getItem(LOCAL_KEY);
+      if(!raw)return;
+      const saved=JSON.parse(raw);
+      if(Array.isArray(saved.fragments))saved.fragments=saved.fragments.map(leanFragment);
+      localStorage.setItem(LOCAL_KEY,JSON.stringify(saved));
+    }catch(error){
+      // Keep an unreadable/unknown snapshot untouched. Future normal saves will
+      // replace it after the app has successfully loaded its state.
+      console.warn("[storage-fix] legacy cache compaction skipped",error);
+    }
+  }
+
+  localSave=function thoughtGardenSafeLocalSave(){
+    try{
+      localStorage.setItem(LOCAL_KEY,JSON.stringify(leanSnapshotFromState()));
       return true;
     }catch(error){
       if(!quotaError(error))throw error;
 
-      // Firestore has already been written before persist() calls localSave().
-      // If an old oversized snapshot is blocking the browser quota, remove only
-      // that derived cache instead of reporting the Firestore write as failed.
-      try{localStorage.removeItem(LOCAL_KEY)}catch(_){}
-      console.warn("[storage-fix] Firestore save succeeded; oversized local cache was cleared.",error);
-      return false;
+      // If Firestore is connected, persist() has already attempted the cloud write
+      // before localSave(). Do not misreport a cloud save as failed because only
+      // the disposable browser cache is full.
+      if(firebaseConnected()){
+        try{localStorage.removeItem(LOCAL_KEY)}catch(_){}
+        console.warn("[storage-fix] Firestore save succeeded; oversized local cache was cleared.",error);
+        return false;
+      }
+
+      // In true offline/local-only mode this cache is the user's persistence layer,
+      // so the quota error must remain visible rather than silently losing a note.
+      throw error;
     }
   };
 
-  // If the page has already finished connecting before this patch executes,
-  // immediately replace any legacy full snapshot with the lightweight version.
-  if(firebaseConnected()){
-    try{localSave()}catch(error){console.warn("[storage-fix] initial cache compaction failed",error)}
-  }
+  // Free space immediately, even if Firebase connection is still racing with this
+  // script or a previous startup already fell back to local mode.
+  compactExistingSnapshot();
 
-  console.info("[storage-fix] lightweight Firestore-backed local cache enabled.");
+  // If state is already populated, rewrite once using the same lightweight shape.
+  try{
+    const hasState=(state.sources?.length||state.fragments?.length||state.trash?.length||state.threads?.length||state.projects?.length);
+    if(hasState)localSave();
+  }catch(error){console.warn("[storage-fix] initial lightweight snapshot failed",error)}
+
+  console.info("[storage-fix] lightweight local cache enabled.");
 })();
