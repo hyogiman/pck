@@ -2,11 +2,13 @@
    앱 껍데기를 캐시해 두어, 네트워크가 없어도 화면이 열리게 합니다.
    기록 데이터 자체의 오프라인 처리는 Firestore 캐시가 담당합니다.
 
-   v3: storage-fix.js의 로컬 저장 정책을 갱신합니다.
-   Firebase 모드에서는 최근 3일의 가벼운 비상용 스냅샷만 localStorage에 남깁니다. */
-const CACHE = "garden-v3";
-const STORAGE_FIX_TAG = '<script src="./storage-fix.js"></script>';
-const SHELL = ["./", "./index.html", "./storage-fix.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+   v4: 최근 3일 로컬 캐시 정책 + 캡처창 별표/분류 UI 패치를 주입합니다. */
+const CACHE = "garden-v4";
+const PATCH_TAGS = [
+  '<script src="./storage-fix.js"></script>',
+  '<script src="./capture-marking.js"></script>'
+];
+const SHELL = ["./", "./index.html", "./storage-fix.js", "./capture-marking.js", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -22,21 +24,23 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-async function injectStorageFix(response){
+async function injectPatches(response){
   if(!response)return response;
   const type=response.headers.get("content-type")||"";
   if(!type.includes("text/html"))return response;
 
-  const html=await response.text();
-  const patched=html.includes("storage-fix.js")
-    ? html
-    : html.replace(/<\/body>/i, `${STORAGE_FIX_TAG}\n</body>`);
+  let html=await response.text();
+  for(const tag of PATCH_TAGS){
+    const match=tag.match(/src="\.\/(.+?)"/);
+    const file=match?.[1]||"";
+    if(file&&!html.includes(file))html=html.replace(/<\/body>/i, `${tag}\n</body>`);
+  }
 
   const headers=new Headers(response.headers);
   headers.delete("content-length");
   headers.delete("content-encoding");
 
-  return new Response(patched,{
+  return new Response(html,{
     status:response.status,
     statusText:response.statusText,
     headers
@@ -54,13 +58,13 @@ self.addEventListener("fetch", (e) => {
     e.respondWith((async()=>{
       try{
         const network=await fetch(req);
-        const patched=await injectStorageFix(network);
+        const patched=await injectPatches(network);
         const copy=patched.clone();
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
         return patched;
       }catch(_){
         const cached=await caches.match(req) || await caches.match("./index.html");
-        return injectStorageFix(cached);
+        return injectPatches(cached);
       }
     })());
     return;
