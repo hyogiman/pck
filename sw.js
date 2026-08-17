@@ -2,8 +2,8 @@
    앱 껍데기를 캐시해 두어, 네트워크가 없어도 화면이 열리게 합니다.
    기록 데이터 자체의 오프라인 처리는 Firestore 캐시가 담당합니다.
 
-   v4: 최근 3일 로컬 캐시 정책 + 캡처창 별표/분류 UI 패치를 주입합니다. */
-const CACHE = "garden-v4";
+   v5: 최근 3일 로컬 캐시 정책 + 캡처창 별표/분류 UI + 안내 문구 정리를 반영합니다. */
+const CACHE = "garden-v5";
 const PATCH_TAGS = [
   '<script src="./storage-fix.js"></script>',
   '<script src="./capture-marking.js"></script>'
