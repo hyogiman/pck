@@ -48,14 +48,20 @@
     row.appendChild(starBtn);
   }
 
-  // 2) 사진·음성·영상 첨부 영역 바로 아래에 기존 Lens 분류를 둔다.
+  // 2) 사진·음성·영상 첨부 영역의 안내 문구는 제거하고,
+  //    바로 아래에 기존 Lens 분류를 둔다.
   const attachmentField=fileInput.closest(".field");
+  if(attachmentField){
+    [...attachmentField.querySelectorAll(".helper")].forEach(helper=>{
+      if(helper.textContent.includes("Firebase Storage가 연결된 경우에만 파일이 실제로 저장됩니다."))helper.remove();
+    });
+  }
   let lensField=document.getElementById("captureMarkingField");
   if(attachmentField&&!lensField){
     lensField=document.createElement("div");
     lensField.className="field capture-marking-field";
     lensField.id="captureMarkingField";
-    lensField.innerHTML=`<label>이 생각을 조금 더 표시해둘까요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span></label><div class="lens-row" id="captureLensRow"></div>`;
+    lensField.innerHTML=`<label>이 생각을 조금 더 표시해둘까요? <span style="color:var(--muted);font-weight:500">(선택)</span></label><div class="lens-row" id="captureLensRow"></div>`;
     attachmentField.insertAdjacentElement("afterend",lensField);
   }
   const lensRow=document.getElementById("captureLensRow");
