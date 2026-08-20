@@ -203,7 +203,7 @@
       <div class="interview-fragment">${esc(excerpt(source))}</div>
       <div class="interview-question">${esc(String(ready.question || ""))}</div>
       <textarea class="textarea" id="bloomingInterviewAnswer" placeholder="지금 떠오르는 만큼만 적어도 괜찮아요." style="margin-top:12px;min-height:120px"></textarea>`;
-    actions.innerHTML = `<button class="btn" id="bloomingInterviewNoAnswer" type="button">지금은 지나갈게요</button><button class="btn primary" id="saveBloomingInterviewAnswer" type="button">🌱 생각으로 남기기</button>`;
+    actions.innerHTML = `<button class="btn" id="bloomingInterviewNoAnswer" type="button">지금은 지나갈게요</button><button class="btn primary" id="saveBloomingInterviewAnswer" type="button" style="white-space:nowrap;font-size:.76rem;padding-left:10px;padding-right:10px">🌱 생각으로 남기기</button>`;
     document.getElementById("bloomingInterviewNoAnswer").onclick = finishBloomingInterview;
     document.getElementById("saveBloomingInterviewAnswer").onclick = saveBloomingInterviewAnswer;
 
