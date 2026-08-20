@@ -7,7 +7,7 @@
   },
   "scripts": {
     "test:ai-v2": "node ai-v2-core.test.js && node blooming-v2-eval-cases.test.js",
-    "verify:ai-v2": "node --check index.js && node --check ai-v2-core.js && node --check ai-v2-entry.js && node --check ai-v2-runtime-entry.js && node --check ai-v2-test-entry.js && node --check blooming-v2.js && node --check blooming-v2-preview.js && node --check blooming-v2-eval-cases.js && node --check blooming-v2-eval-cases.test.js && node --check blooming-v2-synthetic-eval.js && node --check ../blooming-v2-runtime.js && node --check ../ai-v2-test-runtime.js && node --check ../sw.js && node ai-v2-core.test.js && node blooming-v2-eval-cases.test.js"
+    "verify:ai-v2": "node --check index.js && node --check ai-v2-core.js && node --check ai-v2-entry.js && node --check ai-v2-runtime-entry.js && node --check ai-v2-test-entry.js && node --check blooming-v2.js && node --check blooming-v2-preview.js && node --check blooming-v2-lifecycle-test.js && node --check blooming-v2-eval-cases.js && node --check blooming-v2-eval-cases.test.js && node --check blooming-v2-synthetic-eval.js && node --check ../blooming-v2-runtime.js && node --check ../ai-v2-test-runtime.js && node --check ../sw.js && node ai-v2-core.test.js && node blooming-v2-eval-cases.test.js"
   },
   "dependencies": {
     "firebase-admin": "^13.10.0",
