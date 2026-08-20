@@ -97,4 +97,46 @@ const lowValueCheck = validateQuestionCandidate({
 assert.equal(lowValueCheck.ok,false);
 assert.ok(lowValueCheck.reasons.includes("quality-score"));
 
+// Regression from the first real automatic Blooming dry-run: the source says
+// the user delayed decisions and speculates about wanting approval, but it never
+// says they were worried or afraid of another person's reaction. A polished
+// question must not smuggle that inner state into its premise.
+const socialChoiceSource = "그런데 정작 타인과 함께하는 이벤트에서는 결정과 판단을 미뤘던것 같다. 회식메뉴 정하는것도 결국 내가 먹고 싶은걸 밀어부치는게 아닌, 다 같이 먹는 메뉴위주. 왜 그런걸까? 타인에게 인정과 칭찬을 받고 싶어서였을까? 그럴지도 모르지. 고맙다는 말이 듣고 싶어서, 좋은 사람으로 기억되고 싶어서.";
+const assumedWorry = validateQuestionCandidate({
+  question:"회식 메뉴에서 내 의견을 먼저 냈다면, 가장 걱정됐을 반응은 무엇이었을까?",
+  evidence:{primary:"결정과 판단을 미뤘던것 같다"},
+  scores,
+  mode:"question"
+}, {
+  mode:"blooming",
+  sources:{primary:socialChoiceSource}
+});
+assert.equal(assumedWorry.ok,false);
+assert.ok(assumedWorry.reasons.includes("assumed-inner-state"), JSON.stringify(assumedWorry));
+
+// The same vocabulary is allowed when the user actually wrote the state.
+const groundedWorry = validateQuestionCandidate({
+  question:"그때 가장 걱정됐던 반응은 무엇이었나요?",
+  evidence:{primary:"사람들이 싫어할까 걱정됐다"},
+  scores,
+  mode:"question"
+}, {
+  mode:"blooming",
+  sources:{primary:"내 의견을 먼저 말하면 사람들이 싫어할까 걱정됐다. 그래서 그냥 다 같이 먹는 메뉴로 맞췄다."}
+});
+assert.equal(groundedWorry.ok,true, JSON.stringify(groundedWorry));
+
+// nonLeading is now a hard minimum, not a score that can be hidden by other 5s.
+const leadingScoreCheck = validateQuestionCandidate({
+  question:"지금 AI에게서 가장 받고 싶은 것은 답인가요, 아니면 판단해도 된다는 확신인가요?",
+  evidence:{primary:"AI에게 맡기고 싶어지는건"},
+  scores:{...scores, nonLeading:3},
+  mode:"question"
+}, {
+  mode:"blooming",
+  sources:{primary:"AI에게 맡기고 싶어지는건 내가 스스로 판단하면 틀릴 수 있다는 걱정 때문이다."}
+});
+assert.equal(leadingScoreCheck.ok,false);
+assert.ok(leadingScoreCheck.reasons.includes("quality-score"));
+
 console.log("AI_V2_CORE_TEST_PASS");
