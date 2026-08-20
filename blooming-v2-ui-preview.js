@@ -2,14 +2,18 @@
 
 /* Thought Garden · Blooming v2 UI integration preview
  *
- * Localhost-only helper for the private AI v2 lab. It calls the existing
- * read-only auto preview and renders the result through the real Blooming
- * dialog DOM. It never calls prepare/claim/markShown and never saves an answer.
+ * Private AI v2 lab helper. It runs on localhost/127.0.0.1, or when the
+ * explicit ?ai-v2-test=1 flag is present (for same-Wi-Fi mobile layout checks).
+ * It calls only the existing read-only auto preview and renders the result
+ * through the real Blooming dialog DOM. It never calls prepare/claim/markShown
+ * and never saves an answer.
  */
 (() => {
+  const params = new URLSearchParams(location.search);
   const local = ["localhost", "127.0.0.1"].includes(location.hostname);
-  if (!local) {
-    console.warn("Blooming V2 UI preview is localhost-only.");
+  const explicitTest = params.get("ai-v2-test") === "1";
+  if (!local && !explicitTest) {
+    console.warn("Blooming V2 UI preview requires localhost or ?ai-v2-test=1.");
     return;
   }
 
