@@ -80,6 +80,24 @@ function compactIndexForPrompt(rawIndex) {
   return { note: "색인이 길어 일부만 참고", literal: index.literal, innerDynamics: index.innerDynamics, growthEdges: index.growthEdges };
 }
 
+function previewDiagnostics(parsed) {
+  const result = parsed && typeof parsed === "object" ? parsed : {};
+  return {
+    modelDecision: cleanText(result.decision, 40),
+    modelReason: cleanText(result.reason, 700),
+    reopenValue: cleanText(result.reopenValue, 80),
+    reopenReason: cleanText(result.reopenReason, 700),
+    observation: cleanText(result.observation, 1200),
+    candidates: (Array.isArray(result.candidates) ? result.candidates : []).slice(0, 3).map((candidate, index) => ({
+      index,
+      mode: cleanText(candidate?.mode, 80),
+      question: cleanText(candidate?.question, 500),
+      scores: candidate?.scores && typeof candidate.scores === "object" ? candidate.scores : null,
+      evidence: candidate?.evidence && typeof candidate.evidence === "object" ? candidate.evidence : null
+    }))
+  };
+}
+
 async function callStructuredOpenAI({ model, reasoningEffort, systemPrompt, userPayload, schema, schemaName }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
@@ -238,6 +256,7 @@ const bloomingInterviewQuestionV2 = onCall(
       };
     }
 
+    const diagnostics = previewDiagnostics(generated.parsed);
     const selected = selectBestQuestion(generated.parsed, {
       mode: "blooming",
       sources: { primary: thought }
@@ -252,6 +271,7 @@ const bloomingInterviewQuestionV2 = onCall(
         question: null,
         reason: selected.reason,
         rejected: selected.rejected || [],
+        diagnostics,
         model: MODEL_ROUTES.speaking,
         usage: generated.usage
       };
@@ -266,6 +286,7 @@ const bloomingInterviewQuestionV2 = onCall(
       mode: selected.mode,
       scores: selected.scores,
       evidence: selected.evidence,
+      diagnostics,
       model: MODEL_ROUTES.speaking,
       reasoningEffort: MODEL_ROUTES.speakingReasoningEffort,
       usage: generated.usage
