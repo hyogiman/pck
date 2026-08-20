@@ -8,6 +8,13 @@
 (() => {
   "use strict";
 
+  // Quality-lab sessions are dry-runs. Never prepare, claim or count a real
+  // spontaneous Blooming while the user is inspecting model output.
+  if (window.__THOUGHT_GARDEN_AI_V2_TEST__ || new URLSearchParams(location.search).get("ai-v2-test") === "1") {
+    window.__thoughtGardenBloomingV2 = { testMode: true, disabled: true };
+    return;
+  }
+
   const runtime = {
     prepared: null,
     claimed: null,
