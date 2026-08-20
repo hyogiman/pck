@@ -3,10 +3,10 @@
 /**
  * Synthetic Blooming v2 model evaluation.
  *
- * This endpoint never reads or writes the user's Thought Garden. It runs a
- * fixed set of fictional records through the same shared Question Gate and the
- * same Blooming product principles so we can catch obvious model/prompt
- * regressions before using real personal records.
+ * This endpoint never reads or writes the user's Thought Garden. It runs fixed
+ * fictional records through both halves of Blooming:
+ *   1) Terra: should this old thought be reopened, and is there a good question?
+ *   2) Luna: among mixed past records, is there a genuinely worthwhile source?
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
@@ -18,7 +18,7 @@ const {
   questionResultSchema,
   selectBestQuestion
 } = require("./ai-v2-core");
-const { casesForMode } = require("./blooming-v2-eval-cases");
+const { BLOOMING_SYNTHETIC_CASES, casesForMode } = require("./blooming-v2-eval-cases");
 
 function requireNonAnonymousUser(request) {
   const uid = String(request?.auth?.uid || "").trim();
@@ -50,14 +50,60 @@ function normalizeUsage(response) {
   };
 }
 
-function sumUsage(items) {
-  return items.reduce((total, item) => {
-    const usage = item?.usage || {};
-    for (const key of ["inputTokens", "cachedInputTokens", "outputTokens", "reasoningTokens", "totalTokens"]) {
-      total[key] += Number(usage[key] || 0);
-    }
-    return total;
-  }, { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, totalTokens: 0 });
+function emptyUsage() {
+  return { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0, totalTokens: 0 };
+}
+
+function mergeUsage(target, usage) {
+  const out = target || emptyUsage();
+  const src = usage || {};
+  for (const key of Object.keys(out)) out[key] += Number(src[key] || 0);
+  return out;
+}
+
+function sumUsage(items, field = "usage") {
+  return items.reduce((total, item) => mergeUsage(total, item?.[field]), emptyUsage());
+}
+
+async function requestStructured({ model, reasoningEffort, prompt, payload, schema, schemaName, maxOutputTokens, logLabel }) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      input: [
+        { role: "system", content: prompt },
+        { role: "user", content: JSON.stringify(payload) }
+      ],
+      reasoning: { effort: reasoningEffort },
+      text: {
+        verbosity: "low",
+        format: { type: "json_schema", name: schemaName, strict: true, schema }
+      },
+      max_output_tokens: maxOutputTokens
+    })
+  });
+
+  const raw = await response.text();
+  let data = null;
+  try { data = JSON.parse(raw); } catch (_) {}
+  const usage = normalizeUsage(data);
+  if (!response.ok) {
+    logger.error(logLabel || "Blooming synthetic eval OpenAI request failed", {
+      status: response.status,
+      model,
+      message: data?.error?.message || raw.slice(0, 500)
+    });
+    return { ok: false, parsed: null, usage };
+  }
+
+  const text = extractResponseText(data);
+  let parsed = null;
+  try { if (text) parsed = JSON.parse(text); } catch (_) {}
+  return { ok: !!parsed, parsed, usage };
 }
 
 function bloomingEvalPrompt() {
@@ -73,70 +119,65 @@ function bloomingEvalPrompt() {
   ].join("\n");
 }
 
-async function callCase(testCase) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new HttpsError("failed-precondition", "AI 연결 설정을 확인해주세요.");
-
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
+function scoutSchema() {
+  return {
+    type: "object",
+    properties: {
+      decision: { type: "string", enum: ["candidate", "none"] },
+      chosenFragmentId: { type: "string" },
+      reason: { type: "string" },
+      growthEdge: { type: "string" },
+      confidence: { type: "integer", minimum: 0, maximum: 100 }
     },
-    body: JSON.stringify({
-      model: MODEL_ROUTES.speaking,
-      input: [
-        { role: "system", content: bloomingEvalPrompt() },
-        {
-          role: "user",
-          content: JSON.stringify({
-            mode: "blooming-v2-synthetic-eval",
-            thought: testCase.thought,
-            instruction: "이 기록을 시간이 지난 뒤 다시 꺼낼 가치가 있는지 먼저 판단하고, 가치가 있을 때만 질문 후보를 만드세요."
-          })
-        }
-      ],
-      reasoning: { effort: MODEL_ROUTES.speakingReasoningEffort },
-      text: {
-        verbosity: "low",
-        format: {
-          type: "json_schema",
-          name: "thought_garden_blooming_v2_synthetic_eval",
-          strict: true,
-          schema: questionResultSchema("blooming")
-        }
-      },
-      max_output_tokens: 2200
-    })
+    required: ["decision", "chosenFragmentId", "reason", "growthEdge", "confidence"],
+    additionalProperties: false
+  };
+}
+
+function scoutEvalPrompt() {
+  return [
+    "당신은 생각의 텃밭 Blooming Interview의 조용한 후보 선별자다.",
+    "가장 감정적인 글이나 가장 긴 글이 아니라, 시간이 지난 지금 다시 물었을 때 새로운 생각이 자랄 가능성이 높은 기록 하나를 고른다.",
+    "좋은 후보는 아직 닫히지 않은 질문, 선택/욕구/긴장, 관점 변화, 구체화되지 않은 중요한 의미, 당시 결론을 지금 다시 볼 여지가 원문에 있는 글이다.",
+    "단순 사실 기록, 할 일 메모, 그 자체로 충분한 관찰, 이유와 결론이 이미 닫힌 글은 고르지 않는다.",
+    "좋은 후보가 없다면 none이 정답이다. 화면을 채우기 위해 억지로 고르지 않는다.",
+    "growthEdge는 원문에서 아직 쓰이지 않은 탐색 방향만 짧게 적는다. 심리 진단이나 원문 밖의 사실을 만들지 않는다.",
+    "confidence 80 미만이면 원칙적으로 none을 선택한다."
+  ].join("\n");
+}
+
+async function callCase(testCase) {
+  const generated = await requestStructured({
+    model: MODEL_ROUTES.speaking,
+    reasoningEffort: MODEL_ROUTES.speakingReasoningEffort,
+    prompt: bloomingEvalPrompt(),
+    payload: {
+      mode: "blooming-v2-synthetic-eval",
+      thought: testCase.thought,
+      instruction: "이 기록을 시간이 지난 뒤 다시 꺼낼 가치가 있는지 먼저 판단하고, 가치가 있을 때만 질문 후보를 만드세요."
+    },
+    schema: questionResultSchema("blooming"),
+    schemaName: "thought_garden_blooming_v2_synthetic_eval",
+    maxOutputTokens: 2200,
+    logLabel: `Blooming synthetic question eval failed: ${testCase.id}`
   });
 
-  const raw = await response.text();
-  let data = null;
-  try { data = JSON.parse(raw); } catch (_) {}
-  if (!response.ok) {
-    logger.error("Blooming synthetic eval OpenAI request failed", {
-      caseId: testCase.id,
-      status: response.status,
-      message: data?.error?.message || raw.slice(0, 500)
-    });
+  if (!generated.ok) {
     return {
       id: testCase.id,
       label: testCase.label,
       expectedDecision: testCase.expectedDecision,
       actualDecision: "error",
       decisionPass: false,
-      reason: "openai-request-failed",
+      reason: "openai-request-or-parse-failed",
       question: null,
       scores: null,
       evidence: null,
-      usage: normalizeUsage(data)
+      usage: generated.usage
     };
   }
 
-  const text = extractResponseText(data);
-  let parsed = null;
-  try { if (text) parsed = JSON.parse(text); } catch (_) {}
-  const selected = selectBestQuestion(parsed, {
+  const selected = selectBestQuestion(generated.parsed, {
     mode: "blooming",
     sources: { primary: testCase.thought }
   });
@@ -156,7 +197,98 @@ async function callCase(testCase) {
     scores: selected.scores || null,
     evidence: selected.evidence || null,
     rejected: selected.rejected || [],
-    usage: normalizeUsage(data)
+    usage: generated.usage
+  };
+}
+
+function caseById(id) {
+  return BLOOMING_SYNTHETIC_CASES.find((item) => item.id === id);
+}
+
+function scoutScenarios() {
+  const mixedIds = [
+    "silent-meal-log",
+    "silent-task-note",
+    "silent-closed-reasoning",
+    "speak-choice-underneath",
+    "silent-simple-gratitude",
+    "speak-repeated-contradiction"
+  ];
+  const closedIds = [
+    "silent-meal-log",
+    "silent-task-note",
+    "silent-closed-reasoning",
+    "silent-simple-gratitude",
+    "silent-answered-why",
+    "silent-observation-no-gap"
+  ];
+  return [
+    {
+      id: "scout-mixed-pool",
+      label: "좋은 후보가 섞인 기록 묶음",
+      expected: "candidate",
+      allowedIds: ["speak-choice-underneath", "speak-repeated-contradiction"],
+      candidates: mixedIds.map(caseById)
+    },
+    {
+      id: "scout-all-closed",
+      label: "전부 닫힌 기록 묶음",
+      expected: "none",
+      allowedIds: [],
+      candidates: closedIds.map(caseById)
+    }
+  ];
+}
+
+async function callScoutScenario(scenario) {
+  const generated = await requestStructured({
+    model: MODEL_ROUTES.discovery,
+    reasoningEffort: "low",
+    prompt: scoutEvalPrompt(),
+    payload: {
+      mode: "blooming-v2-synthetic-scout-eval",
+      candidates: scenario.candidates.map((item) => ({ id: item.id, thought: item.thought }))
+    },
+    schema: scoutSchema(),
+    schemaName: "thought_garden_blooming_v2_synthetic_scout",
+    maxOutputTokens: 900,
+    logLabel: `Blooming synthetic scout eval failed: ${scenario.id}`
+  });
+
+  if (!generated.ok) {
+    return {
+      id: scenario.id,
+      label: scenario.label,
+      expectedDecision: scenario.expected,
+      actualDecision: "error",
+      chosenFragmentId: "",
+      pass: false,
+      reason: "openai-request-or-parse-failed",
+      growthEdge: "",
+      confidence: 0,
+      usage: generated.usage
+    };
+  }
+
+  const result = generated.parsed || {};
+  const decision = result.decision === "candidate" && Number(result.confidence || 0) >= 80 ? "candidate" : "none";
+  const chosenId = String(result.chosenFragmentId || "");
+  const pass = scenario.expected === "none"
+    ? decision === "none"
+    : decision === "candidate" && scenario.allowedIds.includes(chosenId);
+
+  return {
+    id: scenario.id,
+    label: scenario.label,
+    expectedDecision: scenario.expected,
+    actualDecision: decision,
+    allowedIds: scenario.allowedIds,
+    chosenFragmentId: chosenId,
+    pass,
+    reason: String(result.reason || ""),
+    growthEdge: String(result.growthEdge || ""),
+    confidence: Number(result.confidence || 0),
+    usage: generated.usage
   };
 }
 
@@ -184,10 +316,21 @@ const bloomingInterviewSyntheticEvalV2 = onCall({
   requireNonAnonymousUser(request);
   const mode = String(request.data?.mode || "smoke").toLowerCase() === "full" ? "full" : "smoke";
   const cases = casesForMode(mode);
-  const results = await mapWithConcurrency(cases, 2, callCase);
+
+  const [results, scoutResults] = await Promise.all([
+    mapWithConcurrency(cases, 2, callCase),
+    mapWithConcurrency(scoutScenarios(), 2, callScoutScenario)
+  ]);
+
   const passCount = results.filter((item) => item.decisionPass).length;
   const speakCases = results.filter((item) => item.expectedDecision === "speak");
   const silentCases = results.filter((item) => item.expectedDecision === "silent");
+  const scoutPassCount = scoutResults.filter((item) => item.pass).length;
+  const questionUsage = sumUsage(results);
+  const scoutUsage = sumUsage(scoutResults);
+  const totalUsage = mergeUsage(mergeUsage(emptyUsage(), questionUsage), scoutUsage);
+  const allQuestionDecisionsPassed = passCount === results.length;
+  const allScoutChecksPassed = scoutPassCount === scoutResults.length;
 
   return {
     ok: true,
@@ -196,6 +339,7 @@ const bloomingInterviewSyntheticEvalV2 = onCall({
     version: AI_V2_VERSION,
     questionGateVersion: QUESTION_GATE_VERSION,
     model: MODEL_ROUTES.speaking,
+    discoveryModel: MODEL_ROUTES.discovery,
     reasoningEffort: MODEL_ROUTES.speakingReasoningEffort,
     mode,
     summary: {
@@ -207,10 +351,17 @@ const bloomingInterviewSyntheticEvalV2 = onCall({
       speakTotal: speakCases.length,
       silentPass: silentCases.filter((item) => item.decisionPass).length,
       silentTotal: silentCases.length,
-      allDecisionChecksPassed: passCount === results.length
+      scoutPass: scoutPassCount,
+      scoutTotal: scoutResults.length,
+      allQuestionDecisionChecksPassed: allQuestionDecisionsPassed,
+      allScoutChecksPassed,
+      allDecisionChecksPassed: allQuestionDecisionsPassed && allScoutChecksPassed
     },
-    usage: sumUsage(results),
-    note: "자동 합격은 speak/silent 판단과 Question Gate 통과 여부만 본다. 실제 질문이 답하고 싶을 만큼 좋은지는 사람이 최종 검토해야 한다.",
+    usage: totalUsage,
+    questionUsage,
+    scoutUsage,
+    note: "자동 합격은 speak/silent 판단, Luna 선별 방향, Question Gate 통과 여부를 본다. 실제 질문이 답하고 싶을 만큼 좋은지는 사람이 최종 검토해야 한다.",
+    scoutResults,
     results
   };
 });
