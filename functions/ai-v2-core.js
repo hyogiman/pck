@@ -205,7 +205,7 @@ function questionGenerationPrinciples(mode) {
   } else {
     common.push(
       "Blooming은 질문할 만한 명확한 빈틈이 있을 때만 말한다. 글이 이미 충분히 닫혀 있거나 질문이 억지라면 silent가 정답이다.",
-      "저장 직후 사용자를 붙잡을 만큼 가치 있는 질문인지 엄격하게 판단한다."
+      "시간이 지난 생각을 다시 꺼내는 보람이 있을 만큼, 지금 새 생각을 열 수 있는 질문인지 엄격하게 판단한다."
     );
   }
   return common;
