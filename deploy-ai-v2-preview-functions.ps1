@@ -88,7 +88,8 @@ Write-Host "Hosting 변경: 하지 않음" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "다음 단계:" -ForegroundColor Cyan
-Write-Host "1. 먼저 Synthetic Eval(smoke)로 가상 표준시험을 실행합니다."
-Write-Host "2. 위 Hosting 목록 출력 전체를 ChatGPT에 보내주세요."
-Write-Host "3. 기존 서비스와 충돌하지 않는 모바일 테스트 주소를 정합니다."
-Write-Host "4. 그 주소에서 ?ai-v2-test=1 테스트실을 열어 실제 기록 dry-run을 시작합니다."
+Write-Host "1. 테스트실에서 Synthetic Eval(smoke 6개 + Luna 선별 2개)을 먼저 실행합니다."
+Write-Host "2. 가상 표준시험이 이상하면 실제 개인 기록 테스트로 넘어가지 않습니다."
+Write-Host "3. 위 Hosting 목록 출력 전체를 ChatGPT에 보내주세요."
+Write-Host "4. 기존 서비스와 충돌하지 않는 모바일 테스트 주소를 정합니다."
+Write-Host "5. 그 주소에서 ?ai-v2-test=1 테스트실을 열어 실제 기록 dry-run을 시작합니다."
