@@ -12,9 +12,10 @@ function Fail([string]$Message) {
 
 Write-Host "=== Thought Garden AI v2 시험 배포 준비 ===" -ForegroundColor Cyan
 Write-Host "대상 프로젝트: $ProjectId" -ForegroundColor DarkGray
-Write-Host "배포 대상은 새 테스트 함수 2개뿐입니다." -ForegroundColor Yellow
+Write-Host "배포 대상은 새 테스트 함수 3개뿐입니다." -ForegroundColor Yellow
 Write-Host "  - bloomingInterviewQuestionV2"
 Write-Host "  - bloomingInterviewAutoPreviewV2"
+Write-Host "  - bloomingInterviewSyntheticEvalV2"
 Write-Host "기존 Blooming/정원사/두 생각 사이 함수는 배포 대상으로 지정하지 않습니다." -ForegroundColor Yellow
 Write-Host ""
 
@@ -53,7 +54,7 @@ Write-Host "자동검사 PASS" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "=== 3/4 새 테스트 Functions만 선택 배포 ===" -ForegroundColor Cyan
-$only = "functions:bloomingInterviewQuestionV2,functions:bloomingInterviewAutoPreviewV2"
+$only = "functions:bloomingInterviewQuestionV2,functions:bloomingInterviewAutoPreviewV2,functions:bloomingInterviewSyntheticEvalV2"
 Push-Location $PSScriptRoot
 try {
   & npx --yes firebase-tools@latest deploy --only $only --project $ProjectId
@@ -87,6 +88,7 @@ Write-Host "Hosting 변경: 하지 않음" -ForegroundColor Green
 Write-Host "============================================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "다음 단계:" -ForegroundColor Cyan
-Write-Host "1. 위 Hosting 목록 출력 전체를 ChatGPT에 보내주세요."
-Write-Host "2. 기존 서비스와 충돌하지 않는 모바일 테스트 주소를 정합니다."
-Write-Host "3. 그 주소에서 ?ai-v2-test=1 테스트실을 열어 실제 기록 dry-run을 시작합니다."
+Write-Host "1. 먼저 Synthetic Eval(smoke)로 가상 표준시험을 실행합니다."
+Write-Host "2. 위 Hosting 목록 출력 전체를 ChatGPT에 보내주세요."
+Write-Host "3. 기존 서비스와 충돌하지 않는 모바일 테스트 주소를 정합니다."
+Write-Host "4. 그 주소에서 ?ai-v2-test=1 테스트실을 열어 실제 기록 dry-run을 시작합니다."
