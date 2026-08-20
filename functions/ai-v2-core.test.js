@@ -139,4 +139,51 @@ const leadingScoreCheck = validateQuestionCandidate({
 assert.equal(leadingScoreCheck.ok,false);
 assert.ok(leadingScoreCheck.reasons.includes("quality-score"));
 
+// Regression from Gate v3 full synthetic eval: the user has already asked why,
+// written a plausible cause, and chosen a concrete next action. The model wanted
+// to ask what separated successful and unsuccessful days, but that is optional
+// follow-up evaluation rather than a reason for Blooming to interrupt.
+const answeredWhyWithAction = "왜 요즘 운동을 자꾸 미루는지 생각해봤다. 운동이 싫어서라기보다 퇴근하면 선택할 힘이 남아 있지 않은 것 같다. 그래서 이번 주에는 의욕을 기다리지 않고 귀가하자마자 15분만 걷기로 했다.";
+const afterActionFollowup = {
+  question:"15분 걷기가 된 날과 안 된 날을 가른 건 의욕 말고 무엇이었나요?",
+  evidence:{primary:"퇴근하면 선택할 힘이 남아 있지 않은 것 같다"},
+  scores,
+  mode:"question"
+};
+const answeredWhyResult = selectBestQuestion({
+  decision:"speak",
+  reason:"",
+  observation:"",
+  reopenValue:"worth_reopening",
+  reopenReason:"실행 조건은 더 볼 수 있다.",
+  candidates:[afterActionFollowup]
+}, {
+  mode:"blooming",
+  sources:{primary:answeredWhyWithAction}
+});
+assert.equal(answeredWhyResult.decision,"silent");
+assert.equal(answeredWhyResult.reason,"blooming-source-resolved-with-action");
+
+// Counter-regression: asking why without reaching an explanation + action must
+// remain eligible. The deterministic guard should not silence genuinely open
+// self-inquiry merely because the word '왜' is present.
+const openWhySource = "왜 나는 쉬고 싶다고 하면서 시간이 생기면 또 뭔가를 시작할까. 어제도 아무것도 하지 말자고 해놓고 밤에 새 프로젝트 폴더를 만들었다. 아직 잘 모르겠다.";
+const openWhyResult = selectBestQuestion({
+  decision:"speak",
+  reason:"",
+  observation:"",
+  reopenValue:"worth_reopening",
+  reopenReason:"반복 패턴의 의미가 열려 있다.",
+  candidates:[{
+    question:"밤에 새 프로젝트 폴더를 만들었을 때, 쉬는 것 대신 무엇을 더 하고 싶었나요?",
+    evidence:{primary:"밤에 새 프로젝트 폴더를 만들었다"},
+    scores,
+    mode:"question"
+  }]
+}, {
+  mode:"blooming",
+  sources:{primary:openWhySource}
+});
+assert.equal(openWhyResult.decision,"speak", JSON.stringify(openWhyResult));
+
 console.log("AI_V2_CORE_TEST_PASS");
