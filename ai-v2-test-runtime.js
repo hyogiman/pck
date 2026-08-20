@@ -1,11 +1,13 @@
 /* Thought Garden · AI v2 mobile quality lab
- * Loads only with ?ai-v2-test=1. No test result is written to Firestore.
+ * Loads with ?ai-v2-test=1, or automatically on localhost/127.0.0.1 for the
+ * private development lab. No test result is written to Firestore.
  */
 (() => {
   "use strict";
 
   const params = new URLSearchParams(location.search);
-  if (params.get("ai-v2-test") !== "1") return;
+  const localLab = ["localhost", "127.0.0.1"].includes(location.hostname);
+  if (params.get("ai-v2-test") !== "1" && !localLab) return;
 
   // The spontaneous Blooming runtime checks this before starting. Test mode
   // must never create/claim/show a real Blooming artifact while we are judging
@@ -19,6 +21,7 @@
     clear: "명확성",
     naturalKorean: "자연스러운 한국어",
     insightPotential: "생각 확장 가능성",
+    addsValue: "침묵보다 더할 가치",
     nonLeading: "넘겨짚지 않음",
     relevantNow: "지금 물을 가치"
   };
@@ -104,6 +107,11 @@
   }
 
   function closeLab() {
+    if (localLab) {
+      document.getElementById("aiV2Lab")?.remove();
+      document.getElementById("aiV2TestStyle")?.remove();
+      return;
+    }
     const url = new URL(location.href);
     url.searchParams.delete("ai-v2-test");
     location.href = url.toString();
