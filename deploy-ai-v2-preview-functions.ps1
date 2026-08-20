@@ -19,17 +19,19 @@ Write-Host "  - bloomingInterviewSyntheticEvalV2"
 Write-Host "기존 Blooming/정원사/두 생각 사이 함수는 배포 대상으로 지정하지 않습니다." -ForegroundColor Yellow
 Write-Host ""
 
-$Npm = Get-Command npm -ErrorAction SilentlyContinue
-$Npx = Get-Command npx -ErrorAction SilentlyContinue
-if (-not $Npm -or -not $Npx) {
-  Fail "npm/npx를 찾지 못했습니다. Node.js가 설치된 PC에서 실행해주세요."
+# PowerShell execution policy may block npm.ps1/npx.ps1 on Windows.
+# Use the .cmd launchers explicitly instead of changing the user's policy.
+$NpmCmd = Get-Command npm.cmd -ErrorAction SilentlyContinue
+$NpxCmd = Get-Command npx.cmd -ErrorAction SilentlyContinue
+if (-not $NpmCmd -or -not $NpxCmd) {
+  Fail "npm.cmd/npx.cmd를 찾지 못했습니다. Node.js가 설치된 PC에서 실행해주세요."
 }
 
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "functions\package.json"))) {
   Fail "functions/package.json을 찾지 못했습니다. 저장소 루트에서 실행해주세요."
 }
 
-Write-Host "=== 1/4 브랜치 확인 ===" -ForegroundColor Cyan
+Write-Host "=== 1/5 브랜치 확인 ===" -ForegroundColor Cyan
 $Git = Get-Command git -ErrorAction SilentlyContinue
 if ($Git) {
   $branch = (& git -C $PSScriptRoot branch --show-current 2>$null | Out-String).Trim()
@@ -42,10 +44,21 @@ if ($Git) {
 }
 
 Write-Host ""
-Write-Host "=== 2/4 AI v2 자동검사 ===" -ForegroundColor Cyan
+Write-Host "=== 2/5 Functions 의존성 준비 ===" -ForegroundColor Cyan
 Push-Location (Join-Path $PSScriptRoot "functions")
 try {
-  & npm run verify:ai-v2
+  & $NpmCmd.Source install --package-lock=false --no-audit --no-fund
+  if ($LASTEXITCODE -ne 0) { Fail "Functions 의존성 설치가 실패했습니다. 배포하지 않습니다." }
+} finally {
+  Pop-Location
+}
+Write-Host "Functions 의존성 준비 PASS" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "=== 3/5 AI v2 자동검사 ===" -ForegroundColor Cyan
+Push-Location (Join-Path $PSScriptRoot "functions")
+try {
+  & $NpmCmd.Source run verify:ai-v2
   if ($LASTEXITCODE -ne 0) { Fail "npm run verify:ai-v2가 실패했습니다. 배포하지 않습니다." }
 } finally {
   Pop-Location
@@ -53,11 +66,11 @@ try {
 Write-Host "자동검사 PASS" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "=== 3/4 새 테스트 Functions만 선택 배포 ===" -ForegroundColor Cyan
+Write-Host "=== 4/5 새 테스트 Functions만 선택 배포 ===" -ForegroundColor Cyan
 $only = "functions:bloomingInterviewQuestionV2,functions:bloomingInterviewAutoPreviewV2,functions:bloomingInterviewSyntheticEvalV2"
 Push-Location $PSScriptRoot
 try {
-  & npx --yes firebase-tools@latest deploy --only $only --project $ProjectId
+  & $NpxCmd.Source --yes firebase-tools@latest deploy --only $only --project $ProjectId
   if ($LASTEXITCODE -ne 0) { Fail "Firebase Functions 시험 배포가 실패했습니다." }
 } finally {
   Pop-Location
@@ -65,11 +78,11 @@ try {
 Write-Host "시험 Functions 배포 PASS" -ForegroundColor Green
 
 Write-Host ""
-Write-Host "=== 4/4 Firebase Hosting 상태 읽기 전용 확인 ===" -ForegroundColor Cyan
+Write-Host "=== 5/5 Firebase Hosting 상태 읽기 전용 확인 ===" -ForegroundColor Cyan
 Write-Host "모바일 테스트 주소를 만들기 전에 기존 Hosting site가 있는지 확인합니다." -ForegroundColor DarkGray
 Push-Location $PSScriptRoot
 try {
-  & npx --yes firebase-tools@latest hosting:sites:list --project $ProjectId
+  & $NpxCmd.Source --yes firebase-tools@latest hosting:sites:list --project $ProjectId
   $hostingExit = $LASTEXITCODE
 } finally {
   Pop-Location
