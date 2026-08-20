@@ -12,7 +12,7 @@
  */
 
 const AI_V2_VERSION = 1;
-const QUESTION_GATE_VERSION = 3;
+const QUESTION_GATE_VERSION = 4;
 
 const MODEL_ROUTES = Object.freeze({
   embedding: "text-embedding-3-small",
@@ -123,6 +123,21 @@ function assumedInnerStateHit(question, sourceTexts = []) {
   );
 }
 
+// Blooming has a higher interruption cost than an ordinary chat. When the user
+// has already investigated their own "why", written a plausible explanation,
+// and committed to a concrete next action, a later effectiveness check is not a
+// reason to reopen the old note. This guard is deliberately conjunctive so an
+// unresolved "why" without an action remains eligible.
+function resolvedReflectionWithActionHit(source) {
+  const text = cleanText(source, 30000);
+  if (!text) return false;
+  const investigated = /왜.{0,120}(생각해봤|생각해 보|생각했|돌아봤|돌아보|살펴봤|살펴보)/s.test(text)
+    || /(이유|원인).{0,80}(생각해봤|생각해 보|생각했|정리했|알게 됐|알게 되었)/s.test(text);
+  const explanation = /(라기보다|때문|탓|것 같다|것같다|인 듯|인듯|라고 생각)/.test(text);
+  const action = /(그래서|그러므로|이번 주|이번에는|앞으로).{0,160}(기로 했다|기로 했|해보기로|해 보기로|하려고 한다|하려고 했다|하겠다|해보겠다|해 보겠다|할 생각이다)/s.test(text);
+  return investigated && explanation && action;
+}
+
 function scorePass(scores) {
   const s = normalizeScores(scores);
   if (s.grounded < 4 || s.naturalKorean < 4 || s.insightPotential < 4 || s.addsValue < 4 || s.nonLeading < 4) return false;
@@ -181,6 +196,16 @@ function selectBestQuestion(result, options = {}) {
   // when the source itself contains a meaningful unresolved edge. A question can
   // be grammatical and grounded yet still be worse than silence for a closed note.
   if (mode === "blooming") {
+    const primarySource = cleanText(options?.sources?.primary, 30000);
+    if (resolvedReflectionWithActionHit(primarySource)) {
+      return {
+        decision: "silent",
+        reason: "blooming-source-resolved-with-action",
+        reopenValue: "deterministic-closed",
+        reopenReason: "The source already contains self-inquiry, an explanation, and a concrete next action."
+      };
+    }
+
     const reopenValue = cleanText(result.reopenValue, 80);
     if (reopenValue !== "worth_reopening") {
       return {
@@ -255,6 +280,7 @@ function questionGenerationPrinciples(mode) {
     common.push(
       "Blooming은 질문을 만들기 전에 reopenValue를 먼저 판정한다. 값은 worth_reopening, already_closed, too_thin 중 하나다.",
       "already_closed는 선택·이유·감정·결론이 이미 충분히 적혔거나, 원인 탐색과 다음 행동까지 이미 적혔거나, 관찰의 의미가 그 자체로 자연스럽게 닫힌 경우다.",
+      "사용자가 스스로 '왜'를 탐색하고 원인 또는 가설을 적은 뒤 '그래서 … 하기로 했다'처럼 구체적 다음 행동까지 정했다면 already_closed다. 그 행동이 실제로 성공했는지, 성공/실패를 가른 조건이 무엇인지 묻는 사후 평가 질문은 Blooming이 끼어들 이유가 아니다.",
       "too_thin은 단순 사실·할 일·짧은 상태 기록처럼 다시 꺼내도 새로운 생각이 자랄 근거가 부족한 경우다.",
       "worth_reopening은 원문에 중요한 미해결 선택 기준, 반복 패턴의 아직 열린 의미, 욕구와 비용, 관점 변화, 구체적 사건의 아직 정리되지 않은 핵심이 실제로 남아 있는 경우에만 선택한다.",
       "단지 더 물어볼 수 있다는 사실은 worth_reopening의 근거가 아니다. 이미 닫힌 글 뒤의 감정 크기, 가장 망설인 순간, 추가 장면 같은 선택적 호기심은 Blooming이 끼어들 이유가 아니다.",
