@@ -96,6 +96,7 @@
       .aiv2-score{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;background:#f3f1e8;border-radius:10px;font-size:.74rem}.aiv2-score b{color:#375f47}
       .aiv2-meta{font-size:.74rem;line-height:1.55;color:#686b61;background:#f7f5ef;border-radius:11px;padding:10px 11px;white-space:pre-wrap}
       .aiv2-candidates{display:grid;gap:7px}.aiv2-candidate{border-left:3px solid #d3e2d5;padding:8px 10px;background:#f7f5ef;font-size:.75rem;line-height:1.5}.aiv2-candidate strong{display:block;margin-bottom:3px}
+      .aiv2-evals{display:grid;gap:9px;margin-top:10px}.aiv2-eval{border:1px solid #e3dfd0;border-radius:12px;padding:11px;background:#f7f5ef;font-size:.75rem;line-height:1.5}.aiv2-eval.pass{border-color:#bfd4c3;background:#edf5ed}.aiv2-eval.fail{border-color:#e8c7c2;background:#fbefed}.aiv2-eval-head{display:flex;justify-content:space-between;gap:8px;font-weight:800;margin-bottom:5px}.aiv2-eval-q{margin-top:7px;padding:8px 9px;border-radius:9px;background:#fff;font-family:var(--serif,serif);font-size:.82rem;line-height:1.55}
       .aiv2-raw{margin-top:12px}.aiv2-raw summary{font-size:.75rem;color:#777b70;cursor:pointer}.aiv2-raw pre{font-size:.68rem;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;background:#22251f;color:#f1f0e9;border-radius:12px;padding:12px;overflow:auto}
       @media(max-width:540px){.aiv2-actions,.aiv2-grid{grid-template-columns:1fr}.aiv2-head{align-items:center}}
     `;
@@ -116,9 +117,14 @@
     root.innerHTML = `
       <main class="aiv2-wrap">
         <div class="aiv2-head">
-          <div><div class="aiv2-kicker">THOUGHT GARDEN · PRIVATE TEST LAB</div><h1>🌱 AI v2 질문 품질 테스트</h1><p>실제 기록을 읽지만 테스트 결과는 저장하지 않습니다.</p></div>
+          <div><div class="aiv2-kicker">THOUGHT GARDEN · PRIVATE TEST LAB</div><h1>🌱 AI v2 질문 품질 테스트</h1><p>실제 기록을 읽는 시험도 있지만 테스트 결과는 저장하지 않습니다.</p></div>
           <button class="aiv2-close" id="aiV2Close" type="button">테스트 종료</button>
         </div>
+        <section class="aiv2-card">
+          <h2>0. 가상 표준시험</h2>
+          <p class="aiv2-help">실제 내 기록을 보기 전에, 미리 만든 가상 기록으로 “말해야 할 때와 침묵해야 할 때”를 제대로 구분하는지 시험합니다. 저장되는 데이터는 없습니다.</p>
+          <div class="aiv2-actions"><button class="aiv2-btn primary" id="aiV2SyntheticSmoke" type="button">빠른 표준시험 6개</button><button class="aiv2-btn" id="aiV2SyntheticFull" type="button">전체 표준시험 12개</button></div>
+        </section>
         <section class="aiv2-card">
           <h2>1. 특정 생각으로 질문 시험</h2>
           <p class="aiv2-help">내가 직접 기록 하나를 고릅니다. Terra가 질문할 가치가 있는지 판단하고, Question Gate를 통과한 경우에만 질문을 보여줍니다.</p>
@@ -142,6 +148,8 @@
     document.getElementById("aiV2FragmentSelect").onchange = renderSelectedSource;
     document.getElementById("aiV2ManualRun").onclick = runManual;
     document.getElementById("aiV2AutoRun").onclick = runAuto;
+    document.getElementById("aiV2SyntheticSmoke").onclick = () => runSynthetic("smoke");
+    document.getElementById("aiV2SyntheticFull").onclick = () => runSynthetic("full");
     renderFragmentSelect();
   }
 
@@ -220,6 +228,44 @@
       ${kind === "auto" ? candidatesHtml(data?.candidates) : ""}
       <details class="aiv2-raw"><summary>원본 테스트 결과 JSON 보기</summary><pre>${e(JSON.stringify(data, null, 2))}</pre></details>`;
     document.getElementById("aiV2ResultCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderSyntheticResult(data) {
+    const box = document.getElementById("aiV2Result");
+    if (!box) return;
+    const summary = data?.summary || {};
+    const allPass = !!summary.allDecisionChecksPassed;
+    const resultRows = Array.isArray(data?.results) ? data.results : [];
+    const usage = usageText(data);
+    box.innerHTML = `
+      <div class="aiv2-status ${allPass ? "good" : "bad"}"><strong>${allPass ? "✅ 표준 판단시험 통과" : "⚠️ 표준 판단시험에서 실패 사례가 있음"}</strong><br>${e(summary.pass ?? 0)} / ${e(summary.total ?? 0)} 통과 · 말해야 할 사례 ${e(summary.speakPass ?? 0)}/${e(summary.speakTotal ?? 0)} · 침묵해야 할 사례 ${e(summary.silentPass ?? 0)}/${e(summary.silentTotal ?? 0)}</div>
+      <div class="aiv2-label">가상 사례별 결과</div>
+      <div class="aiv2-evals">${resultRows.map((row) => `<div class="aiv2-eval ${row.decisionPass ? "pass" : "fail"}"><div class="aiv2-eval-head"><span>${row.decisionPass ? "PASS" : "FAIL"} · ${e(row.label || row.id)}</span><span>${e(row.expectedDecision)} → ${e(row.actualDecision)}</span></div><div>${e(row.thought || "")}</div>${row.question ? `<div class="aiv2-eval-q">${e(row.question)}</div>` : ""}<div style="margin-top:6px;color:#777b70">기대 이유: ${e(row.whyExpected || "-")}</div></div>`).join("")}</div>
+      ${usage ? `<div class="aiv2-label">전체 토큰 사용량</div><div class="aiv2-meta">${e(usage)}</div>` : ""}
+      <div class="aiv2-meta" style="margin-top:10px">${e(data?.note || "자동 판정이 통과해도 실제 질문 문장은 사람이 최종 검토합니다.")}</div>
+      <details class="aiv2-raw"><summary>원본 표준시험 JSON 보기</summary><pre>${e(JSON.stringify(data, null, 2))}</pre></details>`;
+    document.getElementById("aiV2ResultCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function runSynthetic(mode) {
+    const smokeButton = document.getElementById("aiV2SyntheticSmoke");
+    const fullButton = document.getElementById("aiV2SyntheticFull");
+    const activeButton = mode === "full" ? fullButton : smokeButton;
+    setBusy(activeButton, true, mode === "full" ? "12개 검사 중…" : "6개 검사 중…");
+    if (smokeButton !== activeButton) smokeButton.disabled = true;
+    if (fullButton !== activeButton) fullButton.disabled = true;
+    document.getElementById("aiV2Result").innerHTML = `<div class="aiv2-status">가상 기록으로 Blooming이 말할 때와 침묵할 때를 구분하는지 검사 중이에요. 실제 텃밭 기록은 읽지 않습니다.</div>`;
+    try {
+      const data = await callFn("bloomingInterviewSyntheticEvalV2", { mode });
+      renderSyntheticResult(data);
+    } catch (error) {
+      console.error(error);
+      document.getElementById("aiV2Result").innerHTML = `<div class="aiv2-status bad">가상 표준시험 호출에 실패했어요.<br>${e(error?.message || error)}</div>`;
+    } finally {
+      setBusy(activeButton, false, "");
+      if (smokeButton !== activeButton) smokeButton.disabled = false;
+      if (fullButton !== activeButton) fullButton.disabled = false;
+    }
   }
 
   async function runManual() {
