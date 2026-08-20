@@ -49,7 +49,7 @@ function publicReady(ready) {
 const bloomingInterviewLifecycleTestV2 = onCall({
   region: "us-central1",
   timeoutSeconds: 30,
-  memory: "128MiB",
+  memory: "256MiB",
   maxInstances: 3
 }, async (request) => {
   const uid = requireUid(request);
