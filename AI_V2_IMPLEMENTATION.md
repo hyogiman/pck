@@ -90,6 +90,19 @@ It shows the older thought and the already-prepared question directly. There is 
 
 If the user answers, the existing Blooming answer path remains useful: the answer becomes a new Fragment connected to the source via `continuedFrom`. If the user passes, the shown question is not immediately repeated.
 
+### Synthetic evaluation before personal-record testing
+
+Before Blooming v2 is tested against the user's real Thought Garden, it must pass a fixed fictional evaluation set stored in code.
+
+- 12 fictional single-record cases: 6 should stay silent, 6 should be worth reopening.
+- Smoke mode runs a balanced 6-case subset first.
+- The eval checks Terra's `speak` / `silent` decision plus the shared Question Gate.
+- Two Luna scout scenarios are also tested:
+  1. a mixed pool where worthwhile records are present — Luna must select one of the allowed open candidates;
+  2. an all-closed pool — Luna should return `none` rather than forcing a candidate.
+- Synthetic eval never reads or writes personal Thought Garden data.
+- Automated pass/fail does **not** replace human review of the final Korean question. A question can pass structural gates and still feel dull or awkward; that remains a release blocker.
+
 ## Between Thoughts v2
 
 - The purpose is not merely to report a similarity.
