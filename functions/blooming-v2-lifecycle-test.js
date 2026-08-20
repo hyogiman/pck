@@ -6,7 +6,7 @@
  * This callable intentionally does NOT touch the production
  * users/{uid}/aiArtifacts/blooming-v2 document and does not call OpenAI.
  * It exercises the transaction semantics on a disposable test document and
- * deletes that document in a finally block.
+ * deletes that document before returning.
  */
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getApps, initializeApp } = require("firebase-admin/app");
@@ -55,8 +55,10 @@ const bloomingInterviewLifecycleTestV2 = onCall({
   const uid = requireUid(request);
   const ref = testRef(uid);
   const startedAt = Date.now();
+  let response = null;
   let cleanup = "not-run";
 
+  // Remove any residue from an interrupted earlier run before starting.
   await ref.delete().catch(() => {});
 
   try {
@@ -170,10 +172,6 @@ const bloomingInterviewLifecycleTestV2 = onCall({
     const finalSnap = await ref.get();
     const finalState = finalSnap.data() || {};
     const finalHistory = bloomHelpers.normalizeHistory(finalState.shownHistory);
-    const finalPassed = finalState.ready == null
-      && finalHistory.length === 1
-      && finalHistory[0].artifactId === artifactId
-      && Date.parse(String(finalState.nextPrepareAfter || "")) > shownAt;
 
     const checks = {
       prepareReady: preparePassed,
@@ -186,7 +184,7 @@ const bloomingInterviewLifecycleTestV2 = onCall({
       cooldownRecorded: Date.parse(String(finalState.nextPrepareAfter || "")) > shownAt
     };
 
-    return {
+    response = {
       ok: true,
       dryRun: true,
       isolatedFirestoreWrite: true,
@@ -208,19 +206,19 @@ const bloomingInterviewLifecycleTestV2 = onCall({
           nextPrepareAfter: finalState.nextPrepareAfter || ""
         }
       },
-      note: "AI 호출 없이 상태 전이만 검사하며 production blooming-v2 문서는 건드리지 않습니다. 테스트 문서는 응답 후 finally에서 삭제됩니다."
+      note: "AI 호출 없이 상태 전이만 검사하며 production blooming-v2 문서는 건드리지 않습니다."
     };
   } finally {
     try {
       await ref.delete();
-      cleanup = "deleted";
+      const cleanupSnap = await ref.get();
+      cleanup = cleanupSnap.exists ? "delete-failed" : "deleted";
     } catch (_) {
       cleanup = "delete-failed";
     }
-    // cleanup is intentionally not returned because return is constructed before
-    // finally runs; successful deletion is independently verified by a rerun.
-    void cleanup;
   }
+
+  return { ...response, cleanup, allPassed: !!response?.allPassed && cleanup === "deleted" };
 });
 
 module.exports = { bloomingInterviewLifecycleTestV2 };
