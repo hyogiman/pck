@@ -446,7 +446,7 @@ const bloomingInterviewPrepareV2 = onCall({
   }
 });
 
-const bloomingInterviewClaimV2 = onCall({ region: "us-central1", timeoutSeconds: 15, memory: "128MiB" }, async (request) => {
+const bloomingInterviewClaimV2 = onCall({ region: "us-central1", timeoutSeconds: 15, memory: "256MiB" }, async (request) => {
   const uid = requireUid(request);
   const artifactId = safeId(request.data?.artifactId, "Blooming");
   const ref = artifactRef(uid);
@@ -464,7 +464,7 @@ const bloomingInterviewClaimV2 = onCall({ region: "us-central1", timeoutSeconds:
   });
 });
 
-const bloomingInterviewMarkShownV2 = onCall({ region: "us-central1", timeoutSeconds: 15, memory: "128MiB" }, async (request) => {
+const bloomingInterviewMarkShownV2 = onCall({ region: "us-central1", timeoutSeconds: 15, memory: "256MiB" }, async (request) => {
   const uid = requireUid(request);
   const artifactId = safeId(request.data?.artifactId, "Blooming");
   const claimToken = safeId(request.data?.claimToken, "예약");
