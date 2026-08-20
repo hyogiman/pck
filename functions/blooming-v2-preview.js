@@ -160,6 +160,8 @@ function finalPrompt() {
     "예전에 남겨둔 생각을 텃밭이 기억했다가 다시 꺼내 대화를 이어가는 순간이다.",
     ...questionGenerationPrinciples("blooming"),
     "원문과 growthEdge를 읽되 growthEdge 역시 참고 가설일 뿐이다.",
+    "context, externalText, aiIndexReference, selectedGrowthEdge, scoutReason은 탐색 방향을 정하는 참고자료일 뿐이며 질문의 직접 근거를 대신할 수 없다.",
+    "각 후보의 evidence.primary에는 반드시 user payload의 thought 필드에 실제로 존재하는 연속된 원문 구절을 짧게 그대로 복사한다. context, aiIndex, growthEdge, scoutReason의 문장이나 그것을 요약·의역한 문장을 evidence로 쓰면 안 된다.",
     "사용자가 원문을 다시 읽었을 때 왜 이 질문이 나왔는지 자연스럽게 이해할 수 있어야 한다.",
     "과거 기록을 다시 꺼낸 보람이 있어야 한다. 요약시키거나 단순히 '왜 그렇게 생각했나요'라고 되묻지 않는다.",
     "최대 3개의 서로 다른 질문 후보를 만들고, 충분히 좋은 질문이 없으면 silent를 선택한다."
@@ -191,6 +193,24 @@ function candidatePayload(fragment) {
     externalText: cleanText(fragment.externalText, 600) || null,
     starred: !!fragment.starred,
     aiIndex: compactIndex(fragment.aiIndex)
+  };
+}
+
+function finalDiagnostics(parsed) {
+  const source = parsed && typeof parsed === "object" ? parsed : {};
+  return {
+    modelDecision: cleanText(source.decision, 80),
+    modelReason: cleanText(source.reason, 1000),
+    reopenValue: cleanText(source.reopenValue, 80),
+    reopenReason: cleanText(source.reopenReason, 1000),
+    observation: cleanText(source.observation, 1400),
+    candidates: (Array.isArray(source.candidates) ? source.candidates : []).slice(0, 3).map((candidate, index) => ({
+      index,
+      mode: cleanText(candidate?.mode, 100),
+      question: cleanText(candidate?.question, 500),
+      scores: candidate?.scores || null,
+      evidence: candidate?.evidence || null
+    }))
   };
 }
 
@@ -310,6 +330,7 @@ const bloomingInterviewAutoPreviewV2 = onCall({
     scores: selected.scores || null,
     evidence: selected.evidence || null,
     rejected: selected.rejected || [],
+    diagnostics: finalDiagnostics(final.parsed),
     model: MODEL_ROUTES.speaking,
     reasoningEffort: MODEL_ROUTES.speakingReasoningEffort,
     candidates: candidateSummary,
