@@ -259,7 +259,7 @@ async function callCase(testCase) {
     },
     schema: judgeSchema(),
     schemaName: "thought_garden_between_v2_synthetic_pair_judge",
-    maxOutputTokens: 2200,
+    maxOutputTokens: 3200,
     logLabel: `Between synthetic pair judge failed: ${testCase.id}`
   });
 
