@@ -195,7 +195,7 @@ async function callCase(testCase) {
     },
     schema: betweenQuestionResultSchema(),
     schemaName: "thought_garden_between_v2_synthetic_generator",
-    maxOutputTokens: 2600,
+    maxOutputTokens: 4200,
     logLabel: `Between synthetic generation failed: ${testCase.id}`
   });
 
@@ -257,7 +257,7 @@ async function callCase(testCase) {
     },
     schema: judgeSchema(),
     schemaName: "thought_garden_between_v2_synthetic_pair_judge",
-    maxOutputTokens: 1500,
+    maxOutputTokens: 2200,
     logLabel: `Between synthetic pair judge failed: ${testCase.id}`
   });
 
@@ -324,13 +324,19 @@ async function mapWithConcurrency(items, limit, worker) {
 const betweenThoughtsSyntheticEvalV2 = onCall({
   region: "us-central1",
   secrets: ["OPENAI_API_KEY"],
-  timeoutSeconds: 240,
+  timeoutSeconds: 540,
   memory: "256MiB",
   maxInstances: 2
 }, async (request) => {
   requireNonAnonymousUser(request);
-  const mode = String(request.data?.mode || "smoke").toLowerCase() === "full" ? "full" : "smoke";
-  const cases = betweenCasesForMode(mode);
+  const requestedCaseId = String(request.data?.caseId || "").trim();
+  const requestedMode = String(request.data?.mode || "smoke").toLowerCase() === "full" ? "full" : "smoke";
+  const sourceCases = requestedCaseId ? betweenCasesForMode("full") : betweenCasesForMode(requestedMode);
+  const cases = requestedCaseId ? sourceCases.filter((item) => item.id === requestedCaseId) : sourceCases;
+  if (requestedCaseId && !cases.length) {
+    throw new HttpsError("invalid-argument", "알 수 없는 Between v2 synthetic caseId입니다.");
+  }
+  const mode = requestedCaseId ? "focus" : requestedMode;
   const results = await mapWithConcurrency(cases, 2, callCase);
 
   const pass = results.filter((row) => row.decisionPass).length;
@@ -351,6 +357,7 @@ const betweenThoughtsSyntheticEvalV2 = onCall({
     judgeModel: MODEL_ROUTES.discovery,
     reasoningEffort: MODEL_ROUTES.speakingReasoningEffort,
     mode,
+    caseId: requestedCaseId || null,
     summary: {
       total: results.length,
       pass,
