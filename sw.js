@@ -2,13 +2,16 @@
    앱 껍데기를 캐시해 두어, 네트워크가 없어도 화면이 열리게 합니다.
    기록 데이터 자체의 오프라인 처리는 Firestore 캐시가 담당합니다.
 
-   v6: 최근 3일 로컬 캐시 정책 + 캡처창 UI 패치를 유지하면서,
+   v8: 기존 저장/캡처 패치 + AI v2 테스트실 + Blooming v2 런타임.
    패치 JS는 버전 URL로 불러오고 새 SW 활성화 시 열린 앱을 한 번 새로고침합니다. */
-const CACHE = "garden-v6";
-const PATCH_VERSION = "20260817-1229";
+const CACHE = "garden-v8";
+const PATCH_VERSION = "20260820-1635-ai-v2-lab";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
-  `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`
+  `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
+  // Test runtime loads first so ?ai-v2-test=1 can suppress spontaneous Blooming.
+  `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
+  `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
 const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
 
@@ -40,7 +43,7 @@ async function injectPatches(response){
 
   let html=await response.text();
   // 예전 주입 태그가 응답/캐시에 남아 있어도 제거한 뒤 현재 버전만 넣는다.
-  html=html.replace(/\s*<script src="\.\/(?:storage-fix|capture-marking)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+  html=html.replace(/\s*<script src="\.\/(?:storage-fix|capture-marking|ai-v2-test-runtime|blooming-v2-runtime)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
   html=html.replace(/<\/body>/i, `${PATCH_TAGS.join("\n")}\n</body>`);
 
   const headers=new Headers(response.headers);
@@ -61,7 +64,7 @@ self.addEventListener("fetch", (e) => {
   if(url.origin!==self.location.origin)return;
 
   // 패치 파일은 항상 네트워크 우선. 실패할 때만 현재 SW 캐시를 사용한다.
-  if(url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")){
+  if(url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")){
     e.respondWith((async()=>{
       try{
         const fresh=await fetch(req,{cache:"no-store"});

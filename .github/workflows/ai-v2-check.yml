@@ -1,0 +1,33 @@
+name: Thought Garden AI v2 checks
+
+on:
+  pull_request:
+    paths:
+      - "functions/**"
+      - "blooming-v2-runtime.js"
+      - "ai-v2-test-runtime.js"
+      - "sw.js"
+      - ".github/workflows/ai-v2-check.yml"
+  push:
+    branches:
+      - "ai-v2-phase1-foundation"
+    paths:
+      - "functions/**"
+      - "blooming-v2-runtime.js"
+      - "ai-v2-test-runtime.js"
+      - "sw.js"
+      - ".github/workflows/ai-v2-check.yml"
+
+jobs:
+  ai-v2-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Use Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify AI v2 foundation and browser runtimes
+        working-directory: functions
+        run: npm run verify:ai-v2
