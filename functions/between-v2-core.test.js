@@ -141,6 +141,27 @@ assert.equal(selected.decision, "speak");
 assert.equal(selected.selectedIndex, 1);
 assert.equal(selected.pairCheck.pairNecessity, 5);
 
+// When generator totals tie, the stronger independent judge assessment should
+// decide the final ranking instead of being used as a veto only.
+const tiedGeneratorCandidates = [
+  { ...good, question: "쉬고 싶은 마음과 만드는 시간을 함께 놓으면, 지금 필요한 휴식은 어떤 모습일까요?" },
+  { ...good, question: "아무것도 하지 않는 쉼과 만들 때 느끼는 삶의 감각 사이에서, 지금 필요한 휴식은 어떤 모습일까요?" }
+];
+const weakerJudge = { ...judgePass, pairNecessity: 4, thirdThoughtPotential: 4, reason: "둘 다 필요하지만 연결 강도는 보통 이상이다." };
+const strongerJudge = { ...judgePass, pairNecessity: 5, thirdThoughtPotential: 5, reason: "두 기록의 관계가 질문의 중심을 직접 만든다." };
+const judgeRanked = selectBestBetweenQuestion({
+  decision: "speak",
+  reason: "",
+  observation: "",
+  candidates: tiedGeneratorCandidates
+}, {
+  sources,
+  pairJudges: [weakerJudge, strongerJudge]
+});
+assert.equal(judgeRanked.decision, "speak");
+assert.equal(judgeRanked.selectedIndex, 1);
+assert.equal(judgeRanked.pairJudge.pairNecessity, 5);
+
 const allRejected = selectBestBetweenQuestion({
   decision: "speak",
   reason: "",
