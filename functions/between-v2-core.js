@@ -104,7 +104,14 @@ function validateBetweenCandidate(candidate, sources, pairJudge = null) {
 function scoreTotal(validation) {
   const questionTotal = Object.values(validation?.scores || {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const pair = validation?.pairCheck || {};
-  return questionTotal + (Number(pair.pairNecessity) || 0) + (Number(pair.thirdThoughtPotential) || 0);
+  const judge = validation?.pairJudge || null;
+  const generatorPairTotal = (Number(pair.pairNecessity) || 0) + (Number(pair.thirdThoughtPotential) || 0);
+  const judgePairTotal = judge
+    ? (Number(judge.pairNecessity) || 0) + (Number(judge.thirdThoughtPotential) || 0)
+    : 0;
+  // The independent ablation judge is not only a veto. Once candidates pass,
+  // its pair-strength assessment should also help choose the strongest one.
+  return questionTotal + generatorPairTotal + judgePairTotal;
 }
 
 function selectBestBetweenQuestion(result, { sources, pairJudges } = {}) {
