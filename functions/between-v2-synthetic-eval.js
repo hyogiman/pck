@@ -210,6 +210,7 @@ async function callCase(testCase) {
   }
 
   const sources = { a: testCase.a, b: testCase.b };
+  const generatedCandidates = Array.isArray(generation.parsed?.candidates) ? generation.parsed.candidates.slice(0, 3) : [];
   const pre = selectBestBetweenQuestion(generation.parsed, { sources });
   if (pre.decision !== "speak") {
     const actualDecision = "silent";
@@ -229,12 +230,13 @@ async function callCase(testCase) {
       pairCheck: null,
       pairJudge: null,
       rejected: pre.rejected || [],
+      generatorCandidates: generatedCandidates,
       generationUsage: generation.usage,
       judgeUsage: emptyUsage()
     };
   }
 
-  const candidates = Array.isArray(generation.parsed?.candidates) ? generation.parsed.candidates.slice(0, 3) : [];
+  const candidates = generatedCandidates;
   const judge = await requestStructured({
     model: MODEL_ROUTES.discovery,
     reasoningEffort: "low",
