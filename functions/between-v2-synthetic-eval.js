@@ -158,8 +158,11 @@ function judgeSchema() {
 function judgePrompt() {
   return [
     "당신은 Between Thoughts의 독립적인 Pair Necessity 심사자다. 질문을 새로 쓰지 말고 주어진 후보만 엄격하게 심사한다.",
+    "평가 대상은 후보가 두 원문에서 영감을 받았는지가 아니라, 최종 질문의 의미 중심이 두 원문을 실제로 필요로 하는지다.",
     "각 후보마다 먼저 B를 완전히 가리고 A와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromAAlone=true다.",
     "그다음 A를 완전히 가리고 B와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromBAlone=true다.",
+    "중요: 다른 기록이 질문을 떠올리는 배경 대비를 제공했더라도, 그 기록의 정보가 질문의 핵심 관계·긴장·기준에 실질적으로 남아 있지 않으면 그 기록은 장식이다. 예를 들어 B만으로 '여럿이 있을 때 언제 내 의견을 먼저 말하는가'를 자연스럽게 물을 수 있다면, A의 혼자일 때 기록이 배경에 있었더라도 worksFromBAlone=true다.",
+    "질문 문장에서 한쪽 출처를 지워도 핵심 질문이 거의 그대로 남는다면 그 출처 없이도 성립하는 것으로 판정한다. 단어가 직접 인용되지 않았더라도 의미 관계가 실제로 필요하면 둘 다 필요한 것으로 볼 수 있다.",
     "둘 중 하나라도 true라면 원칙적으로 requiresBoth=false다. 두 글의 단어를 질문에 같이 넣었다는 이유만으로 둘 다 필요한 것은 아니다.",
     "createsThirdThought=true는 질문이 A의 반복이나 B의 반복이 아니라, 두 기록의 관계에서만 보이는 새 기준·긴장·변화·통합을 열 때만 허용한다.",
     "중요: 질문이 두 기록을 모두 필요로 하게 만들기 위해 원문에 없는 새 목표·의무·관리 과제를 발명했다면 createsThirdThought=false로 판정한다. 예: 한 감정이 다른 감정을 바꾸지 않게 해야 한다, 둘을 구분해둘 필요가 있다, 한쪽을 지켜야 한다, B를 A의 해결책이나 기준으로 써야 한다는 전제를 사용자가 말하지 않았는데 만들어낸 경우다. 이런 후보는 worksFromAAlone/worksFromBAlone이 둘 다 false여도 pairNecessity와 thirdThoughtPotential을 2 이하로 준다.",
@@ -239,7 +242,7 @@ async function callCase(testCase) {
   const candidates = generatedCandidates;
   const judge = await requestStructured({
     model: MODEL_ROUTES.discovery,
-    reasoningEffort: "low",
+    reasoningEffort: "medium",
     prompt: judgePrompt(),
     payload: {
       mode: "between-v2-synthetic-pair-ablation",
