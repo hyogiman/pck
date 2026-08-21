@@ -162,6 +162,7 @@ function judgePrompt() {
     "그다음 A를 완전히 가리고 B와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromBAlone=true다.",
     "둘 중 하나라도 true라면 원칙적으로 requiresBoth=false다. 두 글의 단어를 질문에 같이 넣었다는 이유만으로 둘 다 필요한 것은 아니다.",
     "createsThirdThought=true는 질문이 A의 반복이나 B의 반복이 아니라, 두 기록의 관계에서만 보이는 새 기준·긴장·변화·통합을 열 때만 허용한다.",
+    "중요: 질문이 두 기록을 모두 필요로 하게 만들기 위해 원문에 없는 새 목표·의무·관리 과제를 발명했다면 createsThirdThought=false로 판정한다. 예: 한 감정이 다른 감정을 바꾸지 않게 해야 한다, 둘을 구분해둘 필요가 있다, 한쪽을 지켜야 한다, B를 A의 해결책이나 기준으로 써야 한다는 전제를 사용자가 말하지 않았는데 만들어낸 경우다. 이런 후보는 worksFromAAlone/worksFromBAlone이 둘 다 false여도 pairNecessity와 thirdThoughtPotential을 2 이하로 준다.",
     "pairNecessity와 thirdThoughtPotential은 후하게 주지 않는다. 4점은 명확히 통과할 때, 5점은 매우 강한 쌍일 때만 준다.",
     "원문에 없는 심리나 사실을 만들어 질문을 정당화하지 않는다."
   ].join("\n");
