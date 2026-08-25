@@ -3723,7 +3723,7 @@ async function requestBetweenThoughtCuration(action="load"){
     const excludePairKeys=action==="load"
       ?answered.slice(-60)
       :[...new Set([...bt.seenPairKeys,...answered])].slice(-60);
-    const data=await callFn("betweenThoughtsCurate",{candidateIds,excludePairKeys,action});
+    const data=await callFn("betweenThoughtsCurateV2",{candidateIds,excludePairKeys,action});
     if(data?.enabled===false){
       localStorage.setItem(BETWEEN_THOUGHTS_ENABLED_KEY,"0");bt.items=[];bt.pendingCount=0;bt.manualReady=false;
       setTimeout(()=>{renderBetweenThoughtsSettings();renderBetweenThoughts()},0);return;
@@ -6593,5 +6593,6 @@ if("serviceWorker" in navigator){
 }
 try{ if(new URLSearchParams(location.search).get("action")==="capture") setTimeout(()=>openCapture(),400); }catch(e){}
 </script>
+<script src="./storage-fix.js"></script>
 </body>
 </html>
