@@ -10,6 +10,7 @@ const { bloomingInterviewLifecycleTestV2 } = require("./blooming-v2-lifecycle-te
 const { betweenThoughtsSyntheticEvalV2 } = require("./between-v2-synthetic-eval.js");
 const { betweenThoughtsPreviewV2 } = require("./between-v2-preview.js");
 const { betweenThoughtsScoutDiagnosticV2 } = require("./between-v2-scout-diagnostic.js");
+const { betweenThoughtsPreviewPipelineV2 } = require("./between-v2-preview-pipeline.js");
 
 module.exports = {
   ...runtime,
@@ -18,5 +19,6 @@ module.exports = {
   bloomingInterviewLifecycleTestV2,
   betweenThoughtsSyntheticEvalV2,
   betweenThoughtsPreviewV2,
-  betweenThoughtsScoutDiagnosticV2
+  betweenThoughtsScoutDiagnosticV2,
+  betweenThoughtsPreviewPipelineV2
 };
