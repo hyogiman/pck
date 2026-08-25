@@ -1,6 +1,21 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const Module = require("node:module");
+
+// CI intentionally does not install Firebase dependencies. Stub only the two
+// runtime-only imports so the pure normalization/gate functions can be tested.
+const originalLoad = Module._load;
+Module._load = function(request, parent, isMain) {
+  if (request === "firebase-functions/v2/https") {
+    return { HttpsError: class HttpsError extends Error {} };
+  }
+  if (request === "firebase-functions") {
+    return { logger: { error() {} } };
+  }
+  return originalLoad.call(this, request, parent, isMain);
+};
+
 const {
   MAX_COUNTERPARTS_PER_ANCHOR,
   normalizeDiscovery,
@@ -8,6 +23,7 @@ const {
   passesScoutPairGate,
   rankAcceptedPairs
 } = require("./between-v2-scout-pipeline");
+Module._load = originalLoad;
 
 assert.equal(MAX_COUNTERPARTS_PER_ANCHOR, 2);
 
