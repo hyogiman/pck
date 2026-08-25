@@ -7,14 +7,17 @@ const path = require("node:path");
 const source = fs.readFileSync(path.join(__dirname, "between-v2-scout-diagnostic.js"), "utf8");
 
 assert.match(source, /const betweenThoughtsScoutDiagnosticV2 = onCall/);
-assert.match(source, /MAX_DIAGNOSTIC_PAIRS = 5/);
+assert.match(source, /MAX_RANKED_PAIRS = 5/);
+assert.match(source, /between-v2-scout-recall-diagnostic/);
+assert.match(source, /between-v2-scout-ranking-diagnostic/);
 assert.match(source, /worksFromAAlone/);
 assert.match(source, /worksFromBAlone/);
 assert.match(source, /pairNecessity/);
 assert.match(source, /thirdThoughtPotential/);
+assert.match(source, /discoveryPairs/);
 assert.match(source, /writesPerformed: 0/);
 assert.match(source, /readOnly: true/);
-assert.match(source, /aiCalls: 1/);
+assert.match(source, /aiCalls: 2/);
 
 const forbiddenWritePatterns = [
   /\bFieldValue\b/,
