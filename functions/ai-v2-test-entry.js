@@ -11,6 +11,7 @@ const { betweenThoughtsSyntheticEvalV2 } = require("./between-v2-synthetic-eval.
 const { betweenThoughtsPreviewV2 } = require("./between-v2-preview.js");
 const { betweenThoughtsScoutDiagnosticV2 } = require("./between-v2-scout-diagnostic.js");
 const { betweenThoughtsPreviewPipelineV2 } = require("./between-v2-preview-pipeline.js");
+const { betweenThoughtsCurateV2 } = require("./between-v2-curation.js");
 
 module.exports = {
   ...runtime,
@@ -20,5 +21,6 @@ module.exports = {
   betweenThoughtsSyntheticEvalV2,
   betweenThoughtsPreviewV2,
   betweenThoughtsScoutDiagnosticV2,
-  betweenThoughtsPreviewPipelineV2
+  betweenThoughtsPreviewPipelineV2,
+  betweenThoughtsCurateV2
 };
