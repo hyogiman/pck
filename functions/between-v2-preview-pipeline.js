@@ -3,9 +3,12 @@
 /**
  * Thought Garden · Between Thoughts v2 actual-record preview pipeline.
  *
- * This composes the new accuracy-first scout pipeline with the already-verified
- * actual-record generator + final Luna judge in between-v2-preview.js.
- * During the test phase we deliberately keep the proven generator/judge intact.
+ * Accuracy-first path:
+ * 1) aiIndex scout recall + index-level pair evaluation
+ * 2) actual original-text pair verification with Luna
+ * 3) deterministic pair gate
+ * 4) only the strongest surviving pair reaches the already-verified Terra
+ *    generator + final Luna question judge in between-v2-preview.js
  *
  * READ-ONLY BY DESIGN. No queue/cache/usage/fragment writes.
  */
@@ -19,6 +22,7 @@ const {
   emptyUsage,
   mergeUsage
 } = require("./between-v2-scout-pipeline");
+const { verifyOriginalPairs } = require("./between-v2-original-pair-verifier");
 
 if (!getApps().length) initializeApp();
 const db = getFirestore();
@@ -52,6 +56,30 @@ function summarizeScout(scout) {
   };
 }
 
+function summarizeOriginalVerification(result) {
+  return {
+    aiCalls: Number(result?.aiCalls || 0),
+    reason: result?.reason || "",
+    verificationReason: result?.verificationReason || "",
+    acceptedPairs: Array.isArray(result?.acceptedPairs) ? result.acceptedPairs : [],
+    rejectedPairs: Array.isArray(result?.rejectedPairs) ? result.rejectedPairs : []
+  };
+}
+
+function baseUsage(scout, originalVerification) {
+  const scoutUsage = scout?.usage?.total || emptyUsage();
+  const originalUsage = originalVerification?.usage || emptyUsage();
+  return {
+    scout: scoutUsage,
+    scoutDiscovery: scout?.usage?.discovery || emptyUsage(),
+    scoutEvaluation: scout?.usage?.evaluation || emptyUsage(),
+    originalVerification: originalUsage,
+    generation: emptyUsage(),
+    judge: emptyUsage(),
+    total: mergeUsage(scoutUsage, originalUsage)
+  };
+}
+
 const betweenThoughtsPreviewPipelineV2 = onCall({
   region: "us-central1",
   secrets: ["OPENAI_API_KEY"],
@@ -72,7 +100,7 @@ const betweenThoughtsPreviewPipelineV2 = onCall({
 
   const rawCandidateIds = Array.isArray(request.data?.candidateIds) ? request.data.candidateIds : [];
 
-  // Manual pair remains a precise component test: skip the scout entirely.
+  // Manual pair remains a precise generator/final-judge component test.
   const manualPair = Array.isArray(request.data?.pairFragmentIds) ? request.data.pairFragmentIds : [];
   if (manualPair.length) return betweenThoughtsPreviewV2.run(request);
 
@@ -88,19 +116,15 @@ const betweenThoughtsPreviewPipelineV2 = onCall({
       reason: scout.reason || "scout-pipeline-failed",
       pair: null,
       scoutModel: MODEL_ROUTES.discovery,
+      originalVerifierModel: MODEL_ROUTES.discovery,
       scoutPipeline: summarizeScout(scout),
-      usage: {
-        scout: scout.usage?.total || emptyUsage(),
-        scoutDiscovery: scout.usage?.discovery || emptyUsage(),
-        scoutEvaluation: scout.usage?.evaluation || emptyUsage(),
-        generation: emptyUsage(),
-        judge: emptyUsage(),
-        total: scout.usage?.total || emptyUsage()
-      }
+      originalPairVerification: summarizeOriginalVerification(null),
+      usage: baseUsage(scout, null)
     };
   }
 
-  if (!scout.selectedPair) {
+  const scoutAcceptedPairs = Array.isArray(scout.acceptedPairs) ? scout.acceptedPairs : [];
+  if (!scoutAcceptedPairs.length) {
     return {
       ok: true,
       dryRun: true,
@@ -111,15 +135,49 @@ const betweenThoughtsPreviewPipelineV2 = onCall({
       reason: scout.reason || "scout-pair-gate-rejected-all",
       pair: null,
       scoutModel: MODEL_ROUTES.discovery,
+      originalVerifierModel: MODEL_ROUTES.discovery,
       scoutPipeline: summarizeScout(scout),
-      usage: {
-        scout: scout.usage?.total || emptyUsage(),
-        scoutDiscovery: scout.usage?.discovery || emptyUsage(),
-        scoutEvaluation: scout.usage?.evaluation || emptyUsage(),
-        generation: emptyUsage(),
-        judge: emptyUsage(),
-        total: scout.usage?.total || emptyUsage()
-      }
+      originalPairVerification: summarizeOriginalVerification(null),
+      usage: baseUsage(scout, null)
+    };
+  }
+
+  // Critical accuracy boundary: aiIndex judgments are only retrieval hints.
+  // Re-read the actual stored records for every scout-accepted pair before Terra.
+  const originalVerification = await verifyOriginalPairs(userRef, scoutAcceptedPairs);
+  if (!originalVerification.ok) {
+    return {
+      ok: false,
+      dryRun: true,
+      readOnly: true,
+      writesPerformed: 0,
+      stage: "preview",
+      decision: "silent",
+      reason: originalVerification.reason || "original-pair-verification-failed",
+      pair: null,
+      scoutModel: MODEL_ROUTES.discovery,
+      originalVerifierModel: MODEL_ROUTES.discovery,
+      scoutPipeline: summarizeScout(scout),
+      originalPairVerification: summarizeOriginalVerification(originalVerification),
+      usage: baseUsage(scout, originalVerification)
+    };
+  }
+
+  if (!originalVerification.selectedPair) {
+    return {
+      ok: true,
+      dryRun: true,
+      readOnly: true,
+      writesPerformed: 0,
+      stage: "preview",
+      decision: "silent",
+      reason: originalVerification.reason || "original-pair-gate-rejected-all",
+      pair: null,
+      scoutModel: MODEL_ROUTES.discovery,
+      originalVerifierModel: MODEL_ROUTES.discovery,
+      scoutPipeline: summarizeScout(scout),
+      originalPairVerification: summarizeOriginalVerification(originalVerification),
+      usage: baseUsage(scout, originalVerification)
     };
   }
 
@@ -128,20 +186,25 @@ const betweenThoughtsPreviewPipelineV2 = onCall({
     data: {
       ...(request.data || {}),
       stage: "preview",
-      pairFragmentIds: scout.selectedPair.fragmentIds
+      pairFragmentIds: originalVerification.selectedPair.fragmentIds
     }
   };
 
   const finalResult = await betweenThoughtsPreviewV2.run(delegatedRequest);
   const generationUsage = finalResult?.usage?.generation || emptyUsage();
   const judgeUsage = finalResult?.usage?.judge || emptyUsage();
+  const scoutUsage = scout.usage?.total || emptyUsage();
+  const originalUsage = originalVerification.usage || emptyUsage();
+  const preGenerationUsage = mergeUsage(scoutUsage, originalUsage);
   const finalModelUsage = mergeUsage(generationUsage, judgeUsage);
-  const combinedUsage = mergeUsage(scout.usage?.total || emptyUsage(), finalModelUsage);
+  const combinedUsage = mergeUsage(preGenerationUsage, finalModelUsage);
 
+  const verifiedPair = originalVerification.selectedPair;
   const finalPair = finalResult?.pair ? {
-    ...scout.selectedPair,
-    reason: scout.selectedPair?.pairCheck?.reason || "scout-pair-gate-passed",
-    scoutPairCheck: scout.selectedPair?.pairCheck || null,
+    ...verifiedPair,
+    reason: verifiedPair?.originalPairCheck?.reason || "original-pair-gate-passed",
+    scoutPairCheck: verifiedPair?.scoutPairCheck || verifiedPair?.pairCheck || null,
+    originalPairCheck: verifiedPair?.originalPairCheck || null,
     a: finalResult.pair.a,
     b: finalResult.pair.b
   } : null;
@@ -153,11 +216,14 @@ const betweenThoughtsPreviewPipelineV2 = onCall({
     writesPerformed: 0,
     pair: finalPair,
     scoutModel: MODEL_ROUTES.discovery,
+    originalVerifierModel: MODEL_ROUTES.discovery,
     scoutPipeline: summarizeScout(scout),
+    originalPairVerification: summarizeOriginalVerification(originalVerification),
     usage: {
-      scout: scout.usage?.total || emptyUsage(),
+      scout: scoutUsage,
       scoutDiscovery: scout.usage?.discovery || emptyUsage(),
       scoutEvaluation: scout.usage?.evaluation || emptyUsage(),
+      originalVerification: originalUsage,
       generation: generationUsage,
       judge: judgeUsage,
       total: combinedUsage
