@@ -1,0 +1,26 @@
+"use strict";
+
+// Final branch-only entry layer for the AI v2 test phase.
+// It preserves every legacy + v2 runtime export and adds isolated test
+// endpoints used by the private quality lab.
+const runtime = require("./ai-v2-runtime-entry.js");
+const { bloomingInterviewAutoPreviewV2 } = require("./blooming-v2-preview.js");
+const { bloomingInterviewSyntheticEvalV2 } = require("./blooming-v2-synthetic-eval.js");
+const { bloomingInterviewLifecycleTestV2 } = require("./blooming-v2-lifecycle-test.js");
+const { betweenThoughtsSyntheticEvalV2 } = require("./between-v2-synthetic-eval.js");
+const { betweenThoughtsPreviewV2 } = require("./between-v2-preview.js");
+const { betweenThoughtsScoutDiagnosticV2 } = require("./between-v2-scout-diagnostic.js");
+const { betweenThoughtsPreviewPipelineV2 } = require("./between-v2-preview-pipeline.js");
+const { betweenThoughtsCurateV2 } = require("./between-v2-curation.js");
+
+module.exports = {
+  ...runtime,
+  bloomingInterviewAutoPreviewV2,
+  bloomingInterviewSyntheticEvalV2,
+  bloomingInterviewLifecycleTestV2,
+  betweenThoughtsSyntheticEvalV2,
+  betweenThoughtsPreviewV2,
+  betweenThoughtsScoutDiagnosticV2,
+  betweenThoughtsPreviewPipelineV2,
+  betweenThoughtsCurateV2
+};
