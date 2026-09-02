@@ -5184,7 +5184,7 @@ exports.openAiOfficialUsage = onCall(
     region: "us-central1",
     // OpenAI 공식 집계는 기존처럼 OpenAI 전용 Secret만 사용한다.
     // Firebase 비용 대시보드의 관리자 이메일 Secret과 결합하지 않는다.
-    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID"],
+    secrets: ["OPENAI_ADMIN_KEY"],
     timeoutSeconds: 45,
     memory: "256MiB",
     maxInstances: 5,
