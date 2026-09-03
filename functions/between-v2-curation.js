@@ -17,6 +17,13 @@ const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { MODEL_ROUTES } = require("./ai-v2-core");
+
+const {
+  normalizedUsage,
+  usageHasTokens,
+  mergeNormalizedUsage,
+  routeUsagePatch
+} = require("./ai-v2-feature-usage");
 const { runScoutPipeline, emptyUsage, mergeUsage } = require("./between-v2-scout-pipeline");
 const { verifyOriginalPairs } = require("./between-v2-original-pair-verifier");
 const { betweenThoughtsPreviewV2 } = require("./between-v2-preview");
@@ -107,19 +114,199 @@ function usageOrEmpty(value) {
   return value && typeof value === "object" ? value : emptyUsage();
 }
 
+function trackedUsage(
+  total,
+  {
+    luna = null,
+    lunaCalls = 0,
+    terra = null,
+    terraCalls = 0
+  } = {}
+) {
+  return {
+    ...usageOrEmpty(total),
+
+    __routes: {
+      luna:
+        normalizedUsage(luna),
+
+      lunaCalls:
+        Math.max(
+          0,
+          Number(lunaCalls || 0)
+        ),
+
+      terra:
+        normalizedUsage(terra),
+
+      terraCalls:
+        Math.max(
+          0,
+          Number(terraCalls || 0)
+        )
+    }
+  };
+}
+
+function mergeTrackedUsage(
+  a,
+  b
+) {
+  const total =
+    mergeUsage(
+      usageOrEmpty(a),
+      usageOrEmpty(b)
+    );
+
+  const ar =
+    a?.__routes || {};
+
+  const br =
+    b?.__routes || {};
+
+  return trackedUsage(
+    total,
+    {
+      luna:
+        mergeNormalizedUsage(
+          ar.luna,
+          br.luna
+        ),
+
+      lunaCalls:
+        Number(
+          ar.lunaCalls || 0
+        ) +
+        Number(
+          br.lunaCalls || 0
+        ),
+
+      terra:
+        mergeNormalizedUsage(
+          ar.terra,
+          br.terra
+        ),
+
+      terraCalls:
+        Number(
+          ar.terraCalls || 0
+        ) +
+        Number(
+          br.terraCalls || 0
+        )
+    }
+  );
+}
+
+function trackedScoutUsage(
+  scout
+) {
+  return trackedUsage(
+    scout?.usage?.total,
+    {
+      luna:
+        scout?.usage?.total,
+
+      lunaCalls:
+        Number(
+          scout?.aiCalls || 0
+        )
+    }
+  );
+}
+
+function trackedOriginalUsage(
+  original
+) {
+  return trackedUsage(
+    original?.usage,
+    {
+      luna:
+        original?.usage,
+
+      lunaCalls:
+        Number(
+          original?.aiCalls || 0
+        )
+    }
+  );
+}
+
+function trackedQuestionUsage(
+  preview
+) {
+  const luna =
+    normalizedUsage(
+      preview?.usage?.judge
+    );
+
+  const terra =
+    normalizedUsage(
+      preview?.usage?.generation
+    );
+
+  return trackedUsage(
+    preview?.usage?.total,
+    {
+      luna,
+
+      lunaCalls:
+        usageHasTokens(luna)
+          ? 1
+          : 0,
+
+      terra,
+
+      terraCalls:
+        usageHasTokens(terra)
+          ? 1
+          : 0
+    }
+  );
+}
+
 async function recordV2Usage(userRef, usage, { curationCompleted = false, questionCompleted = false } = {}) {
   const u = usageOrEmpty(usage);
+  const routes = u.__routes || {};
+
   const patch = {
     betweenThoughtsV2InputTokens: FieldValue.increment(Number(u.inputTokens || 0)),
     betweenThoughtsV2CachedInputTokens: FieldValue.increment(Number(u.cachedInputTokens || 0)),
     betweenThoughtsV2OutputTokens: FieldValue.increment(Number(u.outputTokens || 0)),
     betweenThoughtsV2TotalTokens: FieldValue.increment(Number(u.totalTokens || 0)),
+
+    // 과거 total 필드는 호환용으로 유지한다.
     betweenThoughtsV2Model: MODEL_ROUTES.speaking,
+
+    ...routeUsagePatch({
+      prefix: "betweenThoughtsV2",
+      route: "Luna",
+      usage: routes.luna,
+      calls: routes.lunaCalls,
+      model: MODEL_ROUTES.discovery
+    }),
+
+    ...routeUsagePatch({
+      prefix: "betweenThoughtsV2",
+      route: "Terra",
+      usage: routes.terra,
+      calls: routes.terraCalls,
+      model: MODEL_ROUTES.speaking
+    }),
+
     updatedAt: FieldValue.serverTimestamp()
   };
+
   if (curationCompleted) patch.betweenThoughtsV2Curations = FieldValue.increment(1);
   if (questionCompleted) patch.betweenThoughtsV2Questions = FieldValue.increment(1);
-  await userRef.collection("aiUsage").doc(koreaDateKey()).set(patch, { merge: true });
+
+  await userRef
+    .collection("aiUsage")
+    .doc(koreaDateKey())
+    .set(
+      patch,
+      { merge: true }
+    );
 }
 
 function cachePairIds(cache) {
@@ -298,7 +485,7 @@ const betweenThoughtsCurateV2 = onCall({
       throw error;
     }
 
-    const questionUsage = usageOrEmpty(preview?.usage?.total);
+    const questionUsage = trackedQuestionUsage(preview);
     const item = itemFromPreview(preview, candidate);
     const weakPairSkipped = !item;
     if (item) {
@@ -330,7 +517,7 @@ const betweenThoughtsCurateV2 = onCall({
   }
 
   const scout = await runScoutPipeline(userRef, candidateIds);
-  let accumulatedUsage = usageOrEmpty(scout?.usage?.total);
+  let accumulatedUsage = trackedScoutUsage(scout);
   if (!scout.ok) {
     await recordV2Usage(userRef, accumulatedUsage);
     await persistQueue(queueRef, { ...state(), lastUsage: accumulatedUsage });
@@ -345,7 +532,7 @@ const betweenThoughtsCurateV2 = onCall({
     });
 
   const original = await verifyOriginalPairs(userRef, scoutAccepted);
-  accumulatedUsage = mergeUsage(accumulatedUsage, usageOrEmpty(original?.usage));
+  accumulatedUsage = mergeTrackedUsage(accumulatedUsage, trackedOriginalUsage(original));
   if (!original.ok) {
     await recordV2Usage(userRef, accumulatedUsage);
     await persistQueue(queueRef, { ...state(), lastUsage: accumulatedUsage });
@@ -391,8 +578,8 @@ const betweenThoughtsCurateV2 = onCall({
     throw error;
   }
 
-  const questionUsage = usageOrEmpty(preview?.usage?.total);
-  accumulatedUsage = mergeUsage(accumulatedUsage, questionUsage);
+  const questionUsage = trackedQuestionUsage(preview);
+  accumulatedUsage = mergeTrackedUsage(accumulatedUsage, questionUsage);
   const item = itemFromPreview(preview, firstCandidate);
   const weakPairSkipped = !item;
 

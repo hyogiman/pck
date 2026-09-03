@@ -119,114 +119,325 @@
   console.info(`[storage-fix] Firebase mode local cache limited to ${RETENTION_DAYS} days.`);
 })();
 
-/* Studio Gardener V2 usage UI compatibility patch · 2026-09-04
-   The server already returns separate Luna/Terra/retrieval usage. Keep the
-   existing operations screen for all other AI features, and replace only the
-   legacy Studio Gardener block after the original renderer has finished. */
-(function installStudioGardenerV2UsageUi(){
+/* AI V2 operations usage UI · 2026-09-04
+   Keep the legacy renderer as a compatibility base, then replace only the
+   sections whose production engines have moved to GPT-5.6 V2. */
+(function installAiV2OperationsUsageUi(){
   if(typeof window.renderStudioUsage!=="function"){
-    console.warn("[studio-v2-usage-ui] renderStudioUsage not found; patch skipped.");
+    console.warn("[ai-v2-usage-ui] renderStudioUsage not found; patch skipped.");
     return;
   }
 
   const originalRenderStudioUsage=window.renderStudioUsage;
+
   const number=value=>{
     const n=Number(value);
     return Number.isFinite(n)&&n>0?n:0;
   };
-  const tokenText=value=>number(value).toLocaleString("ko-KR");
+
+  const tokenText=value=>
+    number(value)
+      .toLocaleString("ko-KR");
+
   const money=value=>{
     const n=number(value);
-    if(typeof window.formatUsdEstimate==="function")return window.formatUsdEstimate(n);
+
+    if(typeof window.formatUsdEstimate==="function"){
+      return window.formatUsdEstimate(n);
+    }
+
     if(n<=0)return "$0.0000";
     if(n<0.01)return "$"+n.toFixed(4);
     return "$"+n.toFixed(3);
   };
-  const callTokenText=part=>{
+
+  const routeText=part=>{
     const calls=number(part?.calls);
     const input=number(part?.inputTokens);
     const cached=number(part?.cachedInputTokens);
     const output=number(part?.outputTokens);
+
     return `${calls}회 · 입력 ${tokenText(input)} · 출력 ${tokenText(output)}${cached?` · 캐시 ${tokenText(cached)}`:""}`;
   };
 
-  function replaceGardenerBlock(grid,data){
-    const titles=[...grid.querySelectorAll(".ai-usage-section-title")];
-    const legacyTitle=titles.find(el=>/정원사/.test(String(el.textContent||"")));
-    if(!legacyTitle)return;
+  function replaceSection(
+    grid,
+    matcher,
+    html
+  ){
+    const titles=[
+      ...grid.querySelectorAll(
+        ".ai-usage-section-title"
+      )
+    ];
 
-    const studio=data?.studioV2||{};
-    const planner=studio.planner||{};
-    const generator=studio.generator||{};
-    const used=number(data?.used);
-    const limit=Math.max(30,number(data?.limit)||30);
-    const remaining=Math.max(0,Number(data?.remaining??(limit-used))||0);
-    const spoken=number(studio.spokenInterventions);
-    const silent=number(studio.silentRuns);
-    const gardenerCost=number(data?.gardenerEstimatedCostUsd??studio.generationEstimatedCostUsd);
+    const title=
+      titles.find(
+        el=>
+          matcher.test(
+            String(
+              el.textContent||""
+            )
+          )
+      );
 
-    const html=`
-      <span class="ai-usage-section-title">🌿 Studio 정원사 V2 · Luna → Terra</span>
-      <span>오늘 분석</span><span class="value">${used} / ${limit}회</span>
-      <span>남은 분석</span><span class="value">${remaining}회</span>
-      <span>개입 결과</span><span class="value">질문·제안 ${spoken}회 · 침묵 ${silent}회</span>
-      <span>Luna 판단</span><span class="value">${callTokenText(planner)}</span>
-      <span>Luna 추정 비용</span><span class="value">약 ${money(planner.estimatedCostUsd)}</span>
-      <span>Terra 표현</span><span class="value">${callTokenText(generator)}</span>
-      <span>Terra 추정 비용</span><span class="value">약 ${money(generator.estimatedCostUsd)}</span>
-      <span>정원사 생성비 합계</span><span class="value">약 ${money(gardenerCost)}</span>`;
+    if(!title)return;
 
-    legacyTitle.insertAdjacentHTML("beforebegin",html);
+    title.insertAdjacentHTML(
+      "beforebegin",
+      html
+    );
 
-    let node=legacyTitle;
+    let node=title;
+
     while(node){
-      const next=node.nextElementSibling;
+      const next=
+        node.nextElementSibling;
+
       node.remove();
-      if(!next||next.classList?.contains("ai-usage-section-title"))break;
+
+      if(
+        !next ||
+        next.classList
+          ?.contains(
+            "ai-usage-section-title"
+          )
+      ){
+        break;
+      }
+
       node=next;
     }
   }
 
-  function addGardenerRetrievalRow(grid,data){
+  function gardenerHtml(data){
+    const studio=data?.studioV2||{};
+    const luna=studio.planner||{};
+    const terra=studio.generator||{};
+
+    const used=number(data?.used);
+    const limit=Math.max(30,number(data?.limit)||30);
+    const remaining=Math.max(0,Number(data?.remaining??(limit-used))||0);
+
+    return `
+      <span class="ai-usage-section-title">🌿 Studio 정원사 V2 · Luna → Terra</span>
+      <span>오늘 분석</span><span class="value">${used} / ${limit}회</span>
+      <span>남은 분석</span><span class="value">${remaining}회</span>
+      <span>개입 결과</span><span class="value">질문·제안 ${number(studio.spokenInterventions)}회 · 침묵 ${number(studio.silentRuns)}회</span>
+      <span>Luna 판단</span><span class="value">${routeText(luna)}</span>
+      <span>Luna 비용</span><span class="value">약 ${money(luna.estimatedCostUsd)}</span>
+      <span>Terra 표현</span><span class="value">${routeText(terra)}</span>
+      <span>Terra 비용</span><span class="value">약 ${money(terra.estimatedCostUsd)}</span>
+      <span>V2 생성비 합계</span><span class="value">약 ${money(studio.generationEstimatedCostUsd)}</span>`;
+  }
+
+  function bloomingHtml(data){
+    const v2=data?.bloomingV2||{};
+    const luna=v2.luna||{};
+    const terra=v2.terra||{};
+
+    const legacyCount=number(data?.bloomingInterviewQuestions);
+    const legacyCost=number(data?.bloomingInterviewEstimatedCostUsd);
+
+    return `
+      <span class="ai-usage-section-title">🎙️ Blooming Interview V2 · Luna → Terra</span>
+      <span>V2 준비 분석</span><span class="value">${number(v2.runs)}회</span>
+      <span>준비된 질문</span><span class="value">${number(v2.preparedQuestions)}개</span>
+      <span>Luna 후보 선별</span><span class="value">${routeText(luna)}</span>
+      <span>Luna 비용</span><span class="value">약 ${money(luna.estimatedCostUsd)}</span>
+      <span>Terra 질문 생성</span><span class="value">${routeText(terra)}</span>
+      <span>Terra 비용</span><span class="value">약 ${money(terra.estimatedCostUsd)}</span>
+      <span>V2 비용 합계</span><span class="value">약 ${money(v2.totalEstimatedCostUsd)}</span>
+      ${legacyCount||legacyCost
+        ?`<span>이전 GPT-5.4 mini 기록</span><span class="value">${legacyCount}회 · 약 ${money(legacyCost)}</span>`
+        :""
+      }`;
+  }
+
+  function betweenHtml(data){
+    const v2=data?.betweenThoughtsV2||{};
+    const luna=v2.luna||{};
+    const terra=v2.terra||{};
+
+    const legacyCount=number(data?.betweenThoughtsCurations);
+    const legacyCost=number(data?.betweenThoughtsEstimatedCostUsd);
+
+    return `
+      <span class="ai-usage-section-title">🌿 두 생각 사이 V2 · Luna → Terra → Luna</span>
+      <span>후보 묶음 요청</span><span class="value">${number(v2.curationAttempts)} / 4회</span>
+      <span>질문 요청</span><span class="value">${number(v2.questionAttempts)} / 12회</span>
+      <span>완료</span><span class="value">큐레이션 ${number(v2.curations)}회 · 질문 ${number(v2.questions)}개</span>
+      <span>Luna 탐색·검증·판정</span><span class="value">${routeText(luna)}</span>
+      <span>Luna 비용</span><span class="value">약 ${money(luna.estimatedCostUsd)}</span>
+      <span>Terra 질문 생성</span><span class="value">${routeText(terra)}</span>
+      <span>Terra 비용</span><span class="value">약 ${money(terra.estimatedCostUsd)}</span>
+      <span>V2 비용 합계</span><span class="value">약 ${money(v2.totalEstimatedCostUsd)}</span>
+      ${number(v2.unclassifiedTotalTokens)
+        ?`<span>분리 계측 전 V2 기록</span><span class="value">${tokenText(v2.unclassifiedTotalTokens)} tokens · 모델별 비용 분리 불가</span>`
+        :""
+      }
+      ${legacyCount||legacyCost
+        ?`<span>이전 GPT-5.4 mini 기록</span><span class="value">${legacyCount}회 · 약 ${money(legacyCost)}</span>`
+        :""
+      }`;
+  }
+
+  function addGardenerRetrievalRow(
+    grid,
+    data
+  ){
     const studio=data?.studioV2||{};
     const retrieval=studio.retrieval||{};
-    const tokens=number(data?.studioGardenerRetrievalEmbeddingTokens??retrieval.embeddingTokens);
-    const count=number(data?.studioGardenerRetrievalEmbeddingCount??retrieval.embeddingCount);
 
-    const labels=[...grid.querySelectorAll("span:not(.value)")];
-    const materialLabel=labels.find(el=>String(el.textContent||"").trim()==="Studio 재료 검색");
+    const tokens=
+      number(
+        data?.studioGardenerRetrievalEmbeddingTokens ??
+        retrieval.embeddingTokens
+      );
+
+    const count=
+      number(
+        data?.studioGardenerRetrievalEmbeddingCount ??
+        retrieval.embeddingCount
+      );
+
+    const labels=[
+      ...grid.querySelectorAll(
+        "span:not(.value)"
+      )
+    ];
+
+    const materialLabel=
+      labels.find(
+        el=>
+          String(
+            el.textContent||""
+          ).trim()===
+          "Studio 재료 검색"
+      );
+
     if(!materialLabel)return;
 
-    const materialValue=materialLabel.nextElementSibling;
-    const label=document.createElement("span");
-    const value=document.createElement("span");
-    label.textContent="정원사 교차 검색";
-    value.className="value";
-    value.textContent=`${tokenText(tokens)} tokens${count?` · ${count}건`:""}`;
-
-    if(materialValue){
-      materialValue.insertAdjacentElement("afterend",value);
-      materialValue.insertAdjacentElement("afterend",label);
+    // 중복 삽입 방지
+    if(
+      labels.some(
+        el=>
+          String(
+            el.textContent||""
+          ).trim()===
+          "정원사 교차 검색"
+      )
+    ){
+      return;
     }
+
+    const materialValue=
+      materialLabel
+        .nextElementSibling;
+
+    if(!materialValue)return;
+
+    const label=
+      document.createElement(
+        "span"
+      );
+
+    const value=
+      document.createElement(
+        "span"
+      );
+
+    label.textContent=
+      "정원사 교차 검색";
+
+    value.className=
+      "value";
+
+    value.textContent=
+      `${tokenText(tokens)} tokens${count?` · ${count}건`:""}`;
+
+    materialValue
+      .insertAdjacentElement(
+        "afterend",
+        value
+      );
+
+    materialValue
+      .insertAdjacentElement(
+        "afterend",
+        label
+      );
   }
 
-  function prependGardenerExplanation(note){
+  function renderExplanation(
+    note
+  ){
     if(!note)return;
-    note.insertAdjacentHTML("afterbegin",
-      `<b>Studio 정원사 V2</b>는 먼저 의미 검색으로 관련 생각을 찾고, Luna가 지금 개입할 가치와 방식을 판단합니다. Luna가 침묵을 선택하면 Terra는 호출하지 않습니다. Terra는 실제로 보여줄 질문이나 다듬기 제안만 표현합니다. 같은 글 맥락의 서버 캐시가 있으면 의미 검색·Luna·Terra를 다시 호출하지 않습니다.<br><br>`
-    );
+
+    note.innerHTML=
+      `<b>현재 production 모델 구조</b><br>
+      Studio 정원사는 Luna가 개입 여부를 판단하고 Terra가 실제 질문·다듬기 제안을 표현합니다.
+      Blooming Interview는 Luna가 과거 생각 후보를 선별한 뒤 Terra가 질문을 만듭니다.
+      두 생각 사이는 Luna가 후보 탐색·원문 검증·최종 판정을 맡고 Terra가 실제 질문을 생성합니다.
+      다층 생각 색인과 글의 갈래 찾기는 현재 production에서 아직 GPT-5.4 mini를 사용합니다.
+      의미 검색은 text-embedding-3-small을 사용합니다.<br><br>
+      실제 청구액이 아니라 OpenAI 응답의 실제 토큰 사용량에 각 모델의 현재 단가를 곱한 추정값입니다.
+      같은 맥락의 서버 캐시가 사용되거나 AI가 호출되지 않은 단계는 토큰이 추가되지 않습니다.`;
   }
 
-  window.renderStudioUsage=function renderStudioUsageV2(data){
-    originalRenderStudioUsage(data);
-    const grid=document.getElementById("studioUsageGrid");
-    const note=document.getElementById("studioUsageNote");
-    if(!grid)return;
+  window.renderStudioUsage=
+    function renderStudioUsageV2(
+      data
+    ){
+      originalRenderStudioUsage(
+        data
+      );
 
-    replaceGardenerBlock(grid,data);
-    addGardenerRetrievalRow(grid,data);
-    prependGardenerExplanation(note);
-  };
+      const grid=
+        document.getElementById(
+          "studioUsageGrid"
+        );
 
-  console.info("[studio-v2-usage-ui] Luna/Terra usage breakdown enabled.");
+      const note=
+        document.getElementById(
+          "studioUsageNote"
+        );
+
+      if(!grid)return;
+
+      replaceSection(
+        grid,
+        /정원사/,
+        gardenerHtml(data)
+      );
+
+      replaceSection(
+        grid,
+        /Blooming Interview/,
+        bloomingHtml(data)
+      );
+
+      replaceSection(
+        grid,
+        /두 생각 사이/,
+        betweenHtml(data)
+      );
+
+      // 다층 생각 색인과 글의 갈래 찾기는
+      // 실제 production이 아직 GPT-5.4 mini이므로
+      // 기존 renderer의 정확한 라벨을 그대로 둔다.
+
+      addGardenerRetrievalRow(
+        grid,
+        data
+      );
+
+      renderExplanation(
+        note
+      );
+    };
+
+  console.info(
+    "[ai-v2-usage-ui] full production model breakdown enabled."
+  );
 })();
