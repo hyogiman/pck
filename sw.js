@@ -1,10 +1,11 @@
 /* 생각의 텃밭 + 독서의 정원 — shared service worker
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
-   생각의 텃밭 HTML에만 기존 런타임 패치를 주입하고, reading.html에는 주입하지 않습니다.
+   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 UI 런타임 패치는 서로 격리합니다.
 
-   v9: 독서의 정원(reading.html/css/js) 쉘 추가 + reading 페이지 패치 격리. */
-const CACHE = "garden-v9";
+   v10: 독서의 정원 전용 theme/UI v2 주입. */
+const CACHE = "garden-v10";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
+const READING_VERSION = "20260903-reading-v2";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
@@ -12,9 +13,11 @@ const PATCH_TAGS = [
   `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
+const READING_HEAD_TAG = `<link rel="stylesheet" href="./reading-theme-v2.css?v=${READING_VERSION}">`;
+const READING_BODY_TAG = `<script type="module" src="./reading-ui-v2.js?v=${READING_VERSION}"></script>`;
 const SHELL = [
   "./", "./index.html", "./manifest.json",
-  "./reading.html", "./reading.css", "./reading.js",
+  "./reading.html", "./reading.css", "./reading.js", "./reading-theme-v2.css", "./reading-ui-v2.js",
   "./icons/icon-192.png", "./icons/icon-512.png"
 ];
 
@@ -39,7 +42,7 @@ self.addEventListener("activate", (e) => {
   })());
 });
 
-async function injectPatches(response){
+async function injectThoughtPatches(response){
   if(!response)return response;
   const type=response.headers.get("content-type")||"";
   if(!type.includes("text/html"))return response;
@@ -52,12 +55,23 @@ async function injectPatches(response){
   const headers=new Headers(response.headers);
   headers.delete("content-length");
   headers.delete("content-encoding");
+  return new Response(html,{status:response.status,statusText:response.statusText,headers});
+}
 
-  return new Response(html,{
-    status:response.status,
-    statusText:response.statusText,
-    headers
-  });
+async function injectReadingPatches(response){
+  if(!response)return response;
+  const type=response.headers.get("content-type")||"";
+  if(!type.includes("text/html"))return response;
+  let html=await response.text();
+  // 독서의 정원 전용 패치는 중복 삽입하지 않는다.
+  html=html.replace(/\s*<link rel="stylesheet" href="\.\/reading-theme-v2\.css(?:\?v=[^"]*)?">/gi,"");
+  html=html.replace(/\s*<script type="module" src="\.\/reading-ui-v2\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+  html=html.replace(/<\/head>/i, `${READING_HEAD_TAG}\n</head>`);
+  html=html.replace(/<\/body>/i, `${READING_BODY_TAG}\n</body>`);
+  const headers=new Headers(response.headers);
+  headers.delete("content-length");
+  headers.delete("content-encoding");
+  return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
 
 self.addEventListener("fetch", (e) => {
@@ -83,9 +97,13 @@ self.addEventListener("fetch", (e) => {
   }
 
   const isReadingHtml=url.pathname.endsWith("/reading.html");
+  const isRuntimePatch =
+    url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||
+    url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
+    url.pathname.endsWith("/reading-theme-v2.css")||url.pathname.endsWith("/reading-ui-v2.js");
 
-  // 패치 파일은 항상 네트워크 우선. 실패할 때만 현재 SW 캐시를 사용한다.
-  if(url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")){
+  // 런타임 패치 파일은 항상 네트워크 우선. 실패할 때만 현재 SW 캐시를 사용한다.
+  if(isRuntimePatch){
     e.respondWith((async()=>{
       try{
         const fresh=await fetch(req,{cache:"no-store"});
@@ -101,27 +119,28 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // HTML은 네트워크 우선. 생각의 텃밭에만 기존 런타임 패치를 주입한다.
-  // 독서의 정원에는 Thought Garden 전용 패치를 절대 주입하지 않는다.
+  // HTML은 네트워크 우선. 각 앱에는 자기 전용 패치만 주입한다.
   if(req.mode==="navigate"||(req.headers.get("accept")||"").includes("text/html")){
     e.respondWith((async()=>{
       try{
         const network=await fetch(req,{cache:"no-store"});
         if(isReadingHtml){
-          const copy=network.clone();
+          const patched=await injectReadingPatches(network);
+          const copy=patched.clone();
           caches.open(CACHE).then((c)=>c.put(req,copy)).catch(()=>{});
-          return network;
+          return patched;
         }
-        const patched=await injectPatches(network);
+        const patched=await injectThoughtPatches(network);
         const copy=patched.clone();
         caches.open(CACHE).then((c)=>c.put(req,copy)).catch(()=>{});
         return patched;
       }catch(_){
         if(isReadingHtml){
-          return (await caches.match(req)) || (await caches.match("./reading.html")) || Response.error();
+          const cached=(await caches.match(req)) || (await caches.match("./reading.html"));
+          return injectReadingPatches(cached);
         }
         const cached=await caches.match(req)||await caches.match("./index.html");
-        return injectPatches(cached);
+        return injectThoughtPatches(cached);
       }
     })());
     return;
