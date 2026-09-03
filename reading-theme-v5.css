@@ -1,0 +1,42 @@
+/* 독서의 정원 v5 — warm wood base with quiet leaf accents */
+:root{
+  --leaf:#6f7c62;
+  --leaf-deep:#596750;
+  --leaf-soft:#e4e8dc;
+  --leaf-pale:#eef0e8;
+  --leaf-line:#cfd7c5;
+}
+
+/* 우드톤은 유지하고, 살아 있는 작은 요소만 잎색으로 돌린다. */
+.brand{position:relative}
+.brand h1::after{
+  content:"";display:inline-block;width:8px;height:12px;margin-left:8px;vertical-align:-1px;
+  border-radius:9px 2px 9px 2px;background:var(--leaf);transform:rotate(-24deg);opacity:.88;
+}
+.hero-service,.session-service{background:var(--leaf-soft);color:var(--leaf-deep)}
+.mini-tag{background:#eee6d8;color:#765b43}
+.nav-btn.on{background:#e9e1d3;color:var(--leaf-deep)}
+.nav-btn.on span{filter:saturate(.75)}
+.timeline-card:before{background:var(--leaf);}
+.entry-thought{background:var(--leaf-pale);color:#44503f;border:1px solid #dde3d6}
+.entry-thought:before{color:var(--leaf-deep)}
+.capture-orb span{color:var(--leaf-deep)}
+.capture-orb b{color:#6c5441}
+.pen-btn.on,.feel-btn.on{background:var(--leaf-deep);border-color:var(--leaf-deep)}
+.path-progress span{background:linear-gradient(90deg,#8b7257,var(--leaf))}
+.chart-card:nth-child(2n) .hbar-fill{background:linear-gradient(90deg,#88937b,#66735b)}
+.chart-card:nth-child(3n) .hbar-fill{background:linear-gradient(90deg,#c3a66b,#a98d57)}
+
+/* 장르는 독서의 정원에서만 보이는 잎색 표식으로 사용한다. */
+.rg-genre-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:999px;
+  background:var(--leaf-soft);color:var(--leaf-deep);font-size:.62rem;font-weight:800;
+  border:1px solid var(--leaf-line);
+}
+.rg-genre-badge::before{content:"";width:5px;height:7px;border-radius:6px 1px 6px 1px;background:var(--leaf);transform:rotate(-20deg)}
+.rg-genre-card-v5{border-color:#d8d2c3!important;background:linear-gradient(145deg,#fffaf2,#f2eee4)}
+.rg-genre-card-v5 .rg-genre-status-v5{margin-top:8px;color:var(--muted);font-size:.72rem;line-height:1.55}
+.rg-genre-card-v5 .btn{margin-top:10px;background:var(--leaf-soft);color:var(--leaf-deep);border-color:var(--leaf-line);box-shadow:none}
+.rg-genre-card-v5 .genre-note{margin-top:8px;padding:8px 9px;border-radius:10px;background:#f5f0e5;color:#806c54;font-size:.66rem;line-height:1.5}
+
+@media print{.rg-genre-card-v5{display:none!important}}
