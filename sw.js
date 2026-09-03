@@ -1,10 +1,9 @@
-/* 생각의 텃밭 — service worker
-   앱 껍데기를 캐시해 두어, 네트워크가 없어도 화면이 열리게 합니다.
-   기록 데이터 자체의 오프라인 처리는 Firestore 캐시가 담당합니다.
+/* 생각의 텃밭 + 독서의 정원 — shared service worker
+   두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
+   생각의 텃밭 HTML에만 기존 런타임 패치를 주입하고, reading.html에는 주입하지 않습니다.
 
-   v8: 기존 저장/캡처 패치 + AI v2 테스트실 + Blooming v2 런타임.
-   패치 JS는 버전 URL로 불러오고 새 SW 활성화 시 열린 앱을 한 번 새로고침합니다. */
-const CACHE = "garden-v8";
+   v9: 독서의 정원(reading.html/css/js) 쉘 추가 + reading 페이지 패치 격리. */
+const CACHE = "garden-v9";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
@@ -13,7 +12,11 @@ const PATCH_TAGS = [
   `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
-const SHELL = ["./", "./index.html", "./manifest.json", "./icons/icon-192.png", "./icons/icon-512.png"];
+const SHELL = [
+  "./", "./index.html", "./manifest.json",
+  "./reading.html", "./reading.css", "./reading.js",
+  "./icons/icon-192.png", "./icons/icon-512.png"
+];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(
@@ -61,7 +64,25 @@ self.addEventListener("fetch", (e) => {
   const req=e.request;
   if(req.method!=="GET")return;
   const url=new URL(req.url);
-  if(url.origin!==self.location.origin)return;
+
+  // Firebase ESM은 독서의 정원이 한번 온라인으로 열린 뒤에는 런타임 캐시에 남긴다.
+  // 이렇게 하면 같은 기기에서 이후 오프라인 재진입 가능성이 높아진다.
+  if(url.origin!==self.location.origin){
+    if(url.hostname==="www.gstatic.com" && url.pathname.includes("/firebasejs/")){
+      e.respondWith((async()=>{
+        const cached=await caches.match(req);
+        if(cached)return cached;
+        try{
+          const res=await fetch(req);
+          if(res.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{});}
+          return res;
+        }catch(_){return Response.error();}
+      })());
+    }
+    return;
+  }
+
+  const isReadingHtml=url.pathname.endsWith("/reading.html");
 
   // 패치 파일은 항상 네트워크 우선. 실패할 때만 현재 SW 캐시를 사용한다.
   if(url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")){
@@ -80,16 +101,25 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // HTML은 네트워크 우선 + 현재 버전 패치 주입.
+  // HTML은 네트워크 우선. 생각의 텃밭에만 기존 런타임 패치를 주입한다.
+  // 독서의 정원에는 Thought Garden 전용 패치를 절대 주입하지 않는다.
   if(req.mode==="navigate"||(req.headers.get("accept")||"").includes("text/html")){
     e.respondWith((async()=>{
       try{
         const network=await fetch(req,{cache:"no-store"});
+        if(isReadingHtml){
+          const copy=network.clone();
+          caches.open(CACHE).then((c)=>c.put(req,copy)).catch(()=>{});
+          return network;
+        }
         const patched=await injectPatches(network);
         const copy=patched.clone();
         caches.open(CACHE).then((c)=>c.put(req,copy)).catch(()=>{});
         return patched;
       }catch(_){
+        if(isReadingHtml){
+          return (await caches.match(req)) || (await caches.match("./reading.html")) || Response.error();
+        }
         const cached=await caches.match(req)||await caches.match("./index.html");
         return injectPatches(cached);
       }
