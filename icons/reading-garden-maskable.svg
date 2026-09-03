@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="독서의 정원 아이콘">
+  <rect width="512" height="512" fill="#76563d"/>
+  <circle cx="256" cy="256" r="188" fill="#f2e9dc"/>
+  <circle cx="374" cy="145" r="29" fill="#d0b36d" opacity=".78"/>
+  <path d="M143 218c42-14 80-8 113 21v133c-33-29-71-35-113-22z" fill="#fffaf2" stroke="#6a4d38" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M369 218c-42-14-80-8-113 21v133c33-29 71-35 113-22z" fill="#fffaf2" stroke="#6a4d38" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M256 239v133" stroke="#6a4d38" stroke-width="8" stroke-linecap="round"/>
+  <path d="M250 202c-6-31 9-59 38-76 8 32-2 59-38 76z" fill="#6f7c62"/>
+  <path d="M259 198c20-25 46-32 75-21-18 28-44 36-75 21z" fill="#879378"/>
+  <path d="M255 201c4-30-7-53-31-69-10 27-4 51 31 69z" fill="#9aa28b"/>
+</svg>
