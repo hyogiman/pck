@@ -25,7 +25,9 @@ const project = {
       text:
         "I feel tired after company work.",
       gardenerQuestion:
-        "When do you feel most tired?"
+        "When do you feel most tired?",
+      thoughtFragmentId:
+        "studio-hook"
     },
 
     {
@@ -36,7 +38,9 @@ const project = {
         "attached-a",
         "attached-a",
         "attached-b"
-      ]
+      ],
+      thoughtFragmentId:
+        "studio-experience"
     }
   ]
 };
@@ -81,6 +85,16 @@ assert.equal(
 assert.deepEqual(
   context.attachedMaterialIds,
   [
+    "attached-a",
+    "attached-b"
+  ]
+);
+
+assert.deepEqual(
+  context.excludedFragmentIds,
+  [
+    "studio-hook",
+    "studio-experience",
     "attached-a",
     "attached-b"
   ]

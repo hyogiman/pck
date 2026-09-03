@@ -201,6 +201,24 @@ function buildStudioRetrievalContext({
         ]
       : [];
 
+  const excludedFragmentIds =
+    [
+      ...new Set(
+        slots
+          .flatMap((slot) => [
+            String(
+              slot?.thoughtFragmentId || ""
+            ).trim(),
+            ...(
+              Array.isArray(slot?.fragmentIds)
+                ? slot.fragmentIds.map(String)
+                : []
+            )
+          ])
+          .filter(Boolean)
+      )
+    ];
+
   return {
     projectTitle:
       String(data.title || "").trim(),
@@ -230,6 +248,8 @@ function buildStudioRetrievalContext({
     attachedMaterialIds,
 
     startingMaterialIds,
+
+    excludedFragmentIds,
 
     threadMaterialIds:
       Array.isArray(threadMaterialIds)
