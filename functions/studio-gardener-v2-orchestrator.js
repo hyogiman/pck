@@ -46,24 +46,6 @@ async function runStudioGardenerPipeline({
   retrieveMaterials,
   callPlanner
 } = {}) {
-  if (
-    typeof retrieveMaterials !==
-    "function"
-  ) {
-    throw new TypeError(
-      "retrieveMaterials adapter is required"
-    );
-  }
-
-  if (
-    typeof callPlanner !==
-    "function"
-  ) {
-    throw new TypeError(
-      "callPlanner adapter is required"
-    );
-  }
-
   const preflight =
     studioGardenerPreflight(
       context
@@ -103,6 +85,24 @@ async function runStudioGardenerPipeline({
         totalTokens: 0
       }
     };
+  }
+
+  if (
+    typeof retrieveMaterials !==
+    "function"
+  ) {
+    throw new TypeError(
+      "retrieveMaterials adapter is required"
+    );
+  }
+
+  if (
+    typeof callPlanner !==
+    "function"
+  ) {
+    throw new TypeError(
+      "callPlanner adapter is required"
+    );
   }
 
   let retrieval;

@@ -61,6 +61,43 @@ function testPreflightBoundary() {
   );
 }
 
+
+async function testShortDraftNeedsNoAdapters() {
+  const result =
+    await runStudioGardenerPipeline({
+      context: {
+        ...baseContext,
+        currentDraft:
+          "아직 짧게 쓰는 중"
+      }
+    });
+
+  assert.equal(
+    result.decision,
+    "silent"
+  );
+
+  assert.equal(
+    result.mode,
+    "silent"
+  );
+
+  assert.equal(
+    result.plan.reason,
+    "not-enough-current-draft"
+  );
+
+  assert.equal(
+    result.retrieval.attempted,
+    false
+  );
+
+  assert.equal(
+    result.plannerUsage.totalTokens,
+    0
+  );
+}
+
 async function testShortDraftSkipsAllAiWork() {
   let retrievalCalls = 0;
   let plannerCalls = 0;
@@ -228,6 +265,7 @@ async function testRetrievalFailureStillAllowsDeepen() {
 
 async function main() {
   testPreflightBoundary();
+  await testShortDraftNeedsNoAdapters();
   await testShortDraftSkipsAllAiWork();
   await testRetrievalFailureStillAllowsDeepen();
 

@@ -86,16 +86,47 @@ async function planStudioGardener({
   const input =
     buildStudioPlannerInput(context);
 
-  const callResult =
-    await callPlanner({
-      systemPrompt:
-        studioPlannerPrompt(),
+  let callResult;
+
+  try {
+    callResult =
+      await callPlanner({
+        systemPrompt:
+          studioPlannerPrompt(),
+
+        input,
+
+        schema:
+          studioPlanSchema()
+      });
+  } catch (error) {
+    return {
+      ok: true,
+      plannerOk: false,
+      decision: "silent",
+      mode: "silent",
+
+      plan: {
+        decision: "silent",
+        mode: "silent",
+        reason:
+          "planner-call-failed"
+      },
 
       input,
 
-      schema:
-        studioPlanSchema()
-    });
+      usage:
+        emptyPlannerUsage(),
+
+      responseId: "",
+      status: 0,
+
+      errorName:
+        String(
+          error?.name || "Error"
+        )
+    };
+  }
 
   const normalized =
     normalizePlannerCallResult(

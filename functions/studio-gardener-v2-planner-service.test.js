@@ -313,6 +313,67 @@ async function testAdapterFailureBecomesSafeSilent() {
 }
 
 
+
+async function testThrownPlannerFailureBecomesSafeSilent() {
+  const result =
+    await planStudioGardener({
+      context,
+
+      callPlanner:
+        async () => {
+          const error =
+            new Error(
+              "network unavailable"
+            );
+
+          error.name =
+            "FetchError";
+
+          throw error;
+        }
+    });
+
+  assert.equal(
+    result.ok,
+    true
+  );
+
+  assert.equal(
+    result.plannerOk,
+    false
+  );
+
+  assert.equal(
+    result.decision,
+    "silent"
+  );
+
+  assert.equal(
+    result.mode,
+    "silent"
+  );
+
+  assert.equal(
+    result.plan.reason,
+    "planner-call-failed"
+  );
+
+  assert.equal(
+    result.status,
+    0
+  );
+
+  assert.equal(
+    result.usage.totalTokens,
+    0
+  );
+
+  assert.equal(
+    result.errorName,
+    "FetchError"
+  );
+}
+
 async function testRealAdapterSeamWithFakeFetch() {
   let fetchCount = 0;
 
@@ -417,6 +478,7 @@ async function main() {
   await testRejectedPlanBecomesSilent();
   await testAdapterEnvelopeWorks();
   await testAdapterFailureBecomesSafeSilent();
+  await testThrownPlannerFailureBecomesSafeSilent();
   await testRealAdapterSeamWithFakeFetch();
 
   console.log(
