@@ -239,6 +239,8 @@ function studioGeneratorPrompt(
 
       "evidence.primary는 현재 Studio 글 또는 이전 Studio 글에서 실제 문구를 복사한다.",
 
+      "특히 evidence.primary는 Luna가 선택한 plan.primaryEvidence를 그대로 사용하거나 그 안의 연속된 짧은 구절만 사용한다. 다른 Studio 문구로 논점을 바꾸지 않는다.",
+
       mode === "connect"
         ? "connect에서는 반드시 Luna가 고른 selectedMaterial 하나만 사용한다. 단순히 같은 주제라는 이유로 연결하지 말고, 두 생각을 함께 볼 때 새로운 생각이 생기는 질문을 만든다."
         : "",

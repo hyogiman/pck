@@ -144,7 +144,10 @@ function selectQuestionGeneration(
                 plan.mode,
 
               selectedMaterialId:
-                plan.materialId
+                plan.materialId,
+
+              selectedPrimaryEvidence:
+                plan.primaryEvidence
             }
           )
       })

@@ -251,7 +251,7 @@ async function testFullFlow() {
 
                   evidence: {
                     primary:
-                      "나도 꾸준히 기록하면 자신감을 얻을 수 있겠다는 생각이 들었다",
+                      plan.primaryEvidence,
 
                     materialId:
                       "frag-record",

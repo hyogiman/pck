@@ -194,7 +194,12 @@ function studioQuestionSources(context = {}) {
 
 function validateStudioQuestionCandidate(
   candidate,
-  { context = {}, mode = "deepen", selectedMaterialId = "" } = {}
+  {
+    context = {},
+    mode = "deepen",
+    selectedMaterialId = "",
+    selectedPrimaryEvidence = ""
+  } = {}
 ) {
   const base = validateQuestionCandidate(candidate, {
     mode: "studio",
@@ -218,6 +223,29 @@ function validateStudioQuestionCandidate(
   ) {
     reasons.push(
       "ungrounded-primary-evidence"
+    );
+  }
+
+  const expectedPrimary =
+    cleanText(
+      selectedPrimaryEvidence,
+      800
+    );
+
+  if (
+    expectedPrimary &&
+    primaryEvidence &&
+    !containsEvidence(
+      expectedPrimary,
+      primaryEvidence
+    ) &&
+    !containsEvidence(
+      primaryEvidence,
+      expectedPrimary
+    )
+  ) {
+    reasons.push(
+      "primary-evidence-plan-mismatch"
     );
   }
 

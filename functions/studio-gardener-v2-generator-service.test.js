@@ -206,6 +206,65 @@ async function testValidConnect() {
   );
 }
 
+
+async function testPrimaryPlanDriftRejected() {
+  const result =
+    await generateStudioGardenerIntervention({
+      context,
+      plan:
+        connectPlan,
+
+      callGenerator:
+        async () => ({
+          decision:
+            "speak",
+
+          reason:
+            "다른 문장을 근거로 질문한다.",
+
+          candidates: [
+            {
+              question:
+                "꾸준히 기록하면서 자신감이 생긴다면, 기록 방식은 앞으로 어떻게 달라질까?",
+
+              evidence: {
+                primary:
+                  "나도 꾸준히 기록하면 자신감을 얻을 수 있겠다는 생각이 들었다",
+
+                materialId:
+                  "frag-record",
+
+                material:
+                  "과정+경험+깨달은 점"
+              },
+
+              scores:
+                allScores(
+                  QUESTION_SCORE_FIELDS
+                )
+            }
+          ]
+        })
+    });
+
+  assert.equal(
+    result.decision,
+    "silent"
+  );
+
+  assert.equal(
+    result.reason,
+    "studio-question-gate-rejected-all"
+  );
+
+  assert.ok(
+    result.rejected[0]
+      .reasons
+      .includes(
+        "primary-evidence-plan-mismatch"
+      )
+  );
+}
 async function testRepeatedQuestionRejected() {
   const repeated =
     "기록을 멈추게 되는 가장 큰 이유는 무엇일까?";
@@ -432,6 +491,7 @@ async function testPlannerSilentSkipsCall() {
 
 async function main() {
   await testValidConnect();
+  await testPrimaryPlanDriftRejected();
   await testRepeatedQuestionRejected();
   await testValidEdit();
   await testThrownFailureSafeSilent();

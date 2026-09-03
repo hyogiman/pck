@@ -232,6 +232,45 @@ const deepen = validateStudioQuestionCandidate(
 
 assert.equal(deepen.ok, true, JSON.stringify(deepen));
 
+
+// Terra may not switch to a different authored Studio sentence after Luna has
+// already selected the primary evidence for the intervention.
+const differentStudioPrimary = validateStudioQuestionCandidate(
+  {
+    ...connectQuestion,
+
+    evidence: {
+      ...connectQuestion.evidence,
+
+      primary:
+        "회사에서 가장 지치는 건 일이 많다는 사실보다"
+    }
+  },
+
+  {
+    context,
+    mode: "connect",
+
+    selectedMaterialId:
+      "frag-freedom",
+
+    selectedPrimaryEvidence:
+      "만드는 일 자체를 멈추고 싶은 건 아니다"
+  }
+);
+
+assert.equal(
+  differentStudioPrimary.ok,
+  false
+);
+
+assert.ok(
+  differentStudioPrimary
+    .reasons
+    .includes(
+      "primary-evidence-plan-mismatch"
+    )
+);
 // 8. Short editorial guidance has its own evidence/quality gate.
 const edit = validateStudioEditCandidate({
   suggestion:
