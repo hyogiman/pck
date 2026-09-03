@@ -1,0 +1,29 @@
+{
+  "id": "./reading.html",
+  "name": "독서의 정원",
+  "short_name": "독서의 정원",
+  "description": "읽는 시간을 기록하고, 문장·필사·생각을 차곡차곡 쌓아가는 개인 독서 정원",
+  "start_url": "./reading.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f2e9dc",
+  "theme_color": "#76563d",
+  "lang": "ko",
+  "categories": ["books", "lifestyle"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "icons/reading-garden.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/reading-garden-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
