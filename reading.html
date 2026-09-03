@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f3f1e8" />
+  <title>독서의 정원</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="reading.css" />
+</head>
+<body>
+  <div id="authGate" class="auth-gate hidden">
+    <div class="auth-card">
+      <div class="brand-mark">📖</div>
+      <h1>독서의 정원</h1>
+      <p>생각의 텃밭과 같은 Google 계정으로 책과 생각을 이어서 사용합니다.</p>
+      <button id="googleLoginBtn" class="btn primary block" type="button">Google로 연결</button>
+      <div id="authGateStatus" class="helper">계정 상태를 확인하고 있습니다.</div>
+    </div>
+  </div>
+
+  <main class="app" id="appRoot">
+    <section class="view active" data-view="read" id="readView">
+      <header class="topbar minimal">
+        <div class="brand"><span class="eyebrow">READING GARDEN</span><h1>독서의 정원</h1></div>
+        <button class="icon-btn" id="openSettings" type="button" aria-label="설정">⚙</button>
+      </header>
+      <div id="readHero" class="read-hero"></div>
+    </section>
+
+    <section class="view" data-view="library" id="libraryView">
+      <header class="topbar">
+        <div class="brand"><span class="eyebrow">LIBRARY</span><h1>서재</h1></div>
+        <button class="btn soft" id="addBookBtn" type="button">＋ 책 추가</button>
+      </header>
+      <div class="segmented" id="libraryModeTabs">
+        <button class="seg on" data-library-mode="books" type="button">책</button>
+        <button class="seg" data-library-mode="paths" type="button">Reading Paths</button>
+      </div>
+      <div id="libraryBooksPanel">
+        <div class="search-row"><input id="librarySearch" class="input" placeholder="제목 · 저자 검색" /></div>
+        <div class="chips" id="libraryStatusChips"></div>
+        <div id="libraryGrid" class="library-grid"></div>
+      </div>
+      <div id="pathsPanel" class="hidden">
+        <div class="section-actions"><p class="helper">읽고 싶은 책의 흐름을 순서대로 묶어두는 독서 프로젝트입니다.</p><button id="newPathBtn" class="btn soft" type="button">＋ Path 만들기</button></div>
+        <div id="pathsList" class="path-list"></div>
+      </div>
+    </section>
+
+    <section class="view" data-view="timeline" id="timelineView">
+      <header class="topbar">
+        <div class="brand"><span class="eyebrow">TIMELINE</span><h1>기록</h1></div>
+        <div class="top-actions"><button id="timelineSearchBtn" class="icon-btn" type="button" aria-label="검색">⌕</button><button id="timelineExportBtn" class="icon-btn" type="button" aria-label="내보내기">⇧</button></div>
+      </header>
+      <div class="timeline-tools">
+        <div class="segmented compact" id="timelineTypeTabs">
+          <button class="seg on" data-entry-filter="all" type="button">전체</button>
+          <button class="seg" data-entry-filter="quote" type="button">문장</button>
+          <button class="seg" data-entry-filter="handwriting" type="button">필사</button>
+          <button class="seg" data-entry-filter="thought" type="button">생각</button>
+        </div>
+        <select class="select" id="timelineBookFilter"><option value="">전체 책</option></select>
+      </div>
+      <div id="timelineList" class="timeline-list"></div>
+    </section>
+
+    <section class="view" data-view="stats" id="statsView">
+      <header class="topbar">
+        <div class="brand"><span class="eyebrow">INSIGHTS</span><h1>통계</h1></div>
+      </header>
+      <div class="segmented compact" id="statsRangeTabs">
+        <button class="seg" data-range="week" type="button">이번 주</button>
+        <button class="seg on" data-range="month" type="button">이번 달</button>
+        <button class="seg" data-range="year" type="button">올해</button>
+        <button class="seg" data-range="all" type="button">전체</button>
+      </div>
+      <div id="statsSummary" class="stats-summary"></div>
+      <div id="statsCharts" class="stats-charts"></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="nav-btn on" data-view-target="read" type="button"><span>📖</span><b>읽기</b></button>
+    <button class="nav-btn" data-view-target="library" type="button"><span>📚</span><b>서재</b></button>
+    <button class="nav-btn" data-view-target="timeline" type="button"><span>✍️</span><b>기록</b></button>
+    <button class="nav-btn" data-view-target="stats" type="button"><span>▥</span><b>통계</b></button>
+  </nav>
+
+  <section id="bookDetail" class="full-layer hidden" aria-hidden="true">
+    <div class="layer-shell">
+      <header class="layer-head"><button class="back-btn" data-close-layer="bookDetail" type="button">← 서재</button><button id="bookMoreBtn" class="icon-btn" type="button">⋯</button></header>
+      <div id="bookDetailBody"></div>
+    </div>
+  </section>
+
+  <section id="sessionLayer" class="full-layer session-layer hidden" aria-hidden="true">
+    <div class="session-shell">
+      <header class="session-head"><button id="sessionBackBtn" class="back-btn" type="button">←</button><div id="sessionBookTitle" class="session-title"></div><div id="sessionClockTop" class="session-clock-top">00:00</div></header>
+      <div class="session-center">
+        <div id="sessionService" class="session-service"></div>
+        <div id="sessionStateText" class="session-state">읽는 중</div>
+        <div id="sessionClock" class="session-clock">00:00</div>
+        <button id="openRecordBtn" class="capture-orb" type="button"><span>＋</span><b>기록 남기기</b></button>
+        <button id="pauseSessionBtn" class="btn soft session-pause" type="button">일시정지</button>
+      </div>
+      <button id="endSessionBtn" class="btn block session-end" type="button">독서 종료</button>
+    </div>
+  </section>
+
+  <section id="handwritingLayer" class="full-layer hidden" aria-hidden="true">
+    <div class="handwriting-shell">
+      <header class="layer-head handwriting-head"><button id="closeHandwritingBtn" class="back-btn" type="button">← 기록</button><div><strong id="handwritingBookTitle"></strong><small id="handwritingMeta"></small></div></header>
+      <div class="pen-toolbar">
+        <button class="pen-btn" data-pen-width="1.6" type="button">얇게</button>
+        <button class="pen-btn on" data-pen-width="2.5" type="button">보통</button>
+        <button class="pen-btn" data-pen-width="4" type="button">굵게</button>
+        <button id="eraserBtn" class="pen-btn" type="button">지우개</button>
+        <button id="undoStrokeBtn" class="pen-btn" type="button">↶</button>
+      </div>
+      <div class="writing-paper" id="writingPaper"><canvas id="writingCanvas"></canvas><div id="writingHint" class="writing-hint">S Pen으로 필사하세요</div></div>
+      <button id="convertHandwritingBtn" class="btn primary block" type="button">텍스트 변환</button>
+    </div>
+  </section>
+
+  <dialog id="bookPickerDialog" class="sheet-dialog"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">NOW READING</span><h2>다른 책을 읽을까요?</h2></div><button class="close-btn" data-close-dialog="bookPickerDialog" type="button">✕</button></div><div id="bookPickerList"></div></div></dialog>
+
+  <dialog id="recordDialog" class="sheet-dialog tall"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">CAPTURE</span><h2>독서 기록</h2></div><button class="close-btn" data-close-dialog="recordDialog" type="button">✕</button></div>
+    <div class="field"><label for="entryLocator">위치 <span>선택</span></label><input id="entryLocator" class="input" placeholder="예: 37% / p.184 / 3장" /></div>
+    <div class="field"><div class="field-label-row"><label for="entryQuote">책에서 남기고 싶은 문장</label><button id="openHandwritingBtn" class="text-btn" type="button">✍ 필사</button></div><textarea id="entryQuote" class="textarea quote-input" placeholder="문장을 직접 입력하거나 필사로 남기세요."></textarea></div>
+    <div class="field"><label for="entryThought">내 생각</label><textarea id="entryThought" class="textarea" placeholder="이 문장에서 떠오른 생각이 있다면 남겨보세요."></textarea></div>
+    <button id="saveEntryBtn" class="btn primary block" type="button">기록 저장</button><button id="deleteEntryBtn" class="text-btn danger-text block hidden" type="button">기록 삭제</button>
+  </div></dialog>
+
+  <dialog id="ocrDialog" class="sheet-dialog tall"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">HANDWRITING</span><h2>필사 텍스트 확인</h2></div><button class="close-btn" data-close-dialog="ocrDialog" type="button">✕</button></div>
+    <div id="ocrNotice" class="notice">필사 원본은 저장할 준비가 됐습니다. OCR 서버 연결 전에는 아래 칸을 직접 확인·수정해 확정할 수 있습니다.</div>
+    <div class="field"><label for="ocrConfirmedText">인식 결과 · 직접 수정 가능</label><textarea id="ocrConfirmedText" class="textarea ocr-textarea" placeholder="OCR 결과가 여기에 들어옵니다. 현재는 직접 입력할 수 있습니다."></textarea></div>
+    <details class="ocr-raw"><summary>OCR 원문 보기</summary><pre id="ocrRawText">아직 실제 OCR 엔진과 연결되지 않았습니다.</pre></details>
+    <div class="two-actions"><button id="redoHandwritingBtn" class="btn" type="button">다시 필사</button><button id="confirmOcrBtn" class="btn primary" type="button">확정</button></div>
+  </div></dialog>
+
+  <dialog id="endSessionDialog" class="sheet-dialog"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">SESSION</span><h2>오늘의 독서</h2></div><button class="close-btn" data-close-dialog="endSessionDialog" type="button">✕</button></div>
+    <div id="sessionMeasured" class="session-summary-card"></div>
+    <div class="field"><label for="finalDuration">실제 독서시간</label><div class="duration-input"><input id="finalDuration" class="input" inputmode="numeric" type="number" min="1" /><span>분</span></div></div>
+    <div class="field"><label for="endLocator">읽은 위치 <span>선택</span></label><input id="endLocator" class="input" placeholder="예: 42% / p.201" /></div>
+    <div class="field"><label>오늘 읽기는 어땠나요? <span>선택</span></label><div class="feel-row"><button class="feel-btn" data-feel="flow" type="button">잘 읽힘</button><button class="feel-btn" data-feel="normal" type="button">보통</button><button class="feel-btn" data-feel="hard" type="button">집중 필요</button></div></div>
+    <div class="field"><label for="sessionNote">한 줄 메모 <span>선택</span></label><textarea id="sessionNote" class="textarea small" placeholder="오늘의 독서 상태를 짧게 남겨도 좋아요."></textarea></div>
+    <button id="finishSessionBtn" class="btn primary block" type="button">완료</button>
+  </div></dialog>
+
+  <dialog id="bookSearchDialog" class="modal-dialog"><div class="modal"><div class="modal-head"><div><span class="eyebrow">BOOK SEARCH</span><h2>책 추가</h2></div><button class="close-btn" data-close-dialog="bookSearchDialog" type="button">✕</button></div>
+    <div class="search-action"><input id="bookSearchInput" class="input" placeholder="책 제목이나 저자" /><button id="runBookSearchBtn" class="btn primary" type="button">검색</button></div>
+    <div id="bookSearchResults" class="book-search-results"></div>
+  </div></dialog>
+
+  <dialog id="profileDialog" class="sheet-dialog"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">READING PROFILE</span><h2 id="profileDialogTitle">읽기 설정</h2></div><button class="close-btn" data-close-dialog="profileDialog" type="button">✕</button></div>
+    <input id="profileSourceId" type="hidden" />
+    <div class="field"><label for="profileStatus">상태</label><select id="profileStatus" class="select"><option value="wishlist">읽고 싶음</option><option value="reading">읽는 중</option><option value="paused">잠시 멈춤</option><option value="completed">완독</option><option value="dnf">중단</option></select></div>
+    <div class="field"><label for="profileFormat">읽는 형식</label><select id="profileFormat" class="select"><option value="ebook">전자책</option><option value="paper">종이책</option><option value="pdf">PDF</option><option value="audiobook">오디오북</option><option value="other">기타</option></select></div>
+    <div class="field"><label for="profileService">서비스</label><select id="profileService" class="select"><option value="millie">밀리의 서재</option><option value="yes24">YES24</option><option value="paper">종이책</option><option value="other">기타</option></select></div>
+    <div class="field"><label for="profileLocator">최근 위치 <span>선택</span></label><input id="profileLocator" class="input" placeholder="37% / p.184" /></div>
+    <button id="saveProfileBtn" class="btn primary block" type="button">저장</button>
+  </div></dialog>
+
+  <dialog id="completeDialog" class="sheet-dialog tall"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">COMPLETE</span><h2 id="completeBookTitle">완독</h2></div><button class="close-btn" data-close-dialog="completeDialog" type="button">✕</button></div>
+    <div id="completeSummary" class="completion-summary"></div>
+    <div class="field"><label for="finalReflection">이 책이 내게 남긴 것 <span>선택</span></label><textarea id="finalReflection" class="textarea"></textarea></div>
+    <div class="field"><label for="oneLineReflection">한 문장으로 남긴다면 <span>선택</span></label><textarea id="oneLineReflection" class="textarea small"></textarea></div>
+    <label class="check-row"><input id="rereadWanted" type="checkbox" /> 다시 읽고 싶음</label>
+    <button id="saveCompleteBtn" class="btn primary block" type="button">완독 저장</button>
+  </div></dialog>
+
+  <dialog id="searchDialog" class="modal-dialog"><div class="modal"><div class="modal-head"><div><span class="eyebrow">SEARCH</span><h2>독서 기록 검색</h2></div><button class="close-btn" data-close-dialog="searchDialog" type="button">✕</button></div><input id="globalSearchInput" class="input" placeholder="책 · 문장 · 필사 · 생각 검색" /><div id="globalSearchResults" class="search-results"></div></div></dialog>
+
+  <dialog id="pathDialog" class="modal-dialog"><div class="modal"><div class="modal-head"><div><span class="eyebrow">READING PATH</span><h2>Path 만들기</h2></div><button class="close-btn" data-close-dialog="pathDialog" type="button">✕</button></div><div class="field"><label for="pathTitle">이름</label><input id="pathTitle" class="input" placeholder="예: 고전 100권" /></div><div class="field"><label for="pathDescription">설명 <span>선택</span></label><textarea id="pathDescription" class="textarea small"></textarea></div><div class="field"><label>책 선택</label><div id="pathBookChoices" class="choice-list"></div></div><button id="savePathBtn" class="btn primary block" type="button">Path 저장</button></div></dialog>
+
+  <dialog id="exportDialog" class="sheet-dialog"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">EXPORT</span><h2>독서 기록 내보내기</h2></div><button class="close-btn" data-close-dialog="exportDialog" type="button">✕</button></div>
+    <div class="field"><label for="exportScope">범위</label><select id="exportScope" class="select"><option value="all">전체 기록</option><option value="currentBook">현재 책</option></select></div>
+    <div class="export-checks"><label><input id="printQuote" type="checkbox" checked /> 책의 문장</label><label><input id="printHandwriting" type="checkbox" checked /> 필사</label><label><input id="printThought" type="checkbox" checked /> 내 생각</label><label><input id="printSession" type="checkbox" checked /> 독서 세션</label></div>
+    <button id="printBtn" class="btn primary block" type="button">A4 미리보기 · PDF / 인쇄</button>
+  </div></dialog>
+
+  <dialog id="settingsDialog" class="modal-dialog"><div class="modal"><div class="modal-head"><div><span class="eyebrow">SETTINGS</span><h2>설정</h2></div><button class="close-btn" data-close-dialog="settingsDialog" type="button">✕</button></div>
+    <div class="setting-card"><b>계정 · 동기화</b><div id="accountInfo" class="helper">확인 중…</div><div id="syncInfo" class="sync-line">☁️ 연결 확인 중</div></div>
+    <div class="setting-card"><b>데이터</b><div class="setting-actions"><button id="jsonBackupBtn" class="btn" type="button">💾 JSON 백업</button><label class="btn file-btn">♻ JSON 복원<input id="jsonRestoreInput" type="file" accept="application/json" /></label></div></div>
+    <div class="setting-card"><b>Thought Garden</b><p class="helper">책과 생각은 같은 Firebase 계정을 사용합니다.</p><a class="btn soft block link-btn" href="index.html">생각의 텃밭 열기</a></div>
+    <button id="signOutBtn" class="text-btn danger-text" type="button">로그아웃</button>
+  </div></dialog>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <div id="printRoot" class="print-root"></div>
+
+  <script type="module" src="reading.js"></script>
+</body>
+</html>
