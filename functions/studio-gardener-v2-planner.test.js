@@ -93,6 +93,13 @@ assert.ok(
 
 assert.ok(prompt.includes("materialEvidence"));
 assert.ok(prompt.includes("thinkingDeveloped"));
+assert.ok(prompt.includes("referenceMaterials"));
+assert.ok(prompt.includes("previousGardenerQuestions"));
+assert.ok(
+  prompt.includes(
+    "새로 발견한 연결인 것처럼"
+  )
+);
 
 const compacted =
   compactPlannerMaterial({
@@ -132,6 +139,40 @@ const input =
     threadTitle: "기록 습관",
     threadQuestion: "왜 기록을 계속하지 못할까?",
 
+    startingPath: {
+      title:
+        "기록의 의미",
+
+      summary:
+        "기록이 나에게 왜 필요한지 살펴본다.",
+
+      guidingQuestion:
+        "나는 왜 기록하려는가?",
+
+      shape:
+        "meaning"
+    },
+
+    previousGardenerQuestions: [
+      "이 칸에서 전에 받은 질문?"
+    ],
+
+    referenceMaterials: [
+      {
+        id: "r1",
+        role: "attached",
+        thought:
+          "현재 칸에 직접 붙인 생각"
+      },
+
+      {
+        id: "r2",
+        role: "starting",
+        thought:
+          "Studio를 시작한 생각"
+      }
+    ],
+
     previousSlots: [
       { id: "slot-1", text: "1" },
       { id: "slot-2", text: "2" },
@@ -152,6 +193,34 @@ const input =
   });
 
 assert.equal(input.currentDraft.length, 6000);
+
+assert.equal(
+  input.startingPath.title,
+  "기록의 의미"
+);
+
+assert.deepEqual(
+  input.previousGardenerQuestions,
+  [
+    "이 칸에서 전에 받은 질문?"
+  ]
+);
+
+assert.deepEqual(
+  input.referenceMaterials.map(
+    (material) =>
+      material.id
+  ),
+  [
+    "r1",
+    "r2"
+  ]
+);
+
+assert.equal(
+  input.referenceMaterials[0].role,
+  "attached"
+);
 
 assert.deepEqual(
   input.previousSlots.map(

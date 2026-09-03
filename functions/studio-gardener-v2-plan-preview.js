@@ -40,6 +40,12 @@ const {
 );
 
 const {
+  enrichStudioGardenerContext
+} = require(
+  "./studio-gardener-v2-reference-materials"
+);
+
+const {
   requestStudioLuna
 } = require(
   "./studio-gardener-v2-luna-adapter"
@@ -239,12 +245,25 @@ async function loadStudioPlanPreviewState({
         thread.fragmentIds
     });
 
+  const enrichedContext =
+    await enrichStudioGardenerContext({
+      db,
+      userRef,
+      project,
+      slotIndex,
+      context,
+
+      threadMaterials:
+        thread.materials
+    });
+
   return {
     enabled: true,
     uid,
     projectId,
     slotId,
-    context
+    context:
+      enrichedContext
   };
 }
 

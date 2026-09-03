@@ -275,7 +275,8 @@ async function loadThreadContext(
     return {
       title: "",
       question: "",
-      fragmentIds: []
+      fragmentIds: [],
+      materials: []
     };
   }
 
@@ -310,6 +311,7 @@ async function loadThreadContext(
       .get();
 
   const fragmentIds = [];
+  const materials = [];
 
   fragSnap.forEach((doc) => {
     const data = doc.data() || {};
@@ -317,12 +319,18 @@ async function loadThreadContext(
     if (data.deletedAt) return;
 
     fragmentIds.push(doc.id);
+
+    materials.push({
+      id: doc.id,
+      ...data
+    });
   });
 
   return {
     title,
     question,
-    fragmentIds
+    fragmentIds,
+    materials
   };
 }
 
