@@ -58,7 +58,7 @@ function enhanceTimeline(){
       const session=matchSession(card);if(!session)return;
       const head=card.querySelector(".timeline-session-head");if(!head)return;
       const btn=document.createElement("button");
-      btn.type="button";btn.className="rg-session-delete";btn.title="독서시간 기록 삭제";btn.setAttribute("aria-label","독서시간 기록 삭제");btn.textContent="✕";btn.dataset.sessionId=session.id;
+      btn.type="button";btn.className="rg-session-delete";btn.title="독서시간 기록 삭제";btn.setAttribute("aria-label","독서시간 기록 삭제");btn.textContent="🗑";btn.dataset.sessionId=session.id;
       btn.addEventListener("click",async e=>{e.stopPropagation();await deleteSession(session.id)});
       head.appendChild(btn);
     });
