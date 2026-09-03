@@ -1,0 +1,90 @@
+/* 독서의 정원 v2 theme — Thought Garden과 시각적 정체성을 분리한다. */
+:root{
+  --bg:#f3f6f9;
+  --panel:#ffffff;
+  --panel2:#e9eef4;
+  --text:#202b38;
+  --muted:#718092;
+  --line:#dce4ec;
+  --accent:#315f82;
+  --accent2:#e4edf5;
+  --accent3:#edf4f9;
+  --danger:#b25155;
+  --warn:#a8793d;
+  --ink-warm:#b47a43;
+  --shadow:0 20px 52px rgba(36,58,78,.11);
+  --card-shadow:0 4px 16px rgba(43,65,84,.06);
+}
+html,body{background:var(--bg);color:var(--text)}
+body{
+  background:
+    radial-gradient(850px 420px at 92% -8%,rgba(49,95,130,.13),transparent 66%),
+    radial-gradient(680px 360px at -10% 105%,rgba(180,122,67,.055),transparent 70%),
+    var(--bg);
+}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:rgba(49,95,130,.25)}
+.eyebrow{color:var(--accent);letter-spacing:.16em}
+.brand h1{color:#203247}
+.btn.primary{background:linear-gradient(135deg,#315f82,#264e70);border-color:#315f82;box-shadow:0 8px 20px rgba(49,95,130,.19)}
+.btn.soft{background:#e7eff6;color:#2d5b7c;border-color:#d2e0eb}
+.text-btn,.back-btn{color:var(--accent)}
+.input,.textarea,.select{background:#fbfcfd;border-color:#d8e1e9}
+.input:focus,.textarea:focus,.select:focus{border-color:#9eb9cf;box-shadow:0 0 0 3px rgba(49,95,130,.08)}
+.bottom-nav{background:rgba(248,250,252,.95);border-top-color:#dbe4ec;box-shadow:0 -8px 26px rgba(40,59,76,.045)}
+.nav-btn.on{background:#e7eff6;color:#2e5d7f}
+.hero-cover{box-shadow:0 22px 48px rgba(35,55,73,.22)}
+.hero-service,.mini-tag,.session-service{background:#e5eef6;color:#2f5d7e}
+.start-btn{border-radius:16px}
+.segmented{background:#e7edf3}.seg.on{background:#fff;color:#315f82;box-shadow:0 3px 9px rgba(46,68,87,.07)}
+.chip-btn.on{background:#315f82;border-color:#315f82}
+.book-card,.path-card,.timeline-session,.stat-card,.chart-card,.detail-metric,.modal,.sheet{background:#fff}
+.book-card{box-shadow:0 5px 18px rgba(43,65,84,.055)}
+.timeline-card{border-left-color:#ccd9e4}.timeline-card:before{background:#4d7899;box-shadow:0 0 0 4px var(--bg)}
+.entry-locator{color:#507794}
+.entry-quote{border-left-color:#b47a43;color:#273441}
+.entry-thought{background:#edf3f8;color:#304b61}
+.entry-thought:before{color:#315f82}
+.completion-event{border-color:#d5e1eb;background:linear-gradient(145deg,#fff,#edf4f9)}
+.session-layer{background:radial-gradient(760px 430px at 50% 24%,rgba(49,95,130,.11),transparent 66%),var(--bg)}
+.capture-orb{border-color:#cbdce9;background:linear-gradient(145deg,#ffffff,#e4eef6);box-shadow:0 18px 42px rgba(49,95,130,.17);color:#315f82}
+.writing-paper{border-color:#d5dee7;background-color:#fff;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(73,94,112,.11) 31px,rgba(73,94,112,.11) 32px)}
+.pen-btn.on,.feel-btn.on{background:#315f82;border-color:#315f82}
+.sheet-dialog::backdrop,.modal-dialog::backdrop{background:rgba(27,39,50,.44)}
+.sheet{box-shadow:0 -24px 58px rgba(28,46,62,.17)}
+.sheet-grab{background:#bcc9d3}
+.notice{background:#f6f0e8;color:#7b6242;border-color:#eadcc9}
+.session-summary-card,.completion-summary{background:#edf4f9;border-color:#d6e2ec}
+.hbar-fill,.bar-col span,.path-progress span{background:linear-gradient(90deg,#416f91,#2d5a7b)}
+.toast{background:#203247;box-shadow:0 14px 32px rgba(26,42,57,.3)}
+.auth-gate{background:var(--bg)}
+
+/* 기록 입력은 태블릿/PC에서 충분한 작업 공간을 확보한다. */
+#recordDialog .sheet{
+  height:min(96dvh,920px);
+  max-height:96dvh;
+  padding:10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+#recordDialog #entryQuote{min-height:210px;font-size:1.03rem;line-height:1.75}
+#recordDialog #entryThought{min-height:190px;font-size:.96rem;line-height:1.72}
+#recordDialog .field{margin-top:18px}
+#recordDialog #saveEntryBtn{margin-top:18px;min-height:48px}
+#recordDialog #deleteEntryBtn{margin-top:5px}
+
+/* 완료된 독서 세션의 삭제 동작은 기록 카드에서 조용히 접근한다. */
+.timeline-session-head{position:relative;padding-right:36px}
+.rg-session-delete{
+  position:absolute;right:-3px;top:-4px;width:32px;height:32px;border:0;border-radius:50%;
+  background:transparent;color:#9a7880;font-size:.82rem;display:grid;place-items:center;box-shadow:none;
+}
+.rg-session-delete:hover{background:#f8ecee;color:var(--danger)}
+.rg-session-delete:active{transform:scale(.94)}
+
+@media(max-width:520px){
+  #recordDialog .sheet{height:94dvh;max-height:94dvh;padding-left:15px;padding-right:15px}
+  #recordDialog #entryQuote{min-height:165px}
+  #recordDialog #entryThought{min-height:150px}
+}
+
+@media print{
+  .rg-session-delete{display:none!important}
+}
