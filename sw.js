@@ -2,21 +2,28 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 UI 런타임 패치는 서로 격리합니다.
 
-   v11: 독서의 정원 우드톤 + 빠른 첫화면 + 책 선택/세션삭제/장르보완. */
-const CACHE = "garden-v11-reading-wood";
+   v12: 독서의 정원 우드톤 강화 + 새 세션 삭제 버튼 즉시 표시. */
+const CACHE = "garden-v12-reading-deep-wood";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260903-reading-wood-v3";
+const READING_VERSION = "20260903-reading-deep-wood-v4";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
-const READING_HEAD_TAG = `<link rel="stylesheet" href="./reading-theme-v3.css?v=${READING_VERSION}">`;
-const READING_BODY_TAG = `<script type="module" src="./reading-enhance-v3.js?v=${READING_VERSION}"></script>`;
+const READING_HEAD_TAGS = [
+  `<link rel="stylesheet" href="./reading-theme-v3.css?v=${READING_VERSION}">`,
+  `<link rel="stylesheet" href="./reading-theme-v4.css?v=${READING_VERSION}">`
+];
+const READING_BODY_TAGS = [
+  `<script type="module" src="./reading-enhance-v3.js?v=${READING_VERSION}"></script>`,
+  `<script type="module" src="./reading-hotfix-v4.js?v=${READING_VERSION}"></script>`
+];
 const SHELL = [
   "./", "./index.html", "./manifest.json",
-  "./reading.html", "./reading.css", "./reading.js", "./reading-theme-v3.css", "./reading-enhance-v3.js",
+  "./reading.html", "./reading.css", "./reading.js",
+  "./reading-theme-v3.css", "./reading-enhance-v3.js", "./reading-theme-v4.css", "./reading-hotfix-v4.js",
   "./icons/icon-192.png", "./icons/icon-512.png"
 ];
 
@@ -54,9 +61,9 @@ async function injectReadingPatches(response){
   let html=await response.text();
   html=html
     .replace(/\s*<link rel="stylesheet" href="\.\/reading-theme-v\d+\.css(?:\?v=[^"]*)?">/gi,"")
-    .replace(/\s*<script type="module" src="\.\/(?:reading-ui-v\d+|reading-enhance-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
-  html=html.replace(/<\/head>/i, `${READING_HEAD_TAG}\n</head>`);
-  html=html.replace(/<\/body>/i, `${READING_BODY_TAG}\n</body>`);
+    .replace(/\s*<script type="module" src="\.\/(?:reading-ui-v\d+|reading-enhance-v\d+|reading-hotfix-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+  html=html.replace(/<\/head>/i, `${READING_HEAD_TAGS.join("\n")}\n</head>`);
+  html=html.replace(/<\/body>/i, `${READING_BODY_TAGS.join("\n")}\n</body>`);
   const headers=new Headers(response.headers);headers.delete("content-length");headers.delete("content-encoding");
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
@@ -73,7 +80,8 @@ self.addEventListener("fetch", (e) => {
   const isRuntimePatch=
     url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
-    url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js");
+    url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
+    url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js");
   if(isRuntimePatch){
     e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:"no-store"});if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}return fresh}catch(_){return (await caches.match(req))||Response.error()}})());return;
   }
