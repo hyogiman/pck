@@ -1,0 +1,72 @@
+/* 독서의 정원 v4 — warm wood / moss / muted amber overrides */
+:root{
+  --bg:#f2e9dc;
+  --panel:#fffaf2;
+  --panel2:#e8ddcf;
+  --text:#403329;
+  --muted:#817365;
+  --line:#ddcfbd;
+  --accent:#765b43;
+  --accent2:#eadfce;
+  --accent3:#eee8d8;
+  --danger:#a65e56;
+  --warn:#ad8f51;
+  --wood:#76563d;
+  --wood-dark:#5f4634;
+  --moss:#77806a;
+  --moss-soft:#e5e7dc;
+  --amber:#bea061;
+  --amber-soft:#f1e7cb;
+  --shadow:0 20px 52px rgba(78,57,39,.11);
+  --card-shadow:0 4px 16px rgba(78,57,39,.06);
+}
+html,body{background:var(--bg);color:var(--text)}
+body{
+  background:
+    radial-gradient(900px 430px at 92% -10%,rgba(118,86,61,.10),transparent 66%),
+    radial-gradient(700px 420px at -10% 108%,rgba(190,160,97,.085),transparent 70%),
+    linear-gradient(115deg,rgba(255,255,255,.10),transparent 42%),
+    var(--bg);
+}
+.eyebrow{color:#8a7356}
+.brand h1{color:#463529}
+.btn.primary{background:linear-gradient(135deg,#7c5d43,#684b36);border-color:#76563d;color:#fff;box-shadow:0 9px 22px rgba(99,69,45,.18)}
+.btn.soft{background:#eee5d7;color:#715943;border-color:#ded0bd}
+.text-btn,.back-btn{color:#745a43}
+.input,.textarea,.select{background:#fffbf5;border-color:#dccfbe}
+.input:focus,.textarea:focus,.select:focus{border-color:#bba58f;box-shadow:0 0 0 3px rgba(118,86,61,.09)}
+.bottom-nav{background:rgba(250,245,237,.96);border-top-color:#d9cbb9;box-shadow:0 -8px 26px rgba(75,54,37,.045)}
+.nav-btn.on{background:#eadfce;color:#6d523d}
+.hero-service,.mini-tag,.session-service{background:#e8e6d9;color:#68705f}
+.segmented{background:#e5dacb}.seg.on{background:#fffaf2;color:#70553f;box-shadow:0 3px 9px rgba(83,59,40,.065)}
+.chip-btn.on{background:#7b624a;border-color:#7b624a}
+.book-card,.path-card,.timeline-session,.stat-card,.chart-card,.detail-metric,.modal,.sheet{background:#fffaf2;border-color:#ddcfbd}
+.book-card{box-shadow:0 5px 18px rgba(78,57,39,.055)}
+.timeline-card{border-left-color:#cdbb9f}.timeline-card:before{background:#a9855a;box-shadow:0 0 0 4px var(--bg)}
+.entry-locator{color:#886b4d}
+.entry-quote{border-left-color:#9a6f4c;color:#47362a}
+.entry-thought{background:#e8e9df;color:#475042}
+.entry-thought:before{color:#6f7864}
+.completion-event{border-color:#d7c9b5;background:linear-gradient(145deg,#fffaf2,#eee5d7)}
+.session-layer{background:radial-gradient(780px 440px at 50% 24%,rgba(118,86,61,.095),transparent 66%),var(--bg)}
+.capture-orb{border-color:#d4c2aa;background:linear-gradient(145deg,#fffaf3,#eadfce);box-shadow:0 18px 42px rgba(112,78,51,.15);color:#71543e}
+.capture-orb span{color:#8f6948}
+.writing-paper{border-color:#d9cbbb;background-color:#fffaf3;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(112,86,63,.12) 31px,rgba(112,86,63,.12) 32px)}
+.pen-btn.on,.feel-btn.on{background:#775d47;border-color:#775d47}
+.sheet-dialog::backdrop,.modal-dialog::backdrop{background:rgba(57,43,31,.42)}
+.sheet{box-shadow:0 -24px 58px rgba(73,52,35,.16)}
+.sheet-grab{background:#c5b49e}
+.notice{background:#f3e7ca;color:#77623c;border-color:#e5d4aa}
+.session-summary-card,.completion-summary{background:#eee6d8;border-color:#d9cbb7}
+.hbar-fill,.bar-col span,.path-progress span{background:linear-gradient(90deg,#9a7858,#74573f)}
+.chart-card:nth-child(2n) .hbar-fill{background:linear-gradient(90deg,#8c927b,#737b68)}
+.chart-card:nth-child(3n) .hbar-fill{background:linear-gradient(90deg,#c2a468,#a98d56)}
+.toast{background:#4b392c;box-shadow:0 14px 32px rgba(61,43,29,.29)}
+.auth-gate{background:var(--bg)}
+.rg-picker-new .btn{background:#eee2d1;color:#74583f;border-color:#dccbb5}
+.rg-session-delete{color:#96766a}
+.rg-session-delete:hover{background:#f3e4df;color:var(--danger)}
+/* 표지와 카드가 배경에서 살짝 떠 보이되, 과한 그림자는 피한다. */
+.hero-cover{box-shadow:0 22px 48px rgba(68,47,31,.20)}
+.stat-card strong,.detail-metric strong{color:#5d4634}
+@media print{body{background:#fff;color:#111}}
