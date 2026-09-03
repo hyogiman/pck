@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="독서의 정원 아이콘">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f5eadb"/>
+      <stop offset="1" stop-color="#ead8c1"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a694f"/>
+      <stop offset="1" stop-color="#654a36"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <circle cx="406" cy="104" r="36" fill="#d8bd7a" opacity=".75"/>
+  <path d="M112 178c54-18 102-11 144 26v188c-42-36-90-45-144-28z" fill="#fffaf2" stroke="#76563d" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M400 178c-54-18-102-11-144 26v188c42-36 90-45 144-28z" fill="#fffaf2" stroke="#76563d" stroke-width="12" stroke-linejoin="round"/>
+  <path d="M256 204v188" stroke="#76563d" stroke-width="10" stroke-linecap="round"/>
+  <path d="M249 166c-8-39 10-74 47-95 10 40-3 74-47 95z" fill="#6f7c62"/>
+  <path d="M260 160c24-31 57-40 94-26-23 35-55 45-94 26z" fill="#879378"/>
+  <path d="M256 165c5-38-8-67-39-88-13 33-5 64 39 88z" fill="#9aa28b"/>
+  <path d="M144 314c32-8 61-3 88 15" fill="none" stroke="#cfb58f" stroke-width="8" stroke-linecap="round"/>
+  <path d="M368 314c-32-8-61-3-88 15" fill="none" stroke="#cfb58f" stroke-width="8" stroke-linecap="round"/>
+  <path d="M136 342c28-5 55-1 82 13" fill="none" stroke="#d7c3a5" stroke-width="7" stroke-linecap="round"/>
+  <path d="M376 342c-28-5-55-1-82 13" fill="none" stroke="#d7c3a5" stroke-width="7" stroke-linecap="round"/>
+</svg>
