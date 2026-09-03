@@ -1,0 +1,99 @@
+/* 독서의 정원 v3 — muted wood / sage / wheat palette */
+:root{
+  --bg:#f4f0e7;
+  --panel:#fffdf8;
+  --panel2:#ebe5d8;
+  --text:#3a332b;
+  --muted:#81786c;
+  --line:#e1d7c7;
+  --accent:#68765f;
+  --accent2:#e8eadf;
+  --accent3:#f0ede1;
+  --danger:#a45f58;
+  --warn:#ad965a;
+  --wood:#8d7057;
+  --wheat:#c5ad70;
+  --shadow:0 20px 52px rgba(83,69,52,.10);
+  --card-shadow:0 4px 16px rgba(83,69,52,.055);
+}
+html,body{background:var(--bg);color:var(--text)}
+body{
+  background:
+    radial-gradient(820px 420px at 92% -8%,rgba(104,118,95,.085),transparent 66%),
+    radial-gradient(620px 360px at -8% 102%,rgba(197,173,112,.07),transparent 72%),
+    var(--bg);
+}
+/* 메뉴 전환은 즉시 보이게: 기존 180ms rise 애니메이션 제거 */
+.view.active{animation:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:rgba(104,118,95,.24)}
+.eyebrow{color:#7a6a54;letter-spacing:.16em}
+.brand h1{color:#3b332b}
+.btn.primary{background:linear-gradient(135deg,#718069,#5f6d58);border-color:#68765f;color:#fff;box-shadow:0 8px 20px rgba(86,104,77,.16)}
+.btn.soft{background:#eceadf;color:#66715e;border-color:#ddd9c9}
+.text-btn,.back-btn{color:#66715e}
+.input,.textarea,.select{background:#fffefa;border-color:#ded5c7}
+.input:focus,.textarea:focus,.select:focus{border-color:#aeb7a2;box-shadow:0 0 0 3px rgba(104,118,95,.08)}
+.bottom-nav{background:rgba(252,249,243,.95);border-top-color:#ded6c8;box-shadow:0 -8px 26px rgba(76,62,47,.04)}
+.nav-btn.on{background:#ece9dd;color:#66715e}
+.hero-cover{box-shadow:0 22px 48px rgba(74,59,43,.19)}
+.hero-service,.mini-tag,.session-service{background:#eceadf;color:#65705d}
+.start-btn{border-radius:16px}
+.segmented{background:#ebe5d9}.seg.on{background:#fffdf8;color:#65715d;box-shadow:0 3px 9px rgba(77,63,48,.06)}
+.chip-btn.on{background:#6b7862;border-color:#6b7862}
+.book-card,.path-card,.timeline-session,.stat-card,.chart-card,.detail-metric,.modal,.sheet{background:#fffdf8}
+.book-card{box-shadow:0 5px 18px rgba(78,63,48,.05)}
+.timeline-card{border-left-color:#d8cfbd}.timeline-card:before{background:#87927a;box-shadow:0 0 0 4px var(--bg)}
+.entry-locator{color:#7b705e}
+.entry-quote{border-left-color:#9a785d;color:#42372e}
+.entry-thought{background:#eeeee5;color:#465042}
+.entry-thought:before{color:#66745f}
+.completion-event{border-color:#ded8c7;background:linear-gradient(145deg,#fffdf8,#f0ede2)}
+.session-layer{background:radial-gradient(760px 430px at 50% 24%,rgba(104,118,95,.08),transparent 66%),var(--bg)}
+.capture-orb{border-color:#d7d3c1;background:linear-gradient(145deg,#fffefa,#e9eadf);box-shadow:0 18px 42px rgba(93,103,77,.14);color:#65715d}
+.writing-paper{border-color:#ddd5c8;background-color:#fffdf8;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(113,97,76,.115) 31px,rgba(113,97,76,.115) 32px)}
+.pen-btn.on,.feel-btn.on{background:#6b7862;border-color:#6b7862}
+.sheet-dialog::backdrop,.modal-dialog::backdrop{background:rgba(52,45,36,.40)}
+.sheet{box-shadow:0 -24px 58px rgba(68,56,43,.15)}
+.sheet-grab{background:#c9c0b2}
+.notice{background:#f4eedf;color:#76633f;border-color:#e7dbc0}
+.session-summary-card,.completion-summary{background:#efede3;border-color:#ded9c8}
+.hbar-fill,.bar-col span,.path-progress span{background:linear-gradient(90deg,#8d987d,#6c7962)}
+.toast{background:#40372e;box-shadow:0 14px 32px rgba(58,48,38,.28)}
+.auth-gate{background:var(--bg)}
+
+/* 기록 입력은 태블릿/PC에서 충분한 작업 공간을 확보한다. */
+#recordDialog .sheet{
+  height:min(96dvh,930px);
+  max-height:96dvh;
+  padding:10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+#recordDialog #entryQuote{min-height:220px;font-size:1.03rem;line-height:1.76}
+#recordDialog #entryThought{min-height:200px;font-size:.96rem;line-height:1.74}
+#recordDialog .field{margin-top:18px}
+#recordDialog #saveEntryBtn{margin-top:18px;min-height:48px}
+#recordDialog #deleteEntryBtn{margin-top:5px}
+
+/* 첫 화면의 책 선택 sheet에서도 바로 새 책을 검색한다. */
+.rg-picker-new{margin:10px 0 8px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+.rg-picker-new .btn{min-height:44px;background:#f3eee2;color:#725f48;border-color:#e4d9c7;box-shadow:none}
+.rg-picker-new small{display:block;margin-top:6px;color:var(--muted);font-size:.66rem;text-align:center}
+
+/* 완료된 독서 세션 삭제 */
+.timeline-session-head{position:relative;padding-right:36px}
+.rg-session-delete{
+  position:absolute;right:-3px;top:-4px;width:32px;height:32px;border:0;border-radius:50%;
+  background:transparent;color:#9b8177;font-size:.82rem;display:grid;place-items:center;box-shadow:none;
+}
+.rg-session-delete:hover{background:#f5e9e6;color:var(--danger)}
+.rg-session-delete:active{transform:scale(.94)}
+
+/* 장르 보완 도구 */
+.rg-genre-card .rg-genre-status{margin-top:8px;color:var(--muted);font-size:.72rem;line-height:1.55}
+.rg-genre-card .btn{margin-top:10px}
+
+@media(max-width:520px){
+  #recordDialog .sheet{height:94dvh;max-height:94dvh;padding-left:15px;padding-right:15px}
+  #recordDialog #entryQuote{min-height:170px}
+  #recordDialog #entryThought{min-height:155px}
+}
+@media print{.rg-session-delete,.rg-picker-new,.rg-genre-card{display:none!important}}
