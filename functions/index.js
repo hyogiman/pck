@@ -5,6 +5,11 @@ const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 
+const {
+  STUDIO_GARDENER_V2_PRICING,
+  summarizeStudioV2Usage
+} = require("./studio-gardener-v2-usage");
+
 const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 
@@ -3617,14 +3622,37 @@ exports.studioGardenerUsage = onCall(
         Number(data.studioDailyLimit || STUDIO_GARDENER_BASE_DAILY_LIMIT)
       )
     );
-    const inputTokens = Math.max(0, Number(data.studioInputTokens || 0));
-    const cachedInputTokens = Math.max(0, Number(data.studioCachedInputTokens || 0));
-    const outputTokens = Math.max(0, Number(data.studioOutputTokens || 0));
-    const gardenerEstimatedCostUsd = studioEstimatedCostUsd(
-      inputTokens,
-      cachedInputTokens,
-      outputTokens
-    );
+    // V2는 Luna planner와 Terra generator의 단가가 다르므로
+    // 기존 gpt-5.4-mini 기록과 분리 계산한 뒤 화면용 총계만 합친다.
+    const legacyStudioInputTokens = Math.max(0, Number(data.studioInputTokens || 0));
+    const legacyStudioCachedInputTokens = Math.max(0, Number(data.studioCachedInputTokens || 0));
+    const legacyStudioOutputTokens = Math.max(0, Number(data.studioOutputTokens || 0));
+
+    const studioV2Usage =
+      summarizeStudioV2Usage(data);
+
+    const inputTokens =
+      legacyStudioInputTokens +
+      studioV2Usage.inputTokens;
+
+    const cachedInputTokens =
+      legacyStudioCachedInputTokens +
+      studioV2Usage.cachedInputTokens;
+
+    const outputTokens =
+      legacyStudioOutputTokens +
+      studioV2Usage.outputTokens;
+
+    const legacyGardenerEstimatedCostUsd =
+      studioEstimatedCostUsd(
+        legacyStudioInputTokens,
+        legacyStudioCachedInputTokens,
+        legacyStudioOutputTokens
+      );
+
+    const gardenerEstimatedCostUsd =
+      legacyGardenerEstimatedCostUsd +
+      studioV2Usage.generationEstimatedCostUsd;
 
     const bloomingInterviewQuestions = Math.max(0, Number(data.bloomingInterviewQuestions || 0));
     const bloomingInterviewInputTokens = Math.max(0, Number(data.bloomingInterviewInputTokens || 0));
@@ -3674,7 +3702,17 @@ exports.studioGardenerUsage = onCall(
     const fragmentEmbeddingCount = Math.max(0, Number(data.fragmentEmbeddingCount || 0));
     const studioMaterialEmbeddingTokens = Math.max(0, Number(data.studioMaterialEmbeddingTokens || 0));
     const studioMaterialEmbeddingCount = Math.max(0, Number(data.studioMaterialEmbeddingCount || 0));
-    const embeddingTokens = fragmentEmbeddingTokens + studioMaterialEmbeddingTokens;
+    const studioGardenerRetrievalEmbeddingTokens =
+      studioV2Usage.retrieval.embeddingTokens;
+
+    const studioGardenerRetrievalEmbeddingCount =
+      studioV2Usage.retrieval.embeddingCount;
+
+    const embeddingTokens =
+      fragmentEmbeddingTokens +
+      studioMaterialEmbeddingTokens +
+      studioGardenerRetrievalEmbeddingTokens;
+
     const embeddingEstimatedCostUsd =
       (embeddingTokens / 1_000_000) * EMBEDDING_INPUT_USD_PER_M;
     const totalEstimatedCostUsd = gardenerEstimatedCostUsd + bloomingInterviewEstimatedCostUsd + betweenThoughtsEstimatedCostUsd + thoughtIndexEstimatedCostUsd + studioPathEstimatedCostUsd + embeddingEstimatedCostUsd;
@@ -3690,6 +3728,12 @@ exports.studioGardenerUsage = onCall(
       cachedInputTokens,
       outputTokens,
       gardenerEstimatedCostUsd: Number(gardenerEstimatedCostUsd.toFixed(8)),
+
+      studioV2: studioV2Usage,
+
+      studioGardenerRetrievalEmbeddingTokens,
+      studioGardenerRetrievalEmbeddingCount,
+
       bloomingInterviewQuestions,
       bloomingInterviewInputTokens,
       bloomingInterviewCachedInputTokens,
@@ -3731,13 +3775,20 @@ exports.studioGardenerUsage = onCall(
       embeddingTokens,
       embeddingEstimatedCostUsd: Number(embeddingEstimatedCostUsd.toFixed(8)),
       totalEstimatedCostUsd: Number(totalEstimatedCostUsd.toFixed(8)),
-      model: String(data.studioModel || STUDIO_GARDENER_MODEL),
+      model: studioV2Usage.runs > 0
+        ? `${studioV2Usage.planner.model} + ${studioV2Usage.generator.model}`
+        : String(data.studioModel || STUDIO_GARDENER_MODEL),
+
       embeddingModel: EMBEDDING_MODEL,
+
       pricing: {
         inputUsdPerMillion: STUDIO_GARDENER_INPUT_USD_PER_M,
         cachedInputUsdPerMillion: STUDIO_GARDENER_CACHED_INPUT_USD_PER_M,
         outputUsdPerMillion: STUDIO_GARDENER_OUTPUT_USD_PER_M,
         embeddingInputUsdPerMillion: EMBEDDING_INPUT_USD_PER_M,
+
+        studioV2:
+          STUDIO_GARDENER_V2_PRICING,
       },
     };
   }
@@ -5184,7 +5235,7 @@ exports.openAiOfficialUsage = onCall(
     region: "us-central1",
     // OpenAI 공식 집계는 기존처럼 OpenAI 전용 Secret만 사용한다.
     // Firebase 비용 대시보드의 관리자 이메일 Secret과 결합하지 않는다.
-    secrets: ["OPENAI_ADMIN_KEY", "OPENAI_PROJECT_ID"],
+    secrets: ["OPENAI_ADMIN_KEY"],
     timeoutSeconds: 45,
     memory: "256MiB",
     maxInstances: 5,
