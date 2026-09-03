@@ -139,6 +139,45 @@ assert.equal(
   JSON.stringify(connectQuestionCheck)
 );
 
+
+// 5. Primary evidence must come from authored Studio text, not merely from a
+// retrieved material.
+const materialUsedAsPrimary = validateStudioQuestionCandidate(
+  {
+    ...connectQuestion,
+
+    evidence: {
+      primary:
+        "내가 할 일을 고를 수 있는 상태",
+
+      materialId:
+        "frag-freedom",
+
+      material:
+        "내가 할 일을 고를 수 있는 상태"
+    }
+  },
+
+  {
+    context,
+    mode: "connect",
+    selectedMaterialId:
+      "frag-freedom"
+  }
+);
+
+assert.equal(
+  materialUsedAsPrimary.ok,
+  false
+);
+
+assert.ok(
+  materialUsedAsPrimary
+    .reasons
+    .includes(
+      "ungrounded-primary-evidence"
+    )
+);
 // 5. Merely naming a material is not enough. Its quoted evidence must really
 // exist in that Fragment.
 const inventedConnection = validateStudioQuestionCandidate(

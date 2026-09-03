@@ -203,6 +203,24 @@ function validateStudioQuestionCandidate(
 
   const reasons = [...base.reasons];
 
+  const primaryEvidence =
+    cleanText(
+      candidate?.evidence?.primary,
+      800
+    );
+
+  if (
+    !primaryEvidence ||
+    !containsEvidence(
+      authoredStudioText(context),
+      primaryEvidence
+    )
+  ) {
+    reasons.push(
+      "ungrounded-primary-evidence"
+    );
+  }
+
   if (!["connect", "deepen", "challenge"].includes(mode)) {
     reasons.push("invalid-question-mode");
   }
