@@ -1,11 +1,11 @@
 /* 생각의 텃밭 + 독서의 정원 — shared service worker
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
-   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 UI 런타임 패치는 서로 격리합니다.
+   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 UI 런타임은 분리합니다.
 
-   v14: 장르와 혼동되는 일반 '기타' 서비스 배지 제거. */
-const CACHE = "garden-v14-reading-badge-polish";
+   v15: 독서의 정원 전용 PWA manifest + 아이콘 + 설치 보조. */
+const CACHE = "garden-v15-reading-pwa";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260903-reading-badge-v6";
+const READING_VERSION = "20260904-reading-pwa-v7";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
@@ -13,6 +13,8 @@ const PATCH_TAGS = [
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
 const READING_HEAD_TAGS = [
+  `<link rel="manifest" href="./reading-manifest.json?v=${READING_VERSION}">`,
+  `<link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=${READING_VERSION}">`,
   `<link rel="stylesheet" href="./reading-theme-v3.css?v=${READING_VERSION}">`,
   `<link rel="stylesheet" href="./reading-theme-v4.css?v=${READING_VERSION}">`,
   `<link rel="stylesheet" href="./reading-theme-v5.css?v=${READING_VERSION}">`
@@ -21,14 +23,15 @@ const READING_BODY_TAGS = [
   `<script type="module" src="./reading-enhance-v3.js?v=${READING_VERSION}"></script>`,
   `<script type="module" src="./reading-hotfix-v4.js?v=${READING_VERSION}"></script>`,
   `<script type="module" src="./reading-genre-v5.js?v=${READING_VERSION}"></script>`,
-  `<script src="./reading-polish-v6.js?v=${READING_VERSION}"></script>`
+  `<script src="./reading-polish-v6.js?v=${READING_VERSION}"></script>`,
+  `<script src="./reading-pwa-v7.js?v=${READING_VERSION}"></script>`
 ];
 const SHELL = [
   "./", "./index.html", "./manifest.json",
-  "./reading.html", "./reading.css", "./reading.js",
+  "./reading.html", "./reading.css", "./reading.js", "./reading-manifest.json",
   "./reading-theme-v3.css", "./reading-enhance-v3.js", "./reading-theme-v4.css", "./reading-hotfix-v4.js",
-  "./reading-theme-v5.css", "./reading-genre-v5.js", "./reading-polish-v6.js",
-  "./icons/icon-192.png", "./icons/icon-512.png"
+  "./reading-theme-v5.css", "./reading-genre-v5.js", "./reading-polish-v6.js", "./reading-pwa-v7.js",
+  "./icons/icon-192.png", "./icons/icon-512.png", "./icons/reading-garden.svg", "./icons/reading-garden-maskable.svg"
 ];
 
 self.addEventListener("install", (e) => {
@@ -64,9 +67,12 @@ async function injectReadingPatches(response){
   if(!type.includes("text/html"))return response;
   let html=await response.text();
   html=html
+    .replace(/\s*<link rel="manifest" href="\.\/reading-manifest\.json(?:\?v=[^"]*)?">/gi,"")
+    .replace(/\s*<link rel="icon" type="image\/svg\+xml" href="\.\/icons\/reading-garden\.svg(?:\?v=[^"]*)?">/gi,"")
     .replace(/\s*<link rel="stylesheet" href="\.\/reading-theme-v\d+\.css(?:\?v=[^"]*)?">/gi,"")
     .replace(/\s*<script type="module" src="\.\/(?:reading-ui-v\d+|reading-enhance-v\d+|reading-hotfix-v\d+|reading-genre-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"")
-    .replace(/\s*<script src="\.\/reading-polish-v\d+\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+    .replace(/\s*<script src="\.\/(?:reading-polish-v\d+|reading-pwa-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+  html=html.replace(/<meta name="theme-color" content="[^"]*"\s*\/?>/i, `<meta name="theme-color" content="#76563d" />`);
   html=html.replace(/<\/head>/i, `${READING_HEAD_TAGS.join("\n")}\n</head>`);
   html=html.replace(/<\/body>/i, `${READING_BODY_TAGS.join("\n")}\n</body>`);
   const headers=new Headers(response.headers);headers.delete("content-length");headers.delete("content-encoding");
@@ -88,7 +94,8 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
     url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js")||
     url.pathname.endsWith("/reading-theme-v5.css")||url.pathname.endsWith("/reading-genre-v5.js")||
-    url.pathname.endsWith("/reading-polish-v6.js");
+    url.pathname.endsWith("/reading-polish-v6.js")||url.pathname.endsWith("/reading-pwa-v7.js")||
+    url.pathname.endsWith("/reading-manifest.json")||url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
   if(isRuntimePatch){
     e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:"no-store"});if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}return fresh}catch(_){return (await caches.match(req))||Response.error()}})());return;
   }
