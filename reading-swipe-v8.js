@@ -1,4 +1,4 @@
-/* 독서의 정원 v9 — 첫 화면에서 책 영역만 좌우 스와이프. 읽기 시작 버튼 이하는 고정한다. */
+/* 독서의 정원 v9.1 — 첫 화면에서 책 영역만 좌우 스와이프. 읽기 시작 버튼 이하는 고정한다. */
 const RG_SWIPE_DB='readingGarden_v1';
 const RG_SWIPE_CURRENT='readingGarden_currentBook_v1';
 const RG_GENRES=new Set(['소설','에세이','인문·철학','사회·정치','역사','심리','경제·경영','과학·기술','예술·문화','자기계발','육아·교육']);
@@ -63,7 +63,7 @@ function rgPagerHtml(index,total){
   let dots='';
   if(total<=7)dots=Array.from({length:total},(_,i)=>`<i class="${i===index?'on':''}" aria-hidden="true"></i>`).join('');
   else dots=`<span>${index+1} / ${total}</span>`;
-  return `<div class="rg-swipe-nav" aria-label="읽는 중 책 선택">
+  return `<div class="rg-swipe-nav" data-rg-index="${index}" data-rg-total="${total}" aria-label="읽는 중 책 선택">
     <button class="rg-swipe-arrow" data-rg-swipe="prev" type="button" aria-label="이전 책">‹</button>
     <div class="rg-swipe-dots">${dots}</div>
     <button class="rg-swipe-arrow" data-rg-swipe="next" type="button" aria-label="다음 책">›</button>
@@ -103,9 +103,10 @@ function rgRenderBook(book,index,total,direction=0){
 
 function rgUpdateFixedControls(book,index,total){
   const hero=document.getElementById('readHero');if(!hero)return;
-  const start=hero.querySelector('[data-start-book]');if(start)start.dataset.startBook=book.id;
+  const start=hero.querySelector('[data-start-book]');if(start&&start.dataset.startBook!==book.id)start.dataset.startBook=book.id;
   const nav=hero.querySelector('.rg-swipe-nav');
   if(total<2){nav?.remove();return}
+  if(nav&&Number(nav.dataset.rgIndex)===index&&Number(nav.dataset.rgTotal)===total)return;
   const wrap=document.createElement('div');wrap.innerHTML=rgPagerHtml(index,total);
   if(nav)nav.replaceWith(wrap.firstElementChild);
   else hero.querySelector('[data-open-book-picker]')?.insertAdjacentElement('beforebegin',wrap.firstElementChild);
