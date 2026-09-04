@@ -442,16 +442,16 @@
   );
 })();
 
-/* Fragment badge runtime v75 · 2026-09-04
+/* Fragment badge runtime v76 · 2026-09-04
    Only 발견/고민/방향/시도 are selectable now. Historical badges remain
    readable on existing Fragments without being mixed into the current lens set. */
-(function installFragmentBadgeV75(){
-  if(window.__fragmentBadgesV75Installed)return;
+(function installFragmentBadgeV76(){
+  if(window.__fragmentBadgesV76Installed)return;
   if(typeof LENSES==="undefined"||typeof effectiveLens!=="function"){
-    console.warn("[fragment-badges-v75] lens runtime not found; patch skipped.");
+    console.warn("[fragment-badges-v76] lens runtime not found; patch skipped.");
     return;
   }
-  window.__fragmentBadgesV75Installed=true;
+  window.__fragmentBadgesV76Installed=true;
 
   const CURRENT_LENSES=[
     {id:"discovery",e:"👀",label:"발견"},
@@ -494,8 +494,11 @@
     editLensLabel.innerHTML=`이 생각은 지금 내게 어떤 역할을 하나요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span>`;
   }
 
-  renderEditLens=function renderEditLensV75(){
+  renderEditLens=function renderEditLensV76(){
     const box=$("editLensRow");if(!box)return;
+    const field=box.closest(".field");
+    const label=field?.querySelector("label");
+    if(label)label.innerHTML=`이 생각은 지금 내게 어떤 역할을 하나요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span>`;
     const legacy=LEGACY_IDS.has(state.editLens)?BADGE_BY_ID.get(state.editLens):null;
     const legacyNotice=legacy
       ?`<div class="helper" style="width:100%;margin:0 0 2px">기존 표시: ${legacy.e} ${legacy.label} · 그대로 유지됩니다. 새 뱃지를 고를 때만 바뀝니다.</div>`
@@ -522,5 +525,5 @@
     };
   }
 
-  console.info("[fragment-badges-v75] current badges only; legacy display compatibility enabled.");
+  console.info("[fragment-badges-v76] current badges only; legacy display compatibility enabled.");
 })();

@@ -2,11 +2,11 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v22: Fragment badge v75 반영을 위해 런타임 패치 버전과 캐시를 갱신한다.
+   v23: Fragment badge v76 문구·렌더 일치 반영을 위해 캐시를 갱신한다.
    독서의 정원은 reading.html 자체가 현재 CSS/JS를 직접 참조한다.
    서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v22-fragment-badge-v75";
-const PATCH_VERSION = "20260904-1725-fragment-badge-v75";
+const CACHE = "garden-v23-fragment-badge-v76";
+const PATCH_VERSION = "20260904-1740-fragment-badge-v76";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
