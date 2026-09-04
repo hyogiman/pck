@@ -2,10 +2,10 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v18: 첫 화면 스와이프는 책 영역만 움직이고 읽기 시작 버튼 이하는 고정. */
-const CACHE = "garden-v18-reading-book-only-swipe";
+   v19: 독서의 정원 첫 화면 큰 표지 + 제목/부제 정리. */
+const CACHE = "garden-v19-reading-home-presentation";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260904-reading-swipe-v10";
+const READING_VERSION = "20260904-reading-home-v11";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
