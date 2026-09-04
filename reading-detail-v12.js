@@ -1,4 +1,4 @@
-/* 독서의 정원 v14 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 + 전역 DOM 감시 제거 */
+/* 독서의 정원 v15 — 책 상세 안정화 + 필사 저장 중복 방지/시각 피드백 */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -6,6 +6,9 @@ import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gsta
 const SNAPSHOT_DB="readingGarden_v1";
 const CURRENT_BOOK_KEY="readingGarden_currentBook_v1";
 let busy=false;
+let rgEntrySaving=false;
+let rgSaveFallbackTimer=null;
+let rgHandwritingPreviewUrl="";
 
 function injectStyle(){
   if(document.getElementById('rgDetailMenuStyle'))return;
@@ -27,8 +30,31 @@ function injectStyle(){
     #bookMoreMenu .rg-book-remove{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:var(--danger)}
     #bookMoreMenu .rg-book-restore{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:#65745d}
     #bookMoreMenu .rg-menu-note{padding:5px 12px 2px;color:var(--muted);font-size:.62rem;line-height:1.45}
-    #bookDetail .detail-start.rg-restore-primary{background:#65745d;border-color:#65745d}
-    @media(max-width:520px){#bookMoreMenu{right:12px;top:calc(59px + env(safe-area-inset-top));width:min(244px,calc(100vw - 28px))}}
+
+    .rg-handwriting-save-preview{
+      margin:-1px 0 16px;padding:12px;border:1px solid rgba(118,86,61,.16);border-radius:14px;
+      background:#f7f0e6;display:flex;align-items:center;gap:12px;
+    }
+    .rg-handwriting-save-preview.hidden{display:none!important}
+    .rg-handwriting-save-preview img{
+      width:74px;height:56px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid rgba(118,86,61,.12);
+    }
+    .rg-handwriting-save-preview .rg-hw-copy{min-width:0;flex:1}
+    .rg-handwriting-save-preview strong{display:block;font-size:.76rem;color:var(--text);margin-bottom:3px}
+    .rg-handwriting-save-preview span{display:block;font-size:.66rem;line-height:1.45;color:var(--muted)}
+    .rg-handwriting-save-preview.is-saving{background:#f1eadf}
+    .rg-handwriting-save-preview.is-saving img{opacity:.68}
+    .rg-handwriting-save-preview .rg-hw-spinner{
+      width:15px;height:15px;flex:0 0 auto;border:2px solid rgba(118,86,61,.22);border-top-color:#76563d;border-radius:50%;
+      animation:rgSpin .8s linear infinite;display:none;
+    }
+    .rg-handwriting-save-preview.is-saving .rg-hw-spinner{display:block}
+    #saveEntryBtn[aria-busy="true"]{opacity:.78;cursor:wait}
+    @keyframes rgSpin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){
+      #bookMoreMenu{right:12px;top:calc(59px + env(safe-area-inset-top));width:min(244px,calc(100vw - 28px))}
+      .rg-handwriting-save-preview img{width:64px;height:50px}
+    }
   `;document.head.appendChild(s);
 }
 
@@ -50,7 +76,7 @@ async function cloudProfiles(){
   const db=getFirestore(app);try{const snap=await getDocs(collection(db,'users',user.uid,'readingProfiles'));return {db,user,profiles:snap.docs.map(d=>({id:d.id,...d.data()}))}}catch{return {db,user,profiles:[]}}
 }
 
-function sourceIdFromDetail(){return document.querySelector('#bookMoreMenu [data-edit-profile]')?.dataset.editProfile||document.querySelector('#bookDetail [data-start-book]')?.dataset.startBook||document.querySelector('#bookDetail [data-rg-restore-book]')?.dataset.rgRestoreBook||''}
+function sourceIdFromDetail(){return document.querySelector('#bookMoreMenu [data-edit-profile]')?.dataset.editProfile||document.querySelector('#bookDetail [data-start-book]')?.dataset.startBook||''}
 function profileStatus(snap,id){const p=(snap?.readingProfiles||[]).find(x=>x.sourceId===id);if(p)return p.status;const s=(snap?.sources||[]).find(x=>x.id===id);return s?.status==='done'?'completed':'reading'}
 function nextReadingId(snap,removedId){return (snap?.sources||[]).find(s=>s.id!==removedId&&profileStatus(snap,s.id)==='reading')?.id||''}
 
@@ -80,37 +106,8 @@ async function removeBook(sourceId){
   try{const snap=await persistProfile(sourceId,'remove');const next=nextReadingId(snap,sourceId);if(next)localStorage.setItem(CURRENT_BOOK_KEY,next);else localStorage.removeItem(CURRENT_BOOK_KEY);location.reload()}finally{busy=false}
 }
 async function restoreBook(sourceId){
-  if(busy||!sourceId)return;busy=true;const btn=document.querySelector(`[data-rg-restore-book="${CSS.escape(sourceId)}"]`)||document.querySelector('[data-rg-restore-book]');if(btn){btn.disabled=true;btn.textContent='추가 중…'}
+  if(busy||!sourceId)return;busy=true;const btn=document.querySelector('[data-rg-restore-book]');if(btn){btn.disabled=true;btn.textContent='추가 중…'}
   try{await persistProfile(sourceId,'restore');localStorage.setItem(CURRENT_BOOK_KEY,sourceId);location.reload()}finally{busy=false}
-}
-
-function decorateRemovedState(menu,id,removed){
-  const start=document.querySelector('#bookDetail .detail-start');
-  const edit=menu.querySelector('[data-edit-profile]');
-  const complete=menu.querySelector('[data-complete-book]');
-  const statusTag=document.querySelector('#bookDetailBody .detail-tags .mini-tag');
-
-  if(removed){
-    if(start){
-      start.removeAttribute('data-start-book');
-      start.dataset.rgRestoreBook=id;
-      start.textContent='🌿 독서의 정원 서재에 다시 추가';
-      start.classList.add('rg-restore-primary');
-    }
-    edit?.classList.add('hidden');
-    complete?.classList.add('hidden');
-    if(statusTag)statusTag.textContent='서재에서 제거됨';
-    return;
-  }
-
-  if(start?.dataset.rgRestoreBook){
-    start.removeAttribute('data-rg-restore-book');
-    start.dataset.startBook=id;
-    start.textContent='▶ 읽기 시작';
-    start.classList.remove('rg-restore-primary');
-  }
-  edit?.classList.remove('hidden');
-  complete?.classList.remove('hidden');
 }
 
 async function decorateMenu(){
@@ -118,10 +115,21 @@ async function decorateMenu(){
   const id=sourceIdFromDetail();if(!id)return;
   const snap=await readSnapshot(),removed=profileStatus(snap,id)==='removed';
   menu.querySelectorAll('.rg-book-remove,.rg-book-restore,.rg-menu-note').forEach(x=>x.remove());
-  decorateRemovedState(menu,id,removed);
+
+  const start=document.querySelector('#bookDetailBody [data-start-book]');
+  const edit=menu.querySelector('[data-edit-profile]');
+  const complete=menu.querySelector('[data-complete-book]');
+
   if(removed){
+    edit?.classList.add('hidden');complete?.classList.add('hidden');
+    if(start){
+      start.removeAttribute('data-start-book');
+      start.dataset.rgRestoreBook=id;
+      start.textContent='🌿 독서의 정원 서재에 다시 추가';
+    }
     const b=document.createElement('button');b.type='button';b.className='btn rg-book-restore';b.dataset.rgRestoreBook=id;b.textContent='🌿 독서의 정원 서재에 다시 추가';menu.appendChild(b);
   }else{
+    edit?.classList.remove('hidden');complete?.classList.remove('hidden');
     const note=document.createElement('div');note.className='rg-menu-note';note.textContent='생각의 텃밭의 책·생각과 독서 기록은 유지됩니다.';menu.appendChild(note);
     const b=document.createElement('button');b.type='button';b.className='btn rg-book-remove';b.dataset.rgRemoveBook=id;b.textContent='독서의 정원에서 제거';menu.appendChild(b);
   }
@@ -140,10 +148,97 @@ async function guardRemovedHome(){
   const hero=document.getElementById('readHero');if(hero)hero.innerHTML='<div class="empty-hero"><div class="empty-icon">📚</div><h2>읽는 중인 책이 없습니다.</h2><p>서재에서 책을 읽는 중으로 바꾸거나 새 책을 추가해보세요.</p><button class="btn primary" data-open-book-search type="button">＋ 책 추가</button></div>';
 }
 
+function ensureHandwritingPreview(){
+  injectStyle();
+  const quote=document.getElementById('entryQuote');
+  const field=quote?.closest('.field');
+  if(!field)return null;
+  let box=document.getElementById('rgHandwritingSavePreview');
+  if(!box){
+    box=document.createElement('div');
+    box.id='rgHandwritingSavePreview';
+    box.className='rg-handwriting-save-preview hidden';
+    box.innerHTML='<img alt="필사 원본 미리보기"><div class="rg-hw-copy"><strong>✍ 필사 원본 포함</strong><span>작성한 필사 이미지와 S Pen 획 데이터가 기록과 함께 저장됩니다.</span></div><i class="rg-hw-spinner" aria-hidden="true"></i>';
+    field.insertAdjacentElement('afterend',box);
+  }
+  return box;
+}
+
+function captureHandwritingPreview(){
+  const canvas=document.getElementById('writingCanvas');
+  if(!canvas||!canvas.width||!canvas.height)return '';
+  try{return canvas.toDataURL('image/png',.72)}catch{return ''}
+}
+
+function showHandwritingPreview(){
+  const box=ensureHandwritingPreview();if(!box)return;
+  if(!rgHandwritingPreviewUrl)rgHandwritingPreviewUrl=captureHandwritingPreview();
+  const img=box.querySelector('img');if(img&&rgHandwritingPreviewUrl)img.src=rgHandwritingPreviewUrl;
+  box.classList.remove('hidden','is-saving');
+  box.querySelector('strong').textContent='✍ 필사 원본 포함';
+  box.querySelector('span').textContent='작성한 필사 이미지와 S Pen 획 데이터가 기록과 함께 저장됩니다.';
+}
+
+function setSaveVisual(saving){
+  const btn=document.getElementById('saveEntryBtn');if(!btn)return;
+  const box=ensureHandwritingPreview();
+  btn.disabled=saving;btn.setAttribute('aria-busy',saving?'true':'false');
+  if(saving){
+    if(!btn.dataset.rgOriginalText)btn.dataset.rgOriginalText=btn.textContent||'기록 저장';
+    const hasHandwriting=box&&!box.classList.contains('hidden');
+    btn.textContent=hasHandwriting?'✍ 필사 이미지 저장 중…':'기록 저장 중…';
+    if(hasHandwriting){
+      box.classList.add('is-saving');
+      box.querySelector('strong').textContent='필사 이미지 저장 중…';
+      box.querySelector('span').textContent='원본 이미지와 펜 획 데이터를 함께 저장하고 있습니다. 한 번만 눌러주세요.';
+    }
+  }else{
+    btn.disabled=false;btn.setAttribute('aria-busy','false');
+    if(btn.dataset.rgOriginalText){btn.textContent=btn.dataset.rgOriginalText;delete btn.dataset.rgOriginalText}
+    if(box&&!box.classList.contains('hidden'))showHandwritingPreview();
+  }
+}
+
+function resetEntrySaveUi({clearPreview=false}={}){
+  clearTimeout(rgSaveFallbackTimer);rgSaveFallbackTimer=null;rgEntrySaving=false;setSaveVisual(false);
+  if(clearPreview){
+    rgHandwritingPreviewUrl='';
+    const box=document.getElementById('rgHandwritingSavePreview');box?.classList.add('hidden');box?.classList.remove('is-saving');
+  }
+}
+
+function beginEntrySave(e){
+  const btn=e.target.closest('#saveEntryBtn');if(!btn)return;
+  if(rgEntrySaving){e.preventDefault();e.stopImmediatePropagation();return}
+  rgEntrySaving=true;setSaveVisual(true);
+  rgSaveFallbackTimer=setTimeout(()=>{
+    const dialog=document.getElementById('recordDialog');
+    if(dialog?.open&&rgEntrySaving){
+      rgEntrySaving=false;setSaveVisual(false);
+      const box=document.getElementById('rgHandwritingSavePreview');
+      if(box&&!box.classList.contains('hidden'))box.querySelector('span').textContent='저장 확인이 오래 걸리고 있습니다. 네트워크 상태를 확인한 뒤 다시 시도할 수 있습니다.';
+    }
+  },30000);
+}
+
+function setupRecordDialogFeedback(){
+  const dialog=document.getElementById('recordDialog');if(!dialog)return;
+  ensureHandwritingPreview();
+  const observer=new MutationObserver(()=>{
+    if(dialog.open){
+      if(!rgEntrySaving)setSaveVisual(false);
+      if(rgHandwritingPreviewUrl)showHandwritingPreview();
+    }
+  });
+  observer.observe(dialog,{attributes:true,attributeFilter:['open']});
+  dialog.addEventListener('close',()=>{clearTimeout(rgSaveFallbackTimer);rgSaveFallbackTimer=null;rgEntrySaving=false;});
+}
+
 /*
-  v14: document.body 전체 MutationObserver를 제거했다.
-  책 상세를 열거나 다시 렌더링하거나 ⋯ 메뉴를 누르는 실제 사용자 동작에서만 decorate한다.
-  제거된 책은 세션을 바로 시작하지 못하도록 primary action도 명시적 복원 동작으로 바꾼다.
+  v15: document.body 전체 MutationObserver는 사용하지 않는다.
+  책 상세 decorate는 실제 사용자 동작에서만 실행하고,
+  기록 저장 버튼은 capture 단계에서 즉시 잠가 느린 이미지 업로드 중 더블탭 중복 저장을 막는다.
+  필사 확정 후에는 record dialog에 원본 이미지 미리보기와 저장 상태를 보여준다.
 */
 document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-rg-remove-book]');if(remove){e.preventDefault();e.stopPropagation();removeBook(remove.dataset.rgRemoveBook);return}
@@ -151,8 +246,20 @@ document.addEventListener('click',e=>{
 
   if(e.target.closest('[data-open-book],[data-open-existing-book],[data-detail-tab],#bookMoreBtn'))scheduleDecorate();
 
+  if(e.target.closest('#confirmOcrBtn')){
+    rgHandwritingPreviewUrl=captureHandwritingPreview();
+    requestAnimationFrame(showHandwritingPreview);
+  }
+  if(e.target.closest('#openHandwritingBtn')){
+    rgHandwritingPreviewUrl='';
+    document.getElementById('rgHandwritingSavePreview')?.classList.add('hidden');
+  }
+
   const menu=document.getElementById('bookMoreMenu');if(menu&&!menu.classList.contains('hidden')&&!e.target.closest('#bookMoreBtn')&&!e.target.closest('#bookMoreMenu'))menu.classList.add('hidden');
 });
+document.addEventListener('click',beginEntrySave,true);
 
-window.addEventListener('pageshow',scheduleDecorate);
+window.addEventListener('pageshow',()=>{scheduleDecorate();setupRecordDialogFeedback()});
+injectStyle();
+setupRecordDialogFeedback();
 scheduleDecorate();
