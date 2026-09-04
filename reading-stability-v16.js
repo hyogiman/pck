@@ -1,5 +1,5 @@
-/* 독서의 정원 v17 — 세션 복구 + 조용한 타이머
-   필기 성능 최적화는 reading.js 원본에 통합했다. */
+/* 독서의 정원 v17 — 세션 복구 + 조용한 타이머 + 이미지 전용 필사 안내
+   필기 성능 최적화와 필사 이미지 저장은 reading.js 원본에 통합했다. */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -59,6 +59,27 @@ function installQuietTimer(){
   });
 }
 
+function refreshHandwritingCopy(){
+  const box=document.getElementById('rgHandwritingSavePreview');
+  if(!box||box.classList.contains('hidden'))return;
+  const strong=box.querySelector('strong');
+  const copy=box.querySelector('span');
+  if(box.classList.contains('is-saving')){
+    if(strong)strong.textContent='필사 원본 보관 중…';
+    if(copy)copy.textContent='필사 이미지를 기기에 먼저 안전하게 저장하고 있습니다. 클라우드 동기화는 이어서 진행됩니다.';
+  }else{
+    if(strong)strong.textContent='✍ 필사 원본 이미지 포함';
+    if(copy)copy.textContent='필사 원본 이미지만 저장합니다. 펜 획 데이터는 저장하지 않습니다.';
+  }
+}
+function installHandwritingCopySync(){
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#confirmOcrBtn,#saveEntryBtn')){
+      requestAnimationFrame(()=>{refreshHandwritingCopy();setTimeout(refreshHandwritingCopy,0)});
+    }
+  });
+}
+
 async function waitForFirebaseApp(){
   for(let i=0;i<50;i++){
     if(getApps().length)return getApp();
@@ -99,5 +120,6 @@ async function recoverRecentActiveSession(){
 
 whenDomReady(()=>{
   installQuietTimer();
+  installHandwritingCopySync();
   recoverRecentActiveSession();
 });
