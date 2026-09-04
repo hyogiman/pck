@@ -1,11 +1,11 @@
 /* 생각의 텃밭 + 독서의 정원 — shared service worker
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
-   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 UI 런타임은 분리합니다.
+   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v15: 독서의 정원 전용 PWA manifest + 아이콘 + 설치 보조. */
-const CACHE = "garden-v15-reading-pwa";
+   v16: 두 PWA scope 분리 + 독서의 정원 설치 판정 수정. */
+const CACHE = "garden-v16-separated-pwa-scopes";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260904-reading-pwa-v7";
+const READING_VERSION = "20260904-reading-pwa-v8";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
@@ -89,13 +89,14 @@ self.addEventListener("fetch", (e) => {
   }
   const isReadingHtml=url.pathname.endsWith("/reading.html");
   const isRuntimePatch=
+    url.pathname.endsWith("/manifest.json")||url.pathname.endsWith("/reading-manifest.json")||
     url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
     url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
     url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js")||
     url.pathname.endsWith("/reading-theme-v5.css")||url.pathname.endsWith("/reading-genre-v5.js")||
     url.pathname.endsWith("/reading-polish-v6.js")||url.pathname.endsWith("/reading-pwa-v7.js")||
-    url.pathname.endsWith("/reading-manifest.json")||url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
+    url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
   if(isRuntimePatch){
     e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:"no-store"});if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}return fresh}catch(_){return (await caches.match(req))||Response.error()}})());return;
   }
