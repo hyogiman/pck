@@ -2,32 +2,15 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v20: 책 상세 드롭다운 개선 + Reading Garden 전용 서재 제거/복원. */
-const CACHE = "garden-v20-reading-detail-menu";
+   v21: 독서의 정원은 reading.html 자체가 현재 CSS/JS를 직접 참조한다.
+   서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
+const CACHE = "garden-v21-reading-direct-assets";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260904-reading-detail-v12";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
-];
-const READING_HEAD_TAGS = [
-  `<link rel="manifest" href="./reading-manifest.json?v=${READING_VERSION}">`,
-  `<link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=${READING_VERSION}">`,
-  `<link rel="stylesheet" href="./reading-theme-v3.css?v=${READING_VERSION}">`,
-  `<link rel="stylesheet" href="./reading-theme-v4.css?v=${READING_VERSION}">`,
-  `<link rel="stylesheet" href="./reading-theme-v5.css?v=${READING_VERSION}">`,
-  `<link rel="stylesheet" href="./reading-swipe-v8.css?v=${READING_VERSION}">`
-];
-const READING_BODY_TAGS = [
-  `<script type="module" src="./reading-enhance-v3.js?v=${READING_VERSION}"></script>`,
-  `<script type="module" src="./reading-hotfix-v4.js?v=${READING_VERSION}"></script>`,
-  `<script type="module" src="./reading-genre-v5.js?v=${READING_VERSION}"></script>`,
-  `<script src="./reading-polish-v6.js?v=${READING_VERSION}"></script>`,
-  `<script src="./reading-pwa-v7.js?v=${READING_VERSION}"></script>`,
-  `<script src="./reading-swipe-v8.js?v=${READING_VERSION}"></script>`,
-  `<script type="module" src="./reading-detail-v12.js?v=${READING_VERSION}"></script>`
 ];
 const SHELL = [
   "./", "./index.html", "./manifest.json",
@@ -65,24 +48,6 @@ async function injectThoughtPatches(response){
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
 
-async function injectReadingPatches(response){
-  if(!response)return response;
-  const type=response.headers.get("content-type")||"";
-  if(!type.includes("text/html"))return response;
-  let html=await response.text();
-  html=html
-    .replace(/\s*<link rel="manifest" href="\.\/reading-manifest\.json(?:\?v=[^"]*)?">/gi,"")
-    .replace(/\s*<link rel="icon" type="image\/svg\+xml" href="\.\/icons\/reading-garden\.svg(?:\?v=[^"]*)?">/gi,"")
-    .replace(/\s*<link rel="stylesheet" href="\.\/(?:reading-theme|reading-swipe)-v\d+\.css(?:\?v=[^"]*)?">/gi,"")
-    .replace(/\s*<script type="module" src="\.\/(?:reading-ui-v\d+|reading-enhance-v\d+|reading-hotfix-v\d+|reading-genre-v\d+|reading-detail-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"")
-    .replace(/\s*<script src="\.\/(?:reading-polish-v\d+|reading-pwa-v\d+|reading-swipe-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
-  html=html.replace(/<meta name="theme-color" content="[^"]*"\s*\/?>/i, `<meta name="theme-color" content="#76563d" />`);
-  html=html.replace(/<\/head>/i, `${READING_HEAD_TAGS.join("\n")}\n</head>`);
-  html=html.replace(/<\/body>/i, `${READING_BODY_TAGS.join("\n")}\n</body>`);
-  const headers=new Headers(response.headers);headers.delete("content-length");headers.delete("content-encoding");
-  return new Response(html,{status:response.status,statusText:response.statusText,headers});
-}
-
 self.addEventListener("fetch", (e) => {
   const req=e.request;if(req.method!=="GET")return;const url=new URL(req.url);
   if(url.origin!==self.location.origin){
@@ -91,11 +56,13 @@ self.addEventListener("fetch", (e) => {
     }
     return;
   }
+
   const isReadingHtml=url.pathname.endsWith("/reading.html");
   const isRuntimePatch=
     url.pathname.endsWith("/manifest.json")||url.pathname.endsWith("/reading-manifest.json")||
     url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
+    url.pathname.endsWith("/reading.js")||url.pathname.endsWith("/reading.css")||
     url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
     url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js")||
     url.pathname.endsWith("/reading-theme-v5.css")||url.pathname.endsWith("/reading-genre-v5.js")||
@@ -103,19 +70,30 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/reading-swipe-v8.css")||url.pathname.endsWith("/reading-swipe-v8.js")||
     url.pathname.endsWith("/reading-detail-v12.js")||
     url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
+
   if(isRuntimePatch){
-    e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:"no-store"});if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}return fresh}catch(_){return (await caches.match(req))||Response.error()}})());return;
+    e.respondWith((async()=>{
+      try{
+        const fresh=await fetch(req,{cache:"no-store"});
+        if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}
+        return fresh;
+      }catch(_){return (await caches.match(req))||Response.error()}
+    })());return;
   }
+
   if(req.mode==="navigate"||(req.headers.get("accept")||"").includes("text/html")){
     e.respondWith((async()=>{
       try{
-        const network=await fetch(req,{cache:"no-store"}),patched=isReadingHtml?await injectReadingPatches(network):await injectThoughtPatches(network),copy=patched.clone();
-        caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{});return patched;
+        const network=await fetch(req,{cache:"no-store"});
+        const response=isReadingHtml?network:await injectThoughtPatches(network);
+        const copy=response.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{});
+        return response;
       }catch(_){
-        if(isReadingHtml){const cached=(await caches.match(req))||(await caches.match("./reading.html"));return injectReadingPatches(cached)}
+        if(isReadingHtml)return (await caches.match(req))||(await caches.match("./reading.html"))||Response.error();
         const cached=await caches.match(req)||await caches.match("./index.html");return injectThoughtPatches(cached);
       }
     })());return;
   }
+
   e.respondWith(caches.match(req).then(cached=>cached||fetch(req).then(res=>{const copy=res.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{});return res})));
 });
