@@ -1,12 +1,13 @@
-/* 독서의 정원 v9.2 — 책 영역만 스와이프 + 큰 표지 + 제목/부제 분리 표시. */
+/* 독서의 정원 v9.3 — 책 영역만 스와이프 + 큰 표지 + 제목/부제 분리 + 새 책 즉시 반영. */
 const RG_SWIPE_DB='readingGarden_v1';
 const RG_SWIPE_CURRENT='readingGarden_currentBook_v1';
 const RG_GENRES=new Set(['소설','에세이','인문·철학','사회·정치','역사','심리','경제·경영','과학·기술','예술·문화','자기계발','육아·교육']);
 let rgSwipeSnapshot=null;
 let rgSwipeBusy=false;
 let rgSwipeQueued=false;
+const rgEphemeralBooks=new Map();
 
-const rgEsc=(v='')=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const rgEsc=(v='')=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[c]));
 const rgSafe=v=>String(v??'').trim();
 
 function rgRelativeDate(v){
@@ -37,6 +38,7 @@ function rgReadSnapshot(){
 function rgProfileFor(snapshot,id){
   const real=(snapshot?.readingProfiles||[]).find(p=>p.sourceId===id);
   if(real)return real;
+  if(rgEphemeralBooks.has(id))return {sourceId:id,status:'reading',format:'ebook',currentLocator:'',lastReadAt:''};
   const s=(snapshot?.sources||[]).find(x=>x.id===id);
   if(!s)return null;
   return {sourceId:id,status:s.status==='done'?'completed':'reading',format:String(s.platform||'').includes('종이')?'paper':'ebook',currentLocator:'',lastReadAt:''};
@@ -44,11 +46,38 @@ function rgProfileFor(snapshot,id){
 
 function rgReadingBooks(snapshot){
   const books=(snapshot?.sources||[]).filter(s=>s.type==='book'&&rgProfileFor(snapshot,s.id)?.status==='reading');
+  const ids=new Set(books.map(b=>b.id));
+  for(const [id,book] of rgEphemeralBooks){
+    if(ids.has(id))rgEphemeralBooks.delete(id);
+    else books.unshift(book);
+  }
   books.sort((a,b)=>{
     const pa=rgProfileFor(snapshot,a.id),pb=rgProfileFor(snapshot,b.id);
-    return new Date(pb?.lastReadAt||b.updatedAt||b.createdAt||0)-new Date(pa?.lastReadAt||a.updatedAt||a.createdAt||0);
+    const bt=pb?.lastReadAt||b.updatedAt||b.createdAt||0,at=pa?.lastReadAt||a.updatedAt||a.createdAt||0;
+    return new Date(bt)-new Date(at);
   });
   return books;
+}
+
+function rgCaptureLiveBook(hero){
+  const id=hero?.querySelector('[data-start-book]')?.dataset.startBook;
+  if(!id)return;
+  if((rgSwipeSnapshot?.sources||[]).some(s=>s.id===id)){rgEphemeralBooks.delete(id);return}
+  const content=hero.querySelector('[data-rg-book-content]');
+  const fullTitle=rgSafe(content?.dataset.rgFullTitle)||rgSafe(hero.querySelector('.hero-title')?.textContent);
+  if(!fullTitle)return;
+  const subtitle=rgSafe(hero.querySelector('.rg-home-subtitle')?.textContent);
+  const title=subtitle&&!fullTitle.includes(subtitle)?`${fullTitle} - ${subtitle}`:fullTitle;
+  const img=hero.querySelector('.hero-cover');
+  const genre=rgSafe(hero.querySelector('.rg-home-genre')?.textContent);
+  rgEphemeralBooks.set(id,{
+    id,type:'book',status:'active',title,
+    creator:rgSafe(hero.querySelector('.hero-author')?.textContent),
+    image:img?.tagName==='IMG'?img.src:'',
+    primaryGenre:RG_GENRES.has(genre)?genre:'',
+    createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
+    _ephemeral:true
+  });
 }
 
 function rgCover(book){
@@ -99,7 +128,7 @@ function rgBookContentHtml(book,direction=0){
       ? `<div class="hero-locator"><small>최근 독서</small><strong style="font-size:1rem">${rgEsc(rgRelativeDate(p.lastReadAt))}</strong></div>`
       : '';
   const genreHtml=genre?`<span class="hero-service rg-home-genre rg-genre-badge">${rgEsc(genre)}</span>`:'';
-  return `<div class="rg-swipe-book-content ${direction>0?'rg-enter-right':direction<0?'rg-enter-left':''}" data-rg-book-content>
+  return `<div class="rg-swipe-book-content ${direction>0?'rg-enter-right':direction<0?'rg-enter-left':''}" data-rg-book-content data-rg-full-title="${rgEsc(title.full)}">
     ${rgCover(book)}
     <div class="rg-home-title-wrap" title="${rgEsc(title.full)}">
       <h2 class="hero-title">${rgEsc(title.main)}</h2>
@@ -139,9 +168,10 @@ async function rgSwitchBook(step){
   if(rgSwipeBusy)return;
   rgSwipeBusy=true;
   try{
-    await rgRefreshSnapshot();
-    const books=rgReadingBooks(rgSwipeSnapshot);if(books.length<2)return;
     const hero=document.getElementById('readHero');
+    await rgRefreshSnapshot();
+    rgCaptureLiveBook(hero);
+    const books=rgReadingBooks(rgSwipeSnapshot);if(books.length<2)return;
     const currentId=hero?.querySelector('[data-start-book]')?.dataset.startBook||localStorage.getItem(RG_SWIPE_CURRENT)||books[0].id;
     let index=books.findIndex(b=>b.id===currentId);if(index<0)index=0;
     const next=(index+step+books.length)%books.length;
@@ -193,13 +223,17 @@ async function rgEnhanceHero(){
   rgBindHeroPointer();
   const start=hero.querySelector('[data-start-book]');if(!start)return;
   await rgRefreshSnapshot();
+  rgCaptureLiveBook(hero);
   const books=rgReadingBooks(rgSwipeSnapshot);if(!books.length)return;
-  const desired=localStorage.getItem(RG_SWIPE_CURRENT)||start.dataset.startBook;
-  let index=books.findIndex(b=>b.id===desired);if(index<0)index=books.findIndex(b=>b.id===start.dataset.startBook);if(index<0)index=0;
+  const liveId=start.dataset.startBook;
+  const desired=localStorage.getItem(RG_SWIPE_CURRENT)||liveId;
+  let index=books.findIndex(b=>b.id===desired);
+  if(index<0)index=books.findIndex(b=>b.id===liveId);
+  if(index<0)index=0;
   const target=books[index];
   const inner=hero.querySelector('.read-hero-inner');
   const normalized=inner?.querySelector('[data-rg-book-content]');
-  if(!normalized||start.dataset.startBook!==target.id){rgRenderBook(target,index,books.length);return}
+  if(!normalized||liveId!==target.id){rgRenderBook(target,index,books.length);return}
   rgUpdateFixedControls(target,index,books.length);
   inner.setAttribute('data-rg-swipe-ready','');
 }
