@@ -1,0 +1,35 @@
+/* 독서의 정원 v8 — 첫 화면 책 스와이프 */
+#readHero{touch-action:pan-y;overscroll-behavior-x:contain;}
+#readHero .read-hero-inner[data-rg-swipe-ready]{will-change:transform,opacity;transition:transform .18s ease,opacity .18s ease;}
+#readHero .rg-swipe-card.rg-exit-left{transform:translateX(-34px);opacity:0;}
+#readHero .rg-swipe-card.rg-exit-right{transform:translateX(34px);opacity:0;}
+#readHero .rg-swipe-card.rg-enter-right{transform:translateX(26px);opacity:.12;}
+#readHero .rg-swipe-card.rg-enter-left{transform:translateX(-26px);opacity:.12;}
+
+.rg-swipe-nav{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  margin:9px auto 2px;min-height:31px;color:var(--muted);
+  user-select:none;-webkit-user-select:none;
+}
+.rg-swipe-arrow{
+  width:31px;height:31px;border:0;border-radius:50%;padding:0;
+  display:grid;place-items:center;background:transparent;color:#7a6755;
+  font:500 1.55rem/1 system-ui,sans-serif;box-shadow:none;
+}
+.rg-swipe-arrow:active{background:#e8dfd0;transform:scale(.94)}
+.rg-swipe-dots{display:flex;align-items:center;justify-content:center;gap:6px;min-width:54px;height:20px}
+.rg-swipe-dots i{display:block;width:5px;height:5px;border-radius:50%;background:#c8baaa;transition:width .16s ease,background .16s ease}
+.rg-swipe-dots i.on{width:15px;border-radius:999px;background:var(--leaf,#6f7c62)}
+.rg-swipe-dots span{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#857261}
+
+/* 스와이프가 가능한 책에서는 기존 '다른 책 선택'을 보조 수단으로 한 단계 낮춘다. */
+#readHero .rg-swipe-nav + .switch-book{margin-top:2px}
+
+@media (hover:hover) and (pointer:fine){
+  .rg-swipe-arrow:hover{background:#ece4d7;color:#5f4938}
+}
+@media(max-width:520px){
+  .rg-swipe-nav{margin-top:7px;gap:9px}
+  .rg-swipe-arrow{width:29px;height:29px}
+}
+@media print{.rg-swipe-nav{display:none!important}}
