@@ -1,4 +1,4 @@
-/* 독서의 정원 v9 — 책 정보만 움직이고 읽기 시작 버튼 이하는 고정 */
+/* 독서의 정원 v9.2 — 책만 움직이는 스와이프 + 큰 표지 + 제목/부제 정리 */
 #readHero{overscroll-behavior-x:contain;}
 #readHero .rg-swipe-stage{overflow:hidden;touch-action:pan-y;}
 #readHero .rg-swipe-book-content{
@@ -9,6 +9,42 @@
 #readHero .rg-swipe-book-content.rg-exit-right{transform:translateX(34px);opacity:0;}
 #readHero .rg-swipe-book-content.rg-enter-right{transform:translateX(26px);opacity:.12;}
 #readHero .rg-swipe-book-content.rg-enter-left{transform:translateX(-26px);opacity:.12;}
+
+/* 첫 화면은 책 표지를 조금 더 크게 보여준다. 태블릿/PC에서 특히 존재감을 키운다. */
+#readHero .hero-cover{
+  width:min(54vw,235px);
+  max-height:none;
+}
+
+/* 긴 책 제목은 가로로 퍼뜨리지 않고 한 덩어리로 모아 읽히게 한다. */
+#readHero .rg-home-title-wrap{
+  width:min(78%,430px);
+  margin:22px auto 0;
+}
+#readHero .rg-home-title-wrap .hero-title{
+  margin:0;
+  font-size:1.46rem;
+  line-height:1.42;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-wrap:balance;
+}
+#readHero .rg-home-subtitle{
+  width:min(100%,390px);
+  margin:7px auto 0;
+  color:#8a7868;
+  font-size:.76rem;
+  line-height:1.5;
+  font-weight:600;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-wrap:balance;
+}
+#readHero .rg-home-title-wrap + .hero-author{margin-top:11px;}
 
 /* 읽기 시작 이하의 컨트롤은 스와이프 중에도 같은 위치에 남는다. */
 #readHero .start-btn,
@@ -32,10 +68,18 @@
 .rg-swipe-dots span{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#857261}
 #readHero .rg-swipe-nav + .switch-book{margin-top:2px}
 
+@media (min-width:560px){
+  #readHero .hero-cover{width:235px;}
+  #readHero .rg-home-title-wrap{width:min(72%,430px)}
+}
 @media (hover:hover) and (pointer:fine){
   .rg-swipe-arrow:hover{background:#ece4d7;color:#5f4938}
 }
 @media(max-width:520px){
+  #readHero .hero-cover{width:min(58vw,215px)}
+  #readHero .rg-home-title-wrap{width:88%;margin-top:18px}
+  #readHero .rg-home-title-wrap .hero-title{font-size:1.3rem}
+  #readHero .rg-home-subtitle{font-size:.72rem}
   .rg-swipe-nav{margin-top:7px;gap:9px}
   .rg-swipe-arrow{width:29px;height:29px}
 }
