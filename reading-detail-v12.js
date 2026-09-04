@@ -1,16 +1,8 @@
 /* 독서의 정원 v12 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 */
-import { getApps, getApp, initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-const CONFIG={
-  apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
-  authDomain:"idea-pocket-56063.firebaseapp.com",
-  projectId:"idea-pocket-56063",
-  storageBucket:"idea-pocket-56063.firebasestorage.app",
-  messagingSenderId:"894399979515",
-  appId:"1:894399979515:web:834a298e37ef05dbd0f55e"
-};
 const SNAPSHOT_DB="readingGarden_v1";
 const CURRENT_BOOK_KEY="readingGarden_currentBook_v1";
 let busy=false;
@@ -44,15 +36,16 @@ async function readSnapshot(){const db=await openDb();if(!db)return null;return 
 async function writeSnapshot(snap){const db=await openDb();if(!db||!snap)return;return new Promise(resolve=>{if(!db.objectStoreNames.contains('meta')){db.close();resolve();return}const tx=db.transaction('meta','readwrite');tx.objectStore('meta').put(snap);tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();resolve()}})}
 async function queueProfile(profile){const db=await openDb();if(!db)return;return new Promise(resolve=>{if(!db.objectStoreNames.contains('outbox')){db.close();resolve();return}const tx=db.transaction('outbox','readwrite');tx.objectStore('outbox').put({id:`readingProfiles:${profile.id}`,collectionName:'readingProfiles',docId:profile.id,data:profile,kind:'set',queuedAt:new Date().toISOString()});tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();resolve()}})}
 
+async function waitForApp(){for(let i=0;i<40;i++){if(getApps().length)return getApp();await new Promise(r=>setTimeout(r,75))}return null}
 async function getUser(){
-  const app=getApps().length?getApp():initializeApp(CONFIG),auth=getAuth(app);
+  const app=await waitForApp();if(!app)return {app:null,user:null};const auth=getAuth(app);
   if(auth.currentUser)return {app,user:auth.currentUser};
-  const user=await new Promise(resolve=>{const off=onAuthStateChanged(auth,u=>{off();resolve(u||null)});setTimeout(()=>{try{off()}catch{};resolve(null)},2500)});
+  const user=await new Promise(resolve=>{let settled=false;const finish=u=>{if(settled)return;settled=true;try{off()}catch{};resolve(u||null)};const off=onAuthStateChanged(auth,u=>finish(u));setTimeout(()=>finish(null),2500)});
   return {app,user};
 }
 
 async function cloudProfiles(){
-  const {app,user}=await getUser();if(!user)return {db:null,user:null,profiles:[]};
+  const {app,user}=await getUser();if(!app||!user)return {db:null,user:null,profiles:[]};
   const db=getFirestore(app);try{const snap=await getDocs(collection(db,'users',user.uid,'readingProfiles'));return {db,user,profiles:snap.docs.map(d=>({id:d.id,...d.data()}))}}catch{return {db,user,profiles:[]}}
 }
 
