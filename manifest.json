@@ -1,9 +1,10 @@
 {
+  "id": "./index.html",
   "name": "생각의 텃밭",
   "short_name": "텃밭",
   "description": "책·미디어·일상에서 만난 것과, 그에 대한 나의 생각을 기록하는 공간",
   "start_url": "./index.html",
-  "scope": "./",
+  "scope": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f3f1e8",
