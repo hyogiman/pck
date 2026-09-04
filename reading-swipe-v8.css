@@ -1,10 +1,19 @@
-/* 독서의 정원 v8 — 첫 화면 책 스와이프 */
-#readHero{touch-action:pan-y;overscroll-behavior-x:contain;}
-#readHero .read-hero-inner[data-rg-swipe-ready]{will-change:transform,opacity;transition:transform .18s ease,opacity .18s ease;}
-#readHero .rg-swipe-card.rg-exit-left{transform:translateX(-34px);opacity:0;}
-#readHero .rg-swipe-card.rg-exit-right{transform:translateX(34px);opacity:0;}
-#readHero .rg-swipe-card.rg-enter-right{transform:translateX(26px);opacity:.12;}
-#readHero .rg-swipe-card.rg-enter-left{transform:translateX(-26px);opacity:.12;}
+/* 독서의 정원 v9 — 책 정보만 움직이고 읽기 시작 버튼 이하는 고정 */
+#readHero{overscroll-behavior-x:contain;}
+#readHero .rg-swipe-stage{overflow:hidden;touch-action:pan-y;}
+#readHero .rg-swipe-book-content{
+  will-change:transform,opacity;
+  transition:transform .17s ease,opacity .17s ease;
+}
+#readHero .rg-swipe-book-content.rg-exit-left{transform:translateX(-34px);opacity:0;}
+#readHero .rg-swipe-book-content.rg-exit-right{transform:translateX(34px);opacity:0;}
+#readHero .rg-swipe-book-content.rg-enter-right{transform:translateX(26px);opacity:.12;}
+#readHero .rg-swipe-book-content.rg-enter-left{transform:translateX(-26px);opacity:.12;}
+
+/* 읽기 시작 이하의 컨트롤은 스와이프 중에도 같은 위치에 남는다. */
+#readHero .start-btn,
+#readHero .rg-swipe-nav,
+#readHero .switch-book{transform:none!important;opacity:1!important;}
 
 .rg-swipe-nav{
   display:flex;align-items:center;justify-content:center;gap:12px;
@@ -21,8 +30,6 @@
 .rg-swipe-dots i{display:block;width:5px;height:5px;border-radius:50%;background:#c8baaa;transition:width .16s ease,background .16s ease}
 .rg-swipe-dots i.on{width:15px;border-radius:999px;background:var(--leaf,#6f7c62)}
 .rg-swipe-dots span{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#857261}
-
-/* 스와이프가 가능한 책에서는 기존 '다른 책 선택'을 보조 수단으로 한 단계 낮춘다. */
 #readHero .rg-swipe-nav + .switch-book{margin-top:2px}
 
 @media (hover:hover) and (pointer:fine){
