@@ -141,13 +141,12 @@ function rgBindHeroPointer(){
     if(e.button!==undefined&&e.button!==0)return;
     if(e.target.closest('button,a,input,textarea,select,label'))return;
     if(!hero.querySelector('[data-start-book]'))return;
-    rgPointer={id:e.pointerId,x:e.clientX,y:e.clientY,lastX:e.clientX,dragging:false};
+    rgPointer={id:e.pointerId,x:e.clientX,y:e.clientY,dragging:false};
     try{hero.setPointerCapture(e.pointerId)}catch{}
   });
   hero.addEventListener('pointermove',e=>{
     if(!rgPointer||e.pointerId!==rgPointer.id)return;
     const dx=e.clientX-rgPointer.x,dy=e.clientY-rgPointer.y;
-    rgPointer.lastX=e.clientX;
     if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.15)rgPointer.dragging=true;
     if(!rgPointer.dragging)return;
     const card=hero.querySelector('.read-hero-inner');
@@ -166,6 +165,8 @@ function rgBindHeroPointer(){
 }
 
 async function rgEnhanceHero(){
+  const readView=document.getElementById('readView');
+  if(!readView?.classList.contains('active'))return;
   const hero=document.getElementById('readHero');if(!hero)return;
   rgBindHeroPointer();
   const start=hero.querySelector('[data-start-book]');
