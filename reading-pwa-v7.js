@@ -1,7 +1,7 @@
-/* 독서의 정원 v15 — 독립 PWA 설치 보조 + 최신 Reading Garden 런타임 갱신 */
+/* 독서의 정원 v16 — 독립 PWA 설치 보조 + 안정성 런타임 로드 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260904-reading-v15';
+const RG_SW_VERSION='20260904-reading-v16';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -100,3 +100,7 @@ document.getElementById('openSettings')?.addEventListener('click',()=>{
 });
 
 registerSharedWorker();
+
+/* 긴 필사/세션 복구/조용한 타이머는 별도 안정성 모듈로 분리한다.
+   reading.js 원본을 런타임 문자열 치환하지 않고 실제 모듈을 직접 로드한다. */
+import('./reading-stability-v16.js?v=20260904-reading-v16').catch(err=>console.warn('Reading Garden stability runtime failed',err));
