@@ -442,14 +442,16 @@
   );
 })();
 
-/* Fragment badge runtime v74 · 2026-09-04
-   New fragments use 발견/고민/방향/시도. Historical badges are display-only
-   compatibility metadata and are never bulk-migrated. ★ remains importance. */
-(function installFragmentBadgeV74(){
+/* Fragment badge runtime v75 · 2026-09-04
+   Only 발견/고민/방향/시도 are selectable now. Historical badges remain
+   readable on existing Fragments without being mixed into the current lens set. */
+(function installFragmentBadgeV75(){
+  if(window.__fragmentBadgesV75Installed)return;
   if(typeof LENSES==="undefined"||typeof effectiveLens!=="function"){
-    console.warn("[fragment-badges-v74] lens runtime not found; patch skipped.");
+    console.warn("[fragment-badges-v75] lens runtime not found; patch skipped.");
     return;
   }
+  window.__fragmentBadgesV75Installed=true;
 
   const CURRENT_LENSES=[
     {id:"discovery",e:"👀",label:"발견"},
@@ -463,32 +465,27 @@
     {id:"desire",e:"🧭",label:"욕망"},
     {id:"seed",e:"✨",label:"씨앗"}
   ];
-  const CURRENT_IDS=new Set(CURRENT_LENSES.map(x=>x.id));
+  const BADGE_BY_ID=new Map([...CURRENT_LENSES,...LEGACY_LENSES].map(x=>[x.id,x]));
   const LEGACY_IDS=new Set(LEGACY_LENSES.map(x=>x.id));
 
-  // Keep the original array binding so the legacy renderer keeps working,
-  // but expand its metadata to understand both current and historical badges.
-  LENSES.splice(0,LENSES.length,...CURRENT_LENSES,...LEGACY_LENSES);
+  // The app-wide selectable lens source contains current choices only.
+  LENSES.splice(0,LENSES.length,...CURRENT_LENSES);
+
+  lensBadge=function lensBadgeV75(f){
+    const id=effectiveLens(f);if(!id)return "";
+    const lens=BADGE_BY_ID.get(id);if(!lens)return "";
+    return `<span class="lens-badge">${lens.e} ${lens.label}</span>`;
+  };
 
   const filter=document.getElementById("fragLens");
   if(filter){
-    const previous=filter.value;
     filter.innerHTML=`
       <option value="all">전체 표시</option>
-      <optgroup label="현재 뱃지">
-        <option value="discovery">👀 발견</option>
-        <option value="concern">💭 고민</option>
-        <option value="direction">🧭 방향</option>
-        <option value="experiment">🧪 시도</option>
-      </optgroup>
-      <optgroup label="이전 뱃지">
-        <option value="question">❓ 질문</option>
-        <option value="decision">⚖️ 결정</option>
-        <option value="desire">🧭 욕망</option>
-        <option value="seed">✨ 씨앗</option>
-      </optgroup>`;
-    if([...filter.options].some(o=>o.value===previous))filter.value=previous;
-    else filter.value="all";
+      <option value="discovery">👀 발견</option>
+      <option value="concern">💭 고민</option>
+      <option value="direction">🧭 방향</option>
+      <option value="experiment">🧪 시도</option>`;
+    filter.value="all";
   }
 
   const editLensRow=document.getElementById("editLensRow");
@@ -497,26 +494,33 @@
     editLensLabel.innerHTML=`이 생각은 지금 내게 어떤 역할을 하나요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span>`;
   }
 
-  if(typeof renderEditLens==="function"){
-    renderEditLens=function renderEditLensV74(){
-      const box=$("editLensRow");if(!box)return;
-      const currentId=state.editLens;
-      const legacy=LEGACY_IDS.has(currentId)?LEGACY_LENSES.find(L=>L.id===currentId):null;
-      const legacyCurrent=legacy
-        ?`<button class="lens-chip on" data-lens-pick="${legacy.id}" type="button" title="예전에 선택한 뱃지입니다. 누르면 해제되고, 새 뱃지를 고르면 교체됩니다.">이전 · ${legacy.e} ${legacy.label}</button>`
-        :"";
-      box.innerHTML=legacyCurrent+CURRENT_LENSES.map(L=>`<button class="lens-chip ${state.editLens===L.id?"on":""}" data-lens-pick="${L.id}" type="button">${L.e} ${L.label}</button>`).join("");
+  renderEditLens=function renderEditLensV75(){
+    const box=$("editLensRow");if(!box)return;
+    const legacy=LEGACY_IDS.has(state.editLens)?BADGE_BY_ID.get(state.editLens):null;
+    const legacyNotice=legacy
+      ?`<div class="helper" style="width:100%;margin:0 0 2px">기존 표시: ${legacy.e} ${legacy.label} · 그대로 유지됩니다. 새 뱃지를 고를 때만 바뀝니다.</div>`
+      :"";
+    box.innerHTML=legacyNotice+CURRENT_LENSES.map(L=>`<button class="lens-chip ${state.editLens===L.id?"on":""}" data-lens-pick="${L.id}" type="button">${L.e} ${L.label}</button>`).join("");
+  };
+
+  // Seed is historical metadata only, never a Studio material mode now.
+  const oldStyle=document.getElementById("fragment-badges-v74-style");
+  if(oldStyle)oldStyle.remove();
+  let style=document.getElementById("fragment-badges-v75-style");
+  if(!style){
+    style=document.createElement("style");
+    style.id="fragment-badges-v75-style";
+    document.head.appendChild(style);
+  }
+  style.textContent='[data-pool-mode="seed"],[data-attach-mode="seed"]{display:none!important}';
+
+  if(typeof currentPool==="function"){
+    const baseCurrentPool=currentPool;
+    currentPool=function currentPoolV75(){
+      if(state.poolMode==="seed")state.poolMode=state.poolThread?"thread":"all";
+      return baseCurrentPool();
     };
   }
 
-  // 씨앗은 더 이상 Studio 재료의 별도 종류가 아니다. 과거 seed 값은
-  // Fragment 보존/필터/표시를 위해 남기되 Studio의 전용 탭만 숨긴다.
-  const style=document.createElement("style");
-  style.id="fragment-badges-v74-style";
-  style.textContent='[data-pool-mode="seed"],[data-attach-mode="seed"]{display:none!important}';
-  document.head.appendChild(style);
-
-  // Defensive check: only the four current IDs can be offered by the edit picker.
-  if(CURRENT_IDS.size!==4)console.warn("[fragment-badges-v74] unexpected current lens set.");
-  console.info("[fragment-badges-v74] 발견 · 고민 · 방향 · 시도 enabled; legacy badges preserved.");
+  console.info("[fragment-badges-v75] current badges only; legacy display compatibility enabled.");
 })();
