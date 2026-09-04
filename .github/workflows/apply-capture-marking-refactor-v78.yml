@@ -1,0 +1,90 @@
+name: Apply Capture Marking Refactor v78
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/apply-capture-marking-refactor-v78.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply verified refactor
+        run: python3 scripts/refactor-capture-marking-v78.py
+
+      - name: Extract inline JavaScript
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html=Path('index.html').read_text(encoding='utf-8')
+          blocks=[]
+          for attrs,body in re.findall(r'<script([^>]*)>(.*?)</script>',html,re.S|re.I):
+              if re.search(r'\bsrc\s*=',attrs,re.I):
+                  continue
+              blocks.append(body)
+          if not blocks:
+              raise SystemExit('no inline scripts found')
+          out=Path('/tmp/thought-garden-inline-v78')
+          out.mkdir(exist_ok=True)
+          for i,body in enumerate(blocks,1):
+              (out/f'inline-{i}.js').write_text(body,encoding='utf-8')
+          print(f'extracted {len(blocks)} inline script block(s)')
+          PY
+
+      - name: JavaScript syntax checks
+        shell: bash
+        run: |
+          set -e
+          for f in /tmp/thought-garden-inline-v78/*.js; do
+            node --check "$f"
+          done
+          node --check storage-fix.js
+          node --check sw.js
+
+      - name: Source architecture checks
+        shell: bash
+        run: |
+          set -e
+          test ! -e capture-marking.js
+          ! grep -Fq 'capture-marking.js' sw.js
+          ! grep -Fq '이 생각을 조금 더 표시해둘까요?' index.html
+          test "$(grep -Fo '이 생각은 지금 내게 어떤 역할을 하나요?' index.html | wc -l)" -ge 2
+          grep -Fq 'id="captureStarToggle"' index.html
+          grep -Fq 'id="captureLensRow"' index.html
+          grep -Fq 'const captureMarking={starred:false,lens:null};' index.html
+          grep -Fq '...(captureMarking.starred?{starred:true}:{})' index.html
+          grep -Fq '...(captureMarking.lens?{lenses:[captureMarking.lens]}:{})' index.html
+          ! grep -Fq 'document.createElement("style")' scripts/refactor-capture-marking-v78.py
+          grep -Fq 'garden-v25-capture-marking-source-v78' sw.js
+
+      - name: Diff checks
+        shell: bash
+        run: |
+          set -e
+          git diff --check
+          git diff -- index.html sw.js capture-marking.js
+
+      - name: Commit refactor
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html sw.js capture-marking.js
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "refactor: source-own capture marking"
+          git push origin HEAD:main
