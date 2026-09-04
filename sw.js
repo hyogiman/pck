@@ -2,10 +2,10 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v16: 두 PWA scope 분리 + 독서의 정원 설치 판정 수정. */
-const CACHE = "garden-v16-separated-pwa-scopes";
+   v17: 독서의 정원 첫 화면 읽는 중 책 좌우 스와이프 선택. */
+const CACHE = "garden-v17-reading-home-swipe";
 const PATCH_VERSION = "20260820-1635-ai-v2-lab";
-const READING_VERSION = "20260904-reading-pwa-v8";
+const READING_VERSION = "20260904-reading-swipe-v9";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
@@ -17,20 +17,23 @@ const READING_HEAD_TAGS = [
   `<link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=${READING_VERSION}">`,
   `<link rel="stylesheet" href="./reading-theme-v3.css?v=${READING_VERSION}">`,
   `<link rel="stylesheet" href="./reading-theme-v4.css?v=${READING_VERSION}">`,
-  `<link rel="stylesheet" href="./reading-theme-v5.css?v=${READING_VERSION}">`
+  `<link rel="stylesheet" href="./reading-theme-v5.css?v=${READING_VERSION}">`,
+  `<link rel="stylesheet" href="./reading-swipe-v8.css?v=${READING_VERSION}">`
 ];
 const READING_BODY_TAGS = [
   `<script type="module" src="./reading-enhance-v3.js?v=${READING_VERSION}"></script>`,
   `<script type="module" src="./reading-hotfix-v4.js?v=${READING_VERSION}"></script>`,
   `<script type="module" src="./reading-genre-v5.js?v=${READING_VERSION}"></script>`,
   `<script src="./reading-polish-v6.js?v=${READING_VERSION}"></script>`,
-  `<script src="./reading-pwa-v7.js?v=${READING_VERSION}"></script>`
+  `<script src="./reading-pwa-v7.js?v=${READING_VERSION}"></script>`,
+  `<script src="./reading-swipe-v8.js?v=${READING_VERSION}"></script>`
 ];
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./reading.html", "./reading.css", "./reading.js", "./reading-manifest.json",
   "./reading-theme-v3.css", "./reading-enhance-v3.js", "./reading-theme-v4.css", "./reading-hotfix-v4.js",
   "./reading-theme-v5.css", "./reading-genre-v5.js", "./reading-polish-v6.js", "./reading-pwa-v7.js",
+  "./reading-swipe-v8.css", "./reading-swipe-v8.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/reading-garden.svg", "./icons/reading-garden-maskable.svg"
 ];
 
@@ -69,9 +72,9 @@ async function injectReadingPatches(response){
   html=html
     .replace(/\s*<link rel="manifest" href="\.\/reading-manifest\.json(?:\?v=[^"]*)?">/gi,"")
     .replace(/\s*<link rel="icon" type="image\/svg\+xml" href="\.\/icons\/reading-garden\.svg(?:\?v=[^"]*)?">/gi,"")
-    .replace(/\s*<link rel="stylesheet" href="\.\/reading-theme-v\d+\.css(?:\?v=[^"]*)?">/gi,"")
+    .replace(/\s*<link rel="stylesheet" href="\.\/(?:reading-theme|reading-swipe)-v\d+\.css(?:\?v=[^"]*)?">/gi,"")
     .replace(/\s*<script type="module" src="\.\/(?:reading-ui-v\d+|reading-enhance-v\d+|reading-hotfix-v\d+|reading-genre-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"")
-    .replace(/\s*<script src="\.\/(?:reading-polish-v\d+|reading-pwa-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+    .replace(/\s*<script src="\.\/(?:reading-polish-v\d+|reading-pwa-v\d+|reading-swipe-v\d+)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
   html=html.replace(/<meta name="theme-color" content="[^"]*"\s*\/?>/i, `<meta name="theme-color" content="#76563d" />`);
   html=html.replace(/<\/head>/i, `${READING_HEAD_TAGS.join("\n")}\n</head>`);
   html=html.replace(/<\/body>/i, `${READING_BODY_TAGS.join("\n")}\n</body>`);
@@ -96,6 +99,7 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js")||
     url.pathname.endsWith("/reading-theme-v5.css")||url.pathname.endsWith("/reading-genre-v5.js")||
     url.pathname.endsWith("/reading-polish-v6.js")||url.pathname.endsWith("/reading-pwa-v7.js")||
+    url.pathname.endsWith("/reading-swipe-v8.css")||url.pathname.endsWith("/reading-swipe-v8.js")||
     url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
   if(isRuntimePatch){
     e.respondWith((async()=>{try{const fresh=await fetch(req,{cache:"no-store"});if(fresh.ok){const copy=fresh.clone();caches.open(CACHE).then(c=>c.put(req,copy)).catch(()=>{})}return fresh}catch(_){return (await caches.match(req))||Response.error()}})());return;
