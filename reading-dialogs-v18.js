@@ -200,16 +200,17 @@ function installHandwritingMemoryGuard(){
   });
 }
 
+function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
 function syncHandwritingCard(){
   const box=document.getElementById('rgHandwritingSavePreview');if(!box)return;
   box.querySelector('img')?.remove();
   const strong=box.querySelector('strong'),copy=box.querySelector('span');
   if(box.classList.contains('is-saving')){
-    if(strong)strong.textContent='필사 원본 보관 중…';
-    if(copy)copy.textContent='필사 이미지를 기기에 먼저 저장한 뒤 클라우드 동기화를 이어갑니다.';
+    setTextIfChanged(strong,'필사 원본 보관 중…');
+    setTextIfChanged(copy,'필사 이미지를 기기에 먼저 저장한 뒤 클라우드 동기화를 이어갑니다.');
   }else{
-    if(strong)strong.textContent='✍ 필사 원본 이미지 포함';
-    if(copy)copy.textContent='필사 원본 이미지만 저장합니다. 펜 획 데이터는 남기지 않습니다.';
+    setTextIfChanged(strong,'✍ 필사 원본 이미지 포함');
+    setTextIfChanged(copy,'필사 원본 이미지만 저장합니다. 펜 획 데이터는 남기지 않습니다.');
   }
 }
 
