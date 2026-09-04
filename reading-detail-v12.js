@@ -1,4 +1,4 @@
-/* 독서의 정원 v13 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 + 전역 DOM 감시 제거 */
+/* 독서의 정원 v14 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 + 전역 DOM 감시 제거 */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -27,6 +27,7 @@ function injectStyle(){
     #bookMoreMenu .rg-book-remove{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:var(--danger)}
     #bookMoreMenu .rg-book-restore{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:#65745d}
     #bookMoreMenu .rg-menu-note{padding:5px 12px 2px;color:var(--muted);font-size:.62rem;line-height:1.45}
+    #bookDetail .detail-start.rg-restore-primary{background:#65745d;border-color:#65745d}
     @media(max-width:520px){#bookMoreMenu{right:12px;top:calc(59px + env(safe-area-inset-top));width:min(244px,calc(100vw - 28px))}}
   `;document.head.appendChild(s);
 }
@@ -49,7 +50,7 @@ async function cloudProfiles(){
   const db=getFirestore(app);try{const snap=await getDocs(collection(db,'users',user.uid,'readingProfiles'));return {db,user,profiles:snap.docs.map(d=>({id:d.id,...d.data()}))}}catch{return {db,user,profiles:[]}}
 }
 
-function sourceIdFromDetail(){return document.querySelector('#bookMoreMenu [data-edit-profile]')?.dataset.editProfile||document.querySelector('#bookDetail [data-start-book]')?.dataset.startBook||''}
+function sourceIdFromDetail(){return document.querySelector('#bookMoreMenu [data-edit-profile]')?.dataset.editProfile||document.querySelector('#bookDetail [data-start-book]')?.dataset.startBook||document.querySelector('#bookDetail [data-rg-restore-book]')?.dataset.rgRestoreBook||''}
 function profileStatus(snap,id){const p=(snap?.readingProfiles||[]).find(x=>x.sourceId===id);if(p)return p.status;const s=(snap?.sources||[]).find(x=>x.id===id);return s?.status==='done'?'completed':'reading'}
 function nextReadingId(snap,removedId){return (snap?.sources||[]).find(s=>s.id!==removedId&&profileStatus(snap,s.id)==='reading')?.id||''}
 
@@ -79,8 +80,37 @@ async function removeBook(sourceId){
   try{const snap=await persistProfile(sourceId,'remove');const next=nextReadingId(snap,sourceId);if(next)localStorage.setItem(CURRENT_BOOK_KEY,next);else localStorage.removeItem(CURRENT_BOOK_KEY);location.reload()}finally{busy=false}
 }
 async function restoreBook(sourceId){
-  if(busy||!sourceId)return;busy=true;const btn=document.querySelector('[data-rg-restore-book]');if(btn){btn.disabled=true;btn.textContent='추가 중…'}
+  if(busy||!sourceId)return;busy=true;const btn=document.querySelector(`[data-rg-restore-book="${CSS.escape(sourceId)}"]`)||document.querySelector('[data-rg-restore-book]');if(btn){btn.disabled=true;btn.textContent='추가 중…'}
   try{await persistProfile(sourceId,'restore');localStorage.setItem(CURRENT_BOOK_KEY,sourceId);location.reload()}finally{busy=false}
+}
+
+function decorateRemovedState(menu,id,removed){
+  const start=document.querySelector('#bookDetail .detail-start');
+  const edit=menu.querySelector('[data-edit-profile]');
+  const complete=menu.querySelector('[data-complete-book]');
+  const statusTag=document.querySelector('#bookDetailBody .detail-tags .mini-tag');
+
+  if(removed){
+    if(start){
+      start.removeAttribute('data-start-book');
+      start.dataset.rgRestoreBook=id;
+      start.textContent='🌿 독서의 정원 서재에 다시 추가';
+      start.classList.add('rg-restore-primary');
+    }
+    edit?.classList.add('hidden');
+    complete?.classList.add('hidden');
+    if(statusTag)statusTag.textContent='서재에서 제거됨';
+    return;
+  }
+
+  if(start?.dataset.rgRestoreBook){
+    start.removeAttribute('data-rg-restore-book');
+    start.dataset.startBook=id;
+    start.textContent='▶ 읽기 시작';
+    start.classList.remove('rg-restore-primary');
+  }
+  edit?.classList.remove('hidden');
+  complete?.classList.remove('hidden');
 }
 
 async function decorateMenu(){
@@ -88,9 +118,9 @@ async function decorateMenu(){
   const id=sourceIdFromDetail();if(!id)return;
   const snap=await readSnapshot(),removed=profileStatus(snap,id)==='removed';
   menu.querySelectorAll('.rg-book-remove,.rg-book-restore,.rg-menu-note').forEach(x=>x.remove());
+  decorateRemovedState(menu,id,removed);
   if(removed){
     const b=document.createElement('button');b.type='button';b.className='btn rg-book-restore';b.dataset.rgRestoreBook=id;b.textContent='🌿 독서의 정원 서재에 다시 추가';menu.appendChild(b);
-    const tag=document.querySelector('#bookDetailBody .detail-tags .mini-tag');if(tag&&!tag.textContent.trim())tag.textContent='서재에서 제거됨';
   }else{
     const note=document.createElement('div');note.className='rg-menu-note';note.textContent='생각의 텃밭의 책·생각과 독서 기록은 유지됩니다.';menu.appendChild(note);
     const b=document.createElement('button');b.type='button';b.className='btn rg-book-remove';b.dataset.rgRemoveBook=id;b.textContent='독서의 정원에서 제거';menu.appendChild(b);
@@ -111,11 +141,9 @@ async function guardRemovedHome(){
 }
 
 /*
-  v13: document.body 전체 MutationObserver를 제거했다.
-  이전 구현은 메뉴를 decorate하면서 만든 DOM 변경을 다시 감지할 수 있어
-  불필요한 반복 실행/멈춤의 원인이 될 가능성이 있었다.
-  이제 책 상세를 열거나 다시 렌더링하거나 ⋯ 메뉴를 누르는 실제 사용자 동작에서만
-  한 번 decorate한다. core reading.js의 클릭 처리가 끝난 뒤 실행되도록 rAF를 사용한다.
+  v14: document.body 전체 MutationObserver를 제거했다.
+  책 상세를 열거나 다시 렌더링하거나 ⋯ 메뉴를 누르는 실제 사용자 동작에서만 decorate한다.
+  제거된 책은 세션을 바로 시작하지 못하도록 primary action도 명시적 복원 동작으로 바꾼다.
 */
 document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-rg-remove-book]');if(remove){e.preventDefault();e.stopPropagation();removeBook(remove.dataset.rgRemoveBook);return}
