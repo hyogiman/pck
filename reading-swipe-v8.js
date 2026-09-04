@@ -1,4 +1,4 @@
-/* 독서의 정원 v9.1 — 첫 화면에서 책 영역만 좌우 스와이프. 읽기 시작 버튼 이하는 고정한다. */
+/* 독서의 정원 v9.2 — 책 영역만 스와이프 + 큰 표지 + 제목/부제 분리 표시. */
 const RG_SWIPE_DB='readingGarden_v1';
 const RG_SWIPE_CURRENT='readingGarden_currentBook_v1';
 const RG_GENRES=new Set(['소설','에세이','인문·철학','사회·정치','역사','심리','경제·경영','과학·기술','예술·문화','자기계발','육아·교육']);
@@ -58,6 +58,24 @@ function rgCover(book){
 }
 function rgGenre(book){return RG_GENRES.has(rgSafe(book?.primaryGenre))?rgSafe(book.primaryGenre):''}
 
+/* 현재 source에는 title 하나에 부제가 함께 들어오는 책이 많다.
+   DB 원문은 건드리지 않고 첫 화면에서만 ' - ', ' – ', ' — ' 뒤를 부제로 분리한다.
+   향후 YES24의 명시적 subtitle 필드가 생기면 그 값을 우선한다. */
+function rgTitleParts(book){
+  const full=rgSafe(book?.title);
+  const explicit=rgSafe(book?.subtitle);
+  if(explicit)return {full,main:full,subtitle:explicit};
+  const separators=[' - ',' – ',' — '];
+  for(const sep of separators){
+    const i=full.indexOf(sep);
+    if(i>1){
+      const main=full.slice(0,i).trim(),subtitle=full.slice(i+sep.length).trim();
+      if(main.length>=2&&subtitle.length>=5)return {full,main,subtitle};
+    }
+  }
+  return {full,main:full,subtitle:''};
+}
+
 function rgPagerHtml(index,total){
   if(total<2)return '';
   let dots='';
@@ -72,7 +90,7 @@ function rgPagerHtml(index,total){
 
 function rgBookContentHtml(book,direction=0){
   const p=rgProfileFor(rgSwipeSnapshot,book.id)||{};
-  const genre=rgGenre(book);
+  const genre=rgGenre(book),title=rgTitleParts(book);
   const isPhysical=p.format==='paper'||p.format==='pdf';
   const locator=rgSafe(p.currentLocator);
   const extra=isPhysical&&locator
@@ -83,7 +101,10 @@ function rgBookContentHtml(book,direction=0){
   const genreHtml=genre?`<span class="hero-service rg-home-genre rg-genre-badge">${rgEsc(genre)}</span>`:'';
   return `<div class="rg-swipe-book-content ${direction>0?'rg-enter-right':direction<0?'rg-enter-left':''}" data-rg-book-content>
     ${rgCover(book)}
-    <h2 class="hero-title">${rgEsc(book.title)}</h2>
+    <div class="rg-home-title-wrap" title="${rgEsc(title.full)}">
+      <h2 class="hero-title">${rgEsc(title.main)}</h2>
+      ${title.subtitle?`<p class="rg-home-subtitle">${rgEsc(title.subtitle)}</p>`:''}
+    </div>
     <p class="hero-author">${rgEsc(book.creator||'')}</p>
     ${genreHtml}${extra}
   </div>`;
@@ -125,10 +146,7 @@ async function rgSwitchBook(step){
     let index=books.findIndex(b=>b.id===currentId);if(index<0)index=0;
     const next=(index+step+books.length)%books.length;
     const current=hero?.querySelector('[data-rg-book-content]');
-    if(current){
-      current.classList.add(step>0?'rg-exit-left':'rg-exit-right');
-      await new Promise(r=>setTimeout(r,115));
-    }
+    if(current){current.classList.add(step>0?'rg-exit-left':'rg-exit-right');await new Promise(r=>setTimeout(r,115))}
     const book=books[next];
     localStorage.setItem(RG_SWIPE_CURRENT,book.id);
     const stage=hero?.querySelector('.rg-swipe-stage');
@@ -156,11 +174,7 @@ function rgBindHeroPointer(){
     if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.15)rgPointer.dragging=true;
     if(!rgPointer.dragging)return;
     const content=hero.querySelector('[data-rg-book-content]');
-    if(content){
-      content.style.transition='none';
-      content.style.transform=`translateX(${Math.max(-58,Math.min(58,dx*.28))}px)`;
-      content.style.opacity=String(Math.max(.8,1-Math.abs(dx)/720));
-    }
+    if(content){content.style.transition='none';content.style.transform=`translateX(${Math.max(-58,Math.min(58,dx*.28))}px)`;content.style.opacity=String(Math.max(.8,1-Math.abs(dx)/720))}
   });
   const reset=()=>{const content=hero.querySelector('[data-rg-book-content]');if(content){content.style.transition='';content.style.transform='';content.style.opacity=''}};
   const finish=e=>{
