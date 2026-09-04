@@ -1,7 +1,7 @@
-/* 독서의 정원 v13 — 독립 PWA 설치 보조 + 업데이트 즉시 확인 */
+/* 독서의 정원 v14 — 독립 PWA 설치 보조 + 설정 화면 멈춤 수정 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260904-reading-v13';
+const RG_SW_VERSION='20260904-reading-v14';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -37,22 +37,25 @@ function ensureInstallCard(){
   refreshInstallCard();
 }
 
+function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
+function setDisabledIfChanged(el,value){if(el&&el.disabled!==value)el.disabled=value}
+
 function refreshInstallCard(){
   const card=document.querySelector('.rg-install-card');if(!card)return;
   const copy=card.querySelector('.rg-install-copy'),btn=card.querySelector('.rg-install-btn');
 
   if(readingInstallKnown()){
-    copy.textContent='독서의 정원을 별도 앱으로 설치한 기록이 있습니다.';
-    btn.textContent='✓ 독서의 정원 설치됨';btn.disabled=true;return;
+    setTextIfChanged(copy,'독서의 정원을 별도 앱으로 설치한 기록이 있습니다.');
+    setTextIfChanged(btn,'✓ 독서의 정원 설치됨');setDisabledIfChanged(btn,true);return;
   }
 
   if(inStandaloneContext()){
-    copy.textContent='지금은 기존 설치 앱(예: 생각의 텃밭) 안에서 열린 상태일 수 있습니다. 독서의 정원은 별도로 설치할 수 있어요.';
-    btn.textContent='↗ Chrome에서 설치하기';btn.disabled=false;return;
+    setTextIfChanged(copy,'지금은 기존 설치 앱(예: 생각의 텃밭) 안에서 열린 상태일 수 있습니다. 독서의 정원은 별도로 설치할 수 있어요.');
+    setTextIfChanged(btn,'↗ Chrome에서 설치하기');setDisabledIfChanged(btn,false);return;
   }
 
-  copy.textContent='생각의 텃밭과 별개의 아이콘으로 설치할 수 있습니다. 데이터와 Firebase는 그대로 공유합니다.';
-  btn.textContent=deferredInstallPrompt?'📲 독서의 정원 설치':'📲 앱으로 설치';btn.disabled=false;
+  setTextIfChanged(copy,'생각의 텃밭과 별개의 아이콘으로 설치할 수 있습니다. 데이터와 Firebase는 그대로 공유합니다.');
+  setTextIfChanged(btn,deferredInstallPrompt?'📲 독서의 정원 설치':'📲 앱으로 설치');setDisabledIfChanged(btn,false);
 }
 
 function openBrowserInstallPage(){
@@ -64,9 +67,7 @@ function openBrowserInstallPage(){
 
 async function installApp(){
   if(readingInstallKnown()){rgToast('독서의 정원은 이미 별도 앱으로 설치된 것으로 기록되어 있습니다.');return}
-
   if(inStandaloneContext()&&!deferredInstallPrompt){openBrowserInstallPage();return}
-
   if(deferredInstallPrompt){
     const prompt=deferredInstallPrompt;deferredInstallPrompt=null;
     try{
@@ -87,7 +88,15 @@ window.addEventListener('appinstalled',()=>{
   deferredInstallPrompt=null;rgToast('독서의 정원을 별도 앱으로 설치했습니다. 🌿');refreshInstallCard();
 });
 
-const observer=new MutationObserver(()=>{ensureInstallCard();if(document.getElementById('settingsDialog')?.open)refreshInstallCard()});
-observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['open','class']});
+/* 이전 버전은 document.body 전체를 MutationObserver로 감시하면서
+   설정창이 열린 동안 refreshInstallCard()가 다시 DOM mutation을 만들고,
+   그 mutation이 observer를 다시 깨우는 반복이 생길 수 있었다.
+   정적 설정 DOM에서는 감시가 필요 없으므로 최초 1회 생성하고,
+   설정 버튼을 누를 때만 상태를 갱신한다. */
+ensureInstallCard();
+document.getElementById('openSettings')?.addEventListener('click',()=>{
+  ensureInstallCard();
+  requestAnimationFrame(refreshInstallCard);
+});
 
-registerSharedWorker();ensureInstallCard();
+registerSharedWorker();
