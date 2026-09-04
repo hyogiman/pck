@@ -1,6 +1,7 @@
-/* 독서의 정원 v8 — 독립 PWA 설치 보조. 'standalone' 자체를 독서의 정원 설치 여부로 오인하지 않는다. */
+/* 독서의 정원 v13 — 독립 PWA 설치 보조 + 업데이트 즉시 확인 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
+const RG_SW_VERSION='20260904-reading-v13';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -18,8 +19,10 @@ function readingInstallKnown(){
 
 async function registerSharedWorker(){
   if(!('serviceWorker' in navigator))return;
-  try{await navigator.serviceWorker.register('./sw.js',{scope:'./'})}
-  catch(err){console.warn('Reading Garden SW registration failed',err)}
+  try{
+    const reg=await navigator.serviceWorker.register(`./sw.js?v=${RG_SW_VERSION}`,{scope:'./',updateViaCache:'none'});
+    await reg.update().catch(()=>{});
+  }catch(err){console.warn('Reading Garden SW registration failed',err)}
 }
 
 function ensureInstallCard(){
@@ -62,8 +65,6 @@ function openBrowserInstallPage(){
 async function installApp(){
   if(readingInstallKnown()){rgToast('독서의 정원은 이미 별도 앱으로 설치된 것으로 기록되어 있습니다.');return}
 
-  /* 생각의 텃밭 PWA 안에서 reading.html을 열어도 display-mode는 standalone이다.
-     그 상태를 '독서의 정원이 이미 설치됨'으로 판정하지 않는다. */
   if(inStandaloneContext()&&!deferredInstallPrompt){openBrowserInstallPage();return}
 
   if(deferredInstallPrompt){
