@@ -1,7 +1,7 @@
-/* 독서의 정원 v14 — 독립 PWA 설치 보조 + 설정 화면 멈춤 수정 */
+/* 독서의 정원 v15 — 독립 PWA 설치 보조 + 최신 Reading Garden 런타임 갱신 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260904-reading-v14';
+const RG_SW_VERSION='20260904-reading-v15';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
