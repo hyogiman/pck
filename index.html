@@ -620,6 +620,11 @@
     .lens-chip.on{background:var(--accent2);border-color:#bcd3c1;color:var(--accent)}
     .lens-badge{font-size:.66rem;color:var(--accent);background:var(--accent2);border-radius:999px;padding:2px 8px;font-weight:700;flex:0 0 auto}
     .lens-legacy-note{width:100%;margin:0 0 2px}
+    .capture-thought-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+    .capture-thought-title-row>label{margin-bottom:0!important}
+    #captureStarToggle{margin:-5px -4px -5px 0;flex:0 0 auto}
+    .capture-marking-field{margin-top:14px!important;padding-top:2px}
+    .capture-marking-field>label{margin-bottom:9px}
     .stem-walk-card{padding:7px 6px}
     .stem-walk-row{display:block;width:100%;text-align:left;border:0;background:none;cursor:pointer;padding:14px 12px;border-radius:13px}
     .stem-walk-row:hover{background:#fbfcf9}
@@ -1212,7 +1217,10 @@
     <div id="captureQuestion" class="capture-question hidden"></div>
 
     <div class="field">
-      <label for="captureText">내 생각</label>
+      <div class="capture-thought-title-row">
+        <label for="captureText">내 생각</label>
+        <button class="star-toggle" id="captureStarToggle" type="button" aria-label="중요한 생각으로 표시" aria-pressed="false" title="중요한 생각으로 표시">☆</button>
+      </div>
       <textarea class="textarea capture-main" id="captureText" placeholder="떠오른 그대로 적어보세요. 한 줄이어도 충분합니다."></textarea>
     </div>
 
@@ -1235,7 +1243,11 @@
         <span class="date-inline">🗓 <input class="input date-input" type="date" id="captureDate" title="지난 날짜로 기록하려면 바꿔주세요"></span>
       </div>
       <div class="selected-files" id="captureFileList"></div>
-      <div class="helper">Firebase Storage가 연결된 경우에만 파일이 실제로 저장됩니다.</div>
+    </div>
+
+    <div class="field capture-marking-field" id="captureMarkingField">
+      <label>이 생각은 지금 내게 어떤 역할을 하나요? <span style="color:var(--muted);font-weight:500">(선택하지 않아도 됩니다)</span></label>
+      <div class="lens-row" id="captureLensRow"></div>
     </div>
     <div class="modal-actions">
       <button class="btn" data-close="captureDialog" type="button">취소</button>
@@ -4351,6 +4363,25 @@ const LEGACY_LENSES=[
 ];
 const LENS_BY_ID=new Map([...LENSES,...LEGACY_LENSES].map(L=>[L.id,L]));
 const LEGACY_LENS_IDS=new Set(LEGACY_LENSES.map(L=>L.id));
+
+const captureMarking={starred:false,lens:null};
+function renderCaptureMarking(){
+  const star=$("captureStarToggle"),row=$("captureLensRow");
+  if(star){
+    star.classList.toggle("on",captureMarking.starred);
+    star.textContent=captureMarking.starred?"★":"☆";
+    star.setAttribute("aria-pressed",String(captureMarking.starred));
+    star.title=captureMarking.starred?"중요 표시 해제":"중요한 생각으로 표시";
+  }
+  if(row){
+    row.innerHTML=LENSES.map(L=>`<button class="lens-chip ${captureMarking.lens===L.id?"on":""}" data-capture-lens="${L.id}" type="button">${L.e} ${L.label}</button>`).join("");
+  }
+}
+function resetCaptureMarking(){
+  captureMarking.starred=false;
+  captureMarking.lens=null;
+  renderCaptureMarking();
+}
 /* 저장된 lenses가 없으면, 옛 type이 decision인 조각은 결정 렌즈로 '보이게'만 한다.
    (기존 데이터는 한 글자도 다시 쓰지 않는다 — 수정해서 저장할 때 비로소 lenses 필드가 생긴다) */
 function effectiveLens(f){
@@ -5200,6 +5231,7 @@ function openCapture(prefill="",ctx=null){
   $("externalWrap").classList.add("hidden");
   $("toggleExternal").textContent="＋ 문장 · 장면 · 누군가의 말도 함께 남기기";
   $("captureDate").value=today();
+  resetCaptureMarking();
   if(!prefill){
     const d=loadCaptureDraft(ctx);
     if(d&&(d.t||d.e||d.l)){
@@ -5223,6 +5255,8 @@ async function saveCapture(){
     ...(ctx&&(ctx.kind==="continue"||ctx.kind==="thread-child")?{continuedFrom:[ctx.fromId]}:{}),
     ...(ctx&&ctx.kind==="spark"?{bloomingQuestionKey:ctx.sparkKey||"",bloomingQuestion:ctx.prompt,bloomingQuestionCategory:ctx.category||"",bloomingAnsweredAt:createdAt}:{}),
     ...(ctx&&ctx.kind==="weekly-theme"?{gardenReportTheme:ctx.theme||"",gardenReportWeek:ctx.weekKey||""}:{}),
+    ...(captureMarking.starred?{starred:true}:{}),
+    ...(captureMarking.lens?{lenses:[captureMarking.lens]}:{}),
     threadIds:(ctx&&(ctx.kind==="thread"||ctx.kind==="thread-child")&&ctx.threadId)?[ctx.threadId]:[],attachments:[],date:$("captureDate").value||today(),createdAt,updatedAt:createdAt
   };
   try{
@@ -6204,6 +6238,8 @@ $("sheetSettings").addEventListener("click",()=>{
 $("betweenThoughtsNext").addEventListener("click",nextBetweenThoughtsPair);
 $("newSource").addEventListener("click",()=>openSourceDialog());$("newThread").addEventListener("click",()=>openThreadDialog());$("newProject").addEventListener("click",()=>openProjectDialog());$("studioFindPath").addEventListener("click",()=>openStudioPathDialog());
 $("saveCapture").addEventListener("click",saveCapture);$("saveBloomingReflection").addEventListener("click",saveBloomingReflection);["captureText","captureExternal","captureLocator"].forEach(id=>$(id).addEventListener("input",()=>saveCaptureDraft()));$("captureDate").addEventListener("change",()=>saveCaptureDraft());$("saveSource").addEventListener("click",saveSource);$("saveThread").addEventListener("click",saveThread);$("saveProject").addEventListener("click",saveProject);
+$("captureStarToggle").addEventListener("click",()=>{captureMarking.starred=!captureMarking.starred;renderCaptureMarking()});
+$("captureLensRow").addEventListener("click",e=>{const btn=e.target.closest("[data-capture-lens]");if(!btn)return;const id=btn.dataset.captureLens;captureMarking.lens=captureMarking.lens===id?null:id;renderCaptureMarking()});
 $("captureFiles").addEventListener("change",e=>setPendingFiles("capture",e.target.files));
 $("runApiSearch").addEventListener("click",searchSourceApi);
 $("apiSearchQuery").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();searchSourceApi()}});

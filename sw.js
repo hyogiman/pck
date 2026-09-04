@@ -2,14 +2,13 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v24: Fragment badge v77 source refactor 반영을 위해 캐시를 갱신한다.
+   v25: Capture marking을 본체로 통합하고 런타임 주입을 제거한다.
    독서의 정원은 reading.html 자체가 현재 CSS/JS를 직접 참조한다.
    서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v24-fragment-badge-source-v77";
-const PATCH_VERSION = "20260904-1810-fragment-badge-source-v77";
+const CACHE = "garden-v25-capture-marking-source-v78";
+const PATCH_VERSION = "20260904-1845-capture-marking-source-v78";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
-  `<script src="./capture-marking.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./ai-v2-test-runtime.js?v=${PATCH_VERSION}"></script>`,
   `<script src="./blooming-v2-runtime.js?v=${PATCH_VERSION}"></script>`
 ];
@@ -43,7 +42,7 @@ async function injectThoughtPatches(response){
   const type=response.headers.get("content-type")||"";
   if(!type.includes("text/html"))return response;
   let html=await response.text();
-  html=html.replace(/\s*<script src="\.\/(?:storage-fix|capture-marking|ai-v2-test-runtime|blooming-v2-runtime)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
+  html=html.replace(/\s*<script src="\.\/(?:storage-fix|ai-v2-test-runtime|blooming-v2-runtime)\.js(?:\?v=[^"]*)?"><\/script>/gi,"");
   html=html.replace(/<\/body>/i, `${PATCH_TAGS.join("\n")}\n</body>`);
   const headers=new Headers(response.headers);headers.delete("content-length");headers.delete("content-encoding");
   return new Response(html,{status:response.status,statusText:response.statusText,headers});
@@ -61,7 +60,7 @@ self.addEventListener("fetch", (e) => {
   const isReadingHtml=url.pathname.endsWith("/reading.html");
   const isRuntimePatch=
     url.pathname.endsWith("/manifest.json")||url.pathname.endsWith("/reading-manifest.json")||
-    url.pathname.endsWith("/storage-fix.js")||url.pathname.endsWith("/capture-marking.js")||
+    url.pathname.endsWith("/storage-fix.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
     url.pathname.endsWith("/reading.js")||url.pathname.endsWith("/reading.css")||
     url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
