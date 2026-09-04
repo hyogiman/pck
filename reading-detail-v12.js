@@ -1,4 +1,4 @@
-/* 독서의 정원 v12 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 */
+/* 독서의 정원 v13 — 책 상세 드롭다운 + Reading Garden 전용 서재 제거/복원 + 전역 DOM 감시 제거 */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -98,7 +98,10 @@ async function decorateMenu(){
 }
 
 let decorating=false;
-function scheduleDecorate(){if(decorating)return;decorating=true;requestAnimationFrame(async()=>{decorating=false;await decorateMenu();guardRemovedHome()})}
+function scheduleDecorate(){
+  if(decorating)return;decorating=true;
+  requestAnimationFrame(async()=>{decorating=false;await decorateMenu();guardRemovedHome()});
+}
 async function guardRemovedHome(){
   const start=document.querySelector('#readView.active #readHero [data-start-book]');if(!start)return;
   const snap=await readSnapshot();if(profileStatus(snap,start.dataset.startBook)!=='removed')return;
@@ -107,10 +110,21 @@ async function guardRemovedHome(){
   const hero=document.getElementById('readHero');if(hero)hero.innerHTML='<div class="empty-hero"><div class="empty-icon">📚</div><h2>읽는 중인 책이 없습니다.</h2><p>서재에서 책을 읽는 중으로 바꾸거나 새 책을 추가해보세요.</p><button class="btn primary" data-open-book-search type="button">＋ 책 추가</button></div>';
 }
 
+/*
+  v13: document.body 전체 MutationObserver를 제거했다.
+  이전 구현은 메뉴를 decorate하면서 만든 DOM 변경을 다시 감지할 수 있어
+  불필요한 반복 실행/멈춤의 원인이 될 가능성이 있었다.
+  이제 책 상세를 열거나 다시 렌더링하거나 ⋯ 메뉴를 누르는 실제 사용자 동작에서만
+  한 번 decorate한다. core reading.js의 클릭 처리가 끝난 뒤 실행되도록 rAF를 사용한다.
+*/
 document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-rg-remove-book]');if(remove){e.preventDefault();e.stopPropagation();removeBook(remove.dataset.rgRemoveBook);return}
   const restore=e.target.closest('[data-rg-restore-book]');if(restore){e.preventDefault();e.stopPropagation();restoreBook(restore.dataset.rgRestoreBook);return}
+
+  if(e.target.closest('[data-open-book],[data-open-existing-book],[data-detail-tab],#bookMoreBtn'))scheduleDecorate();
+
   const menu=document.getElementById('bookMoreMenu');if(menu&&!menu.classList.contains('hidden')&&!e.target.closest('#bookMoreBtn')&&!e.target.closest('#bookMoreMenu'))menu.classList.add('hidden');
 });
-new MutationObserver(scheduleDecorate).observe(document.body,{subtree:true,childList:true});
+
+window.addEventListener('pageshow',scheduleDecorate);
 scheduleDecorate();
