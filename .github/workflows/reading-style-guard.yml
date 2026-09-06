@@ -1,0 +1,61 @@
+name: Reading Garden style guard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'reading*'
+      - 'sw.js'
+      - '.github/workflows/reading-style-guard.yml'
+  pull_request:
+    paths:
+      - 'reading*'
+      - 'sw.js'
+      - '.github/workflows/reading-style-guard.yml'
+
+jobs:
+  style-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify single Reading style source
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          css_files = sorted(p.name for p in Path('.').glob('reading*.css'))
+          assert css_files == ['reading.css'], f'Only reading.css is allowed; found {css_files}'
+
+          html = Path('reading.html').read_text(encoding='utf-8')
+          links = re.findall(r'<link\s+rel="stylesheet"\s+href="\./(reading[^"?]*\.css)', html)
+          assert links == ['reading.css'], f'reading.html must load only reading.css; found {links}'
+
+          scan = [Path('reading.html'), *sorted(Path('.').glob('reading*.js'))]
+          patterns = {
+              'inline style attribute': re.compile(r'\bstyle\s*='),
+              'dynamic style element': re.compile(r'createElement\(\s*["\']style["\']\s*\)'),
+              'style property mutation': re.compile(r'\.style(?:\.|\[|\s*=)'),
+              'setAttribute(style)': re.compile(r'setAttribute\(\s*["\']style["\']'),
+          }
+          errors=[]
+          for p in scan:
+              text=p.read_text(encoding='utf-8')
+              for label, pattern in patterns.items():
+                  m=pattern.search(text)
+                  if m: errors.append(f'{p}: {label}: {m.group(0)}')
+          assert not errors, 'Scattered Reading styles are forbidden:\n' + '\n'.join(errors)
+
+          sw=Path('sw.js').read_text(encoding='utf-8')
+          for old in ['reading-theme-v2.css','reading-theme-v3.css','reading-theme-v4.css','reading-theme-v5.css','reading-swipe-v8.css']:
+              assert old not in html and old not in sw, f'Stale Reading CSS reference: {old}'
+
+          print('PASS: reading.css is the only Reading Garden CSS source')
+          print('PASS: no inline/dynamic JS/HTML style declarations')
+          PY
+      - name: Verify Reading JavaScript syntax
+        run: |
+          for f in reading*.js sw.js; do node --check "$f"; done
