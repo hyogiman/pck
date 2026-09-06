@@ -1,0 +1,51 @@
+name: reading thought sync v34
+
+on:
+  push:
+    paths:
+      - '.github/scripts/reading_thought_sync_v34.py'
+      - '.github/workflows/reading-thought-sync-v34.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Thought Garden sync boundary
+        run: python .github/scripts/reading_thought_sync_v34.py
+      - name: Verify JavaScript syntax
+        run: node --check reading.js
+      - name: Verify thought-only fragment writes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('reading.js').read_text(encoding='utf-8')
+          start=s.index('async function saveEntry(){')
+          end=s.index('async function deleteCurrentEntry()',start)
+          block=s[start:end]
+          assert 'previousThought=safeText(editing?.thought)' in block
+          assert 'previousFragmentId=editing?.linkedFragmentId||null' in block
+          assert 'const thoughtChanged=!previousFragmentId||thought!==previousThought;' in block
+          assert block.count('await cloudSet("fragments",fragmentId,fragment,{silent:true});') == 1
+          assert 'if(thoughtChanged){' in block
+          assert 'else if(previousFragmentId){' in block
+          print('PASS: existing Fragment write is guarded by thought text change')
+          print('PASS: clearing thought still deletes linked Fragment')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading.js
+          git commit -m 'fix: sync Thought Garden only when thought changes'
+          git push origin main
