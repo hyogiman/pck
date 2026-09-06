@@ -1,0 +1,45 @@
+name: reading v31 read refactor
+
+on:
+  push:
+    paths:
+      - '.github/scripts/reading_v31_read_refactor.py'
+      - '.github/workflows/reading-v31-read-refactor.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply targeted read refactor
+        run: python .github/scripts/reading_v31_read_refactor.py
+      - name: Verify JavaScript syntax
+        run: |
+          node --check reading.js
+          node --check reading-pwa-v7.js
+          node --check sw.js
+      - name: Verify scope and boundaries
+        run: |
+          ! grep -F 'loadCollection("sources")' reading.js
+          ! grep -F 'loadCollection("fragments")' reading.js
+          grep -F 'where("type","==","book")' reading.js
+          grep -F 'where("sourceId","in"' reading.js
+          grep -F 'if(thought){' reading.js
+          grep -F 'else if(entry.linkedFragmentId)' reading.js
+      - name: Commit refactor
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading.js reading.html reading-pwa-v7.js sw.js
+          git commit -m 'refactor: narrow Reading Garden Firestore reads'
+          git push origin main
