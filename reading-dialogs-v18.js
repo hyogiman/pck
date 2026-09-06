@@ -1,5 +1,5 @@
-/* 독서의 정원 v24 — 앱 모달(confirm/alert 대체) 전용 */
-const RG_DIALOG_VERSION='20260904-reading-v20';
+/* 독서의 정원 v26 — 앱 모달(confirm/alert 대체) + 타임라인 삭제 확인 정리 */
+const RG_DIALOG_VERSION='20260906-reading-v26';
 const approvals=[];
 const replayClicks=new WeakSet();
 const replayChanges=new WeakSet();
@@ -21,6 +21,7 @@ function injectStyle(){
     #rgAppConfirmDialog h3{margin:0 0 9px;font-family:var(--serif);font-size:1.16rem;color:var(--text)}
     #rgAppConfirmDialog .rg-confirm-message{margin:0;color:var(--muted);font-size:.79rem;line-height:1.65;white-space:pre-line}
     #rgAppConfirmDialog .rg-confirm-option{display:flex;gap:9px;align-items:flex-start;margin:17px 0 0;padding:12px;border-radius:13px;background:#f5eee4;font-size:.75rem;line-height:1.5;color:var(--text)}
+    #rgAppConfirmDialog .rg-confirm-option[hidden]{display:none!important}
     #rgAppConfirmDialog .rg-confirm-option input{margin-top:3px;accent-color:#76563d}
     #rgAppConfirmDialog .rg-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:21px}
     #rgAppConfirmDialog .rg-confirm-actions.one{grid-template-columns:1fr}
@@ -129,6 +130,24 @@ async function interceptClick(e){
     replayClick(target);return;
   }
 
+  /* v26의 독립 독서기록 삭제 버튼은 세션 삭제 버튼과 같은 CSS class를 쓰므로 먼저 분기한다. */
+  if(target.dataset.rgDeleteEntry){
+    const card=target.closest('.timeline-session');
+    const title=card?.querySelector('.timeline-session-head h3')?.textContent?.trim()||'이 기록';
+    const hasLinkedThought=!!card?.querySelector('.entry-thought');
+    clearApprovals('연결된 생각의 텃밭 생각도 함께 삭제할까요?');
+    const result=await ask({
+      title:'독서 기록을 삭제할까요?',
+      message:`${title}\n\n이 기록을 삭제하면 독서의 정원 타임라인에서 사라집니다.`,
+      confirmText:'기록 삭제',danger:true,
+      checkboxText:hasLinkedThought?'연결된 생각의 텃밭 생각도 함께 삭제':''
+    });
+    if(!result.ok)return;
+    authorize('이 독서 기록을 삭제할까요?',true,120000);
+    authorize('연결된 생각의 텃밭 생각도 함께 삭제할까요?',hasLinkedThought&&result.checked,120000);
+    replayClick(target);return;
+  }
+
   if(target.matches('.rg-session-delete')){
     const card=target.closest('.timeline-session');
     const title=card?.querySelector('.timeline-session-head h3')?.textContent?.trim()||'이 독서시간';
@@ -144,16 +163,17 @@ async function interceptClick(e){
   }
 
   if(target.id==='deleteEntryBtn'){
+    const hasLinkedThought=!!document.getElementById('entryThought')?.value.trim();
     clearApprovals('연결된 생각의 텃밭 생각도 함께 삭제할까요?');
     const result=await ask({
       title:'독서 기록을 삭제할까요?',
       message:'이 기록을 삭제하면 독서의 정원 타임라인에서 사라집니다.',
       confirmText:'기록 삭제',danger:true,
-      checkboxText:'연결된 생각의 텃밭 생각도 함께 삭제'
+      checkboxText:hasLinkedThought?'연결된 생각의 텃밭 생각도 함께 삭제':''
     });
     if(!result.ok)return;
     authorize('이 독서 기록을 삭제할까요?',true,120000);
-    authorize('연결된 생각의 텃밭 생각도 함께 삭제할까요?',result.checked,120000);
+    authorize('연결된 생각의 텃밭 생각도 함께 삭제할까요?',hasLinkedThought&&result.checked,120000);
     replayClick(target);
   }
 }
