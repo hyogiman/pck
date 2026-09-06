@@ -1,5 +1,5 @@
-/* 독서의 정원 v19 — 기본 브라우저 confirm/alert 제거 + 필사 미리보기 메모리 절약 + OCR 없는 필사 확정 */
-const RG_DIALOG_VERSION='20260904-reading-v19';
+/* 독서의 정원 v20 — 기본 브라우저 confirm/alert 제거 + 필사 메모리 절약 + OCR/텍스트 없는 필사 저장 */
+const RG_DIALOG_VERSION='20260904-reading-v20';
 const approvals=[];
 const replayClicks=new WeakSet();
 const replayChanges=new WeakSet();
@@ -222,6 +222,34 @@ function installEmptyOcrConfirm(){
   },true);
 }
 
+/* reading.js의 saveEntry()는 현재 quote/thought만 유효 콘텐츠로 검사한다.
+   이미지 단독 필사에서는 첫 safeText(quote) 호출만 truthy 토큰으로 통과시키고,
+   토큰은 toJSON/toString에서 빈 문자열이 되므로 DB와 화면에는 가짜 텍스트를 남기지 않는다.
+   원본 saveEntry 검증이 이미지까지 포함하도록 정리되면 이 브리지는 제거한다. */
+function installImageOnlySaveBridge(){
+  const btn=document.getElementById('saveEntryBtn');if(!btn)return;
+  const nativeTrim=String.prototype.trim;
+  btn.addEventListener('click',()=>{
+    const quote=(document.getElementById('entryQuote')?.value||'').trim();
+    const thought=(document.getElementById('entryThought')?.value||'').trim();
+    const box=document.getElementById('rgHandwritingSavePreview');
+    const hasHandwriting=!!box&&!box.classList.contains('hidden');
+    if(quote||thought||!hasHandwriting)return;
+
+    let armed=true;
+    const emptyToken={toString:()=>'',valueOf:()=>'',toJSON:()=>''};
+    String.prototype.trim=function(...args){
+      if(armed&&String(this)===''){
+        armed=false;
+        String.prototype.trim=nativeTrim;
+        return emptyToken;
+      }
+      return nativeTrim.apply(this,args);
+    };
+    queueMicrotask(()=>{if(String.prototype.trim!==nativeTrim)String.prototype.trim=nativeTrim});
+  },{capture:true});
+}
+
 function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
 function syncHandwritingCard(){
   const box=document.getElementById('rgHandwritingSavePreview');if(!box)return;
@@ -243,5 +271,5 @@ function installCardCleanup(){
   syncHandwritingCard();
 }
 
-function boot(){injectStyle();ensureDialog();installHandwritingMemoryGuard();installEmptyOcrConfirm();installCardCleanup()}
+function boot(){injectStyle();ensureDialog();installHandwritingMemoryGuard();installEmptyOcrConfirm();installImageOnlySaveBridge();installCardCleanup()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
