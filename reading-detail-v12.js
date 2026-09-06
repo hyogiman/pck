@@ -1,4 +1,4 @@
-/* 독서의 정원 v15 — 책 상세 안정화 + 필사 저장 중복 방지/시각 피드백 */
+/* 독서의 정원 v24 — 책 상세/서재 제거·복원 전용 */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -6,9 +6,6 @@ import { getFirestore, collection, getDocs, doc, setDoc } from "https://www.gsta
 const SNAPSHOT_DB="readingGarden_v1";
 const CURRENT_BOOK_KEY="readingGarden_currentBook_v1";
 let busy=false;
-let rgEntrySaving=false;
-let rgSaveFallbackTimer=null;
-let rgHandwritingPreviewUrl="";
 
 function injectStyle(){
   if(document.getElementById('rgDetailMenuStyle'))return;
@@ -148,97 +145,11 @@ async function guardRemovedHome(){
   const hero=document.getElementById('readHero');if(hero)hero.innerHTML='<div class="empty-hero"><div class="empty-icon">📚</div><h2>읽는 중인 책이 없습니다.</h2><p>서재에서 책을 읽는 중으로 바꾸거나 새 책을 추가해보세요.</p><button class="btn primary" data-open-book-search type="button">＋ 책 추가</button></div>';
 }
 
-function ensureHandwritingPreview(){
-  injectStyle();
-  const quote=document.getElementById('entryQuote');
-  const field=quote?.closest('.field');
-  if(!field)return null;
-  let box=document.getElementById('rgHandwritingSavePreview');
-  if(!box){
-    box=document.createElement('div');
-    box.id='rgHandwritingSavePreview';
-    box.className='rg-handwriting-save-preview hidden';
-    box.innerHTML='<img alt="필사 원본 미리보기"><div class="rg-hw-copy"><strong>✍ 필사 원본 포함</strong><span>작성한 필사 이미지와 S Pen 획 데이터가 기록과 함께 저장됩니다.</span></div><i class="rg-hw-spinner" aria-hidden="true"></i>';
-    field.insertAdjacentElement('afterend',box);
-  }
-  return box;
-}
-
-function captureHandwritingPreview(){
-  const canvas=document.getElementById('writingCanvas');
-  if(!canvas||!canvas.width||!canvas.height)return '';
-  try{return canvas.toDataURL('image/png',.72)}catch{return ''}
-}
-
-function showHandwritingPreview(){
-  const box=ensureHandwritingPreview();if(!box)return;
-  if(!rgHandwritingPreviewUrl)rgHandwritingPreviewUrl=captureHandwritingPreview();
-  const img=box.querySelector('img');if(img&&rgHandwritingPreviewUrl)img.src=rgHandwritingPreviewUrl;
-  box.classList.remove('hidden','is-saving');
-  box.querySelector('strong').textContent='✍ 필사 원본 포함';
-  box.querySelector('span').textContent='작성한 필사 이미지와 S Pen 획 데이터가 기록과 함께 저장됩니다.';
-}
-
-function setSaveVisual(saving){
-  const btn=document.getElementById('saveEntryBtn');if(!btn)return;
-  const box=ensureHandwritingPreview();
-  btn.disabled=saving;btn.setAttribute('aria-busy',saving?'true':'false');
-  if(saving){
-    if(!btn.dataset.rgOriginalText)btn.dataset.rgOriginalText=btn.textContent||'기록 저장';
-    const hasHandwriting=box&&!box.classList.contains('hidden');
-    btn.textContent=hasHandwriting?'✍ 필사 이미지 저장 중…':'기록 저장 중…';
-    if(hasHandwriting){
-      box.classList.add('is-saving');
-      box.querySelector('strong').textContent='필사 이미지 저장 중…';
-      box.querySelector('span').textContent='원본 이미지와 펜 획 데이터를 함께 저장하고 있습니다. 한 번만 눌러주세요.';
-    }
-  }else{
-    btn.disabled=false;btn.setAttribute('aria-busy','false');
-    if(btn.dataset.rgOriginalText){btn.textContent=btn.dataset.rgOriginalText;delete btn.dataset.rgOriginalText}
-    if(box&&!box.classList.contains('hidden'))showHandwritingPreview();
-  }
-}
-
-function resetEntrySaveUi({clearPreview=false}={}){
-  clearTimeout(rgSaveFallbackTimer);rgSaveFallbackTimer=null;rgEntrySaving=false;setSaveVisual(false);
-  if(clearPreview){
-    rgHandwritingPreviewUrl='';
-    const box=document.getElementById('rgHandwritingSavePreview');box?.classList.add('hidden');box?.classList.remove('is-saving');
-  }
-}
-
-function beginEntrySave(e){
-  const btn=e.target.closest('#saveEntryBtn');if(!btn)return;
-  if(rgEntrySaving){e.preventDefault();e.stopImmediatePropagation();return}
-  rgEntrySaving=true;setSaveVisual(true);
-  rgSaveFallbackTimer=setTimeout(()=>{
-    const dialog=document.getElementById('recordDialog');
-    if(dialog?.open&&rgEntrySaving){
-      rgEntrySaving=false;setSaveVisual(false);
-      const box=document.getElementById('rgHandwritingSavePreview');
-      if(box&&!box.classList.contains('hidden'))box.querySelector('span').textContent='저장 확인이 오래 걸리고 있습니다. 네트워크 상태를 확인한 뒤 다시 시도할 수 있습니다.';
-    }
-  },30000);
-}
-
-function setupRecordDialogFeedback(){
-  const dialog=document.getElementById('recordDialog');if(!dialog)return;
-  ensureHandwritingPreview();
-  const observer=new MutationObserver(()=>{
-    if(dialog.open){
-      if(!rgEntrySaving)setSaveVisual(false);
-      if(rgHandwritingPreviewUrl)showHandwritingPreview();
-    }
-  });
-  observer.observe(dialog,{attributes:true,attributeFilter:['open']});
-  dialog.addEventListener('close',()=>{clearTimeout(rgSaveFallbackTimer);rgSaveFallbackTimer=null;rgEntrySaving=false;});
-}
-
 /*
   v15: document.body 전체 MutationObserver는 사용하지 않는다.
   책 상세 decorate는 실제 사용자 동작에서만 실행하고,
   기록 저장 버튼은 capture 단계에서 즉시 잠가 느린 이미지 업로드 중 더블탭 중복 저장을 막는다.
-  필사 확정 후에는 record dialog에 원본 이미지 미리보기와 저장 상태를 보여준다.
+  필사/저장 UI는 reading.js 원본이 담당한다.
 */
 document.addEventListener('click',e=>{
   const remove=e.target.closest('[data-rg-remove-book]');if(remove){e.preventDefault();e.stopPropagation();removeBook(remove.dataset.rgRemoveBook);return}
@@ -246,20 +157,10 @@ document.addEventListener('click',e=>{
 
   if(e.target.closest('[data-open-book],[data-open-existing-book],[data-detail-tab],#bookMoreBtn'))scheduleDecorate();
 
-  if(e.target.closest('#confirmOcrBtn')){
-    rgHandwritingPreviewUrl=captureHandwritingPreview();
-    requestAnimationFrame(showHandwritingPreview);
-  }
-  if(e.target.closest('#openHandwritingBtn')){
-    rgHandwritingPreviewUrl='';
-    document.getElementById('rgHandwritingSavePreview')?.classList.add('hidden');
-  }
 
   const menu=document.getElementById('bookMoreMenu');if(menu&&!menu.classList.contains('hidden')&&!e.target.closest('#bookMoreBtn')&&!e.target.closest('#bookMoreMenu'))menu.classList.add('hidden');
 });
-document.addEventListener('click',beginEntrySave,true);
 
-window.addEventListener('pageshow',()=>{scheduleDecorate();setupRecordDialogFeedback()});
+window.addEventListener('pageshow',()=>{scheduleDecorate()});
 injectStyle();
-setupRecordDialogFeedback();
 scheduleDecorate();

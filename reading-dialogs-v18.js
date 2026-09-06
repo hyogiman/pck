@@ -1,4 +1,4 @@
-/* 독서의 정원 v20 — 기본 브라우저 confirm/alert 제거 + 필사 메모리 절약 + OCR/텍스트 없는 필사 저장 */
+/* 독서의 정원 v24 — 앱 모달(confirm/alert 대체) 전용 */
 const RG_DIALOG_VERSION='20260904-reading-v20';
 const approvals=[];
 const replayClicks=new WeakSet();
@@ -176,100 +176,5 @@ document.addEventListener('change',async e=>{
   input.dispatchEvent(new Event('change',{bubbles:true}));
 },true);
 
-function installHandwritingMemoryGuard(){
-  injectStyle();
-  const canvas=document.getElementById('writingCanvas');if(!canvas)return;
-  /* reading-detail-v12의 미리보기용 PNG/base64 복제를 차단한다. 저장 WebP Blob과는 무관하다. */
-  try{Object.defineProperty(canvas,'toDataURL',{configurable:true,value:()=>''})}catch{}
-
-  const releaseWhenConverted=()=>{
-    let tries=0;
-    const check=()=>{
-      const layer=document.getElementById('handwritingLayer');
-      const ocr=document.getElementById('ocrDialog');
-      if((layer?.classList.contains('hidden')||ocr?.open)&&canvas.width>1){
-        canvas.width=1;canvas.height=1;return;
-      }
-      if(++tries<50)setTimeout(check,40);
-    };
-    setTimeout(check,0);
-  };
-  document.addEventListener('click',e=>{
-    if(e.target.closest('#convertHandwritingBtn'))releaseWhenConverted();
-    if(e.target.closest('#confirmOcrBtn,#saveEntryBtn'))requestAnimationFrame(syncHandwritingCard);
-  });
-}
-
-function installEmptyOcrConfirm(){
-  /* reading.js 원본은 OCR 텍스트가 비어 있으면 confirmOcr()에서 return한다.
-     OCR 서버 연결 전에는 이미지 자체가 유효한 기록이므로 빈 텍스트도 통과시킨다. */
-  document.addEventListener('click',e=>{
-    const btn=e.target.closest('#confirmOcrBtn');if(!btn)return;
-    const text=(document.getElementById('ocrConfirmedText')?.value||'').trim();
-    if(text)return;
-    e.preventDefault();e.stopImmediatePropagation();
-    const ocr=document.getElementById('ocrDialog'),record=document.getElementById('recordDialog');
-    if(ocr?.open)ocr.close();
-    if(record&&!record.open)record.showModal();
-    requestAnimationFrame(syncHandwritingCard);
-    const toast=document.getElementById('toast');
-    if(toast){
-      toast.textContent='필사 이미지를 첨부했습니다. 문장은 기록 화면에서 직접 입력할 수 있어요. ✍';
-      toast.classList.add('show');
-      clearTimeout(installEmptyOcrConfirm.t);
-      installEmptyOcrConfirm.t=setTimeout(()=>toast.classList.remove('show'),3000);
-    }
-  },true);
-}
-
-/* reading.js의 saveEntry()는 현재 quote/thought만 유효 콘텐츠로 검사한다.
-   이미지 단독 필사에서는 첫 safeText(quote) 호출만 truthy 토큰으로 통과시키고,
-   토큰은 toJSON/toString에서 빈 문자열이 되므로 DB와 화면에는 가짜 텍스트를 남기지 않는다.
-   원본 saveEntry 검증이 이미지까지 포함하도록 정리되면 이 브리지는 제거한다. */
-function installImageOnlySaveBridge(){
-  const btn=document.getElementById('saveEntryBtn');if(!btn)return;
-  const nativeTrim=String.prototype.trim;
-  btn.addEventListener('click',()=>{
-    const quote=(document.getElementById('entryQuote')?.value||'').trim();
-    const thought=(document.getElementById('entryThought')?.value||'').trim();
-    const box=document.getElementById('rgHandwritingSavePreview');
-    const hasHandwriting=!!box&&!box.classList.contains('hidden');
-    if(quote||thought||!hasHandwriting)return;
-
-    let armed=true;
-    const emptyToken={toString:()=>'',valueOf:()=>'',toJSON:()=>''};
-    String.prototype.trim=function(...args){
-      if(armed&&String(this)===''){
-        armed=false;
-        String.prototype.trim=nativeTrim;
-        return emptyToken;
-      }
-      return nativeTrim.apply(this,args);
-    };
-    queueMicrotask(()=>{if(String.prototype.trim!==nativeTrim)String.prototype.trim=nativeTrim});
-  },{capture:true});
-}
-
-function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
-function syncHandwritingCard(){
-  const box=document.getElementById('rgHandwritingSavePreview');if(!box)return;
-  box.querySelector('img')?.remove();
-  const strong=box.querySelector('strong'),copy=box.querySelector('span');
-  if(box.classList.contains('is-saving')){
-    setTextIfChanged(strong,'필사 원본 보관 중…');
-    setTextIfChanged(copy,'필사 이미지를 기기에 먼저 저장한 뒤 클라우드 동기화를 이어갑니다.');
-  }else{
-    setTextIfChanged(strong,'✍ 필사 원본 이미지 포함');
-    setTextIfChanged(copy,'필사 원본 이미지만 저장합니다. 펜 획 데이터는 남기지 않습니다.');
-  }
-}
-
-function installCardCleanup(){
-  const record=document.querySelector('#recordDialog .sheet');if(!record)return;
-  const observer=new MutationObserver(()=>syncHandwritingCard());
-  observer.observe(record,{subtree:true,childList:true});
-  syncHandwritingCard();
-}
-
-function boot(){injectStyle();ensureDialog();installHandwritingMemoryGuard();installEmptyOcrConfirm();installImageOnlySaveBridge();installCardCleanup()}
+function boot(){injectStyle();ensureDialog()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
