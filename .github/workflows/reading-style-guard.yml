@@ -31,6 +31,7 @@ jobs:
           assert css_files == ['reading.css'], f'Only reading.css is allowed; found {css_files}'
 
           html = Path('reading.html').read_text(encoding='utf-8')
+          css = Path('reading.css').read_text(encoding='utf-8')
           links = re.findall(r'<link\s+rel="stylesheet"\s+href="\./(reading[^"?]*\.css)', html)
           assert links == ['reading.css'], f'reading.html must load only reading.css; found {links}'
 
@@ -53,8 +54,14 @@ jobs:
           for old in ['reading-theme-v2.css','reading-theme-v3.css','reading-theme-v4.css','reading-theme-v5.css','reading-swipe-v8.css']:
               assert old not in html and old not in sw, f'Stale Reading CSS reference: {old}'
 
+          # Prevent reintroducing the v29 browser-compatibility mistake.
+          assert 'calc(var(--rg-level' not in css, 'Unsupported level multiplication returned to reading.css'
+          assert css.count('.rg-relative-date{font-size:1rem}') == 1, 'Duplicate canonical helper returned'
+
           print('PASS: reading.css is the only Reading Garden CSS source')
           print('PASS: no inline/dynamic JS/HTML style declarations')
+          print('PASS: no stale Reading CSS files/references')
+          print('PASS: canonical progress/chart CSS uses compatible values')
           PY
       - name: Verify Reading JavaScript syntax
         run: |
