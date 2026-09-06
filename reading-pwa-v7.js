@@ -1,7 +1,7 @@
-/* 독서의 정원 v21 — 독립 PWA 설치 보조 + 안정성/모달 런타임 로드 */
+/* 독서의 정원 v22 — 독립 PWA 설치 보조 + 안정성/모달/필사상태 런타임 로드 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260904-reading-v21';
+const RG_SW_VERSION='20260904-reading-v22';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -88,11 +88,6 @@ window.addEventListener('appinstalled',()=>{
   deferredInstallPrompt=null;rgToast('독서의 정원을 별도 앱으로 설치했습니다. 🌿');refreshInstallCard();
 });
 
-/* 이전 버전은 document.body 전체를 MutationObserver로 감시하면서
-   설정창이 열린 동안 refreshInstallCard()가 다시 DOM mutation을 만들고,
-   그 mutation이 observer를 다시 깨우는 반복이 생길 수 있었다.
-   정적 설정 DOM에서는 감시가 필요 없으므로 최초 1회 생성하고,
-   설정 버튼을 누를 때만 상태를 갱신한다. */
 ensureInstallCard();
 document.getElementById('openSettings')?.addEventListener('click',()=>{
   ensureInstallCard();
@@ -102,8 +97,7 @@ document.getElementById('openSettings')?.addEventListener('click',()=>{
 registerSharedWorker();
 
 /* 필기 성능 최적화는 reading.js 원본에 통합했다.
-   v21은 브라우저 기본 confirm/alert를 앱 모달로 통일하고,
-   필사 이미지 단독 기록을 허용하며,
-   새로고침 직후에도 기존 진행 세션이 있으면 새 세션 생성을 막는다. */
-import('./reading-dialogs-v18.js?v=20260904-reading-v21').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
-import('./reading-stability-v16.js?v=20260904-reading-v21').catch(err=>console.warn('Reading Garden stability runtime failed',err));
+   v22는 필사 원본 첨부 상태를 이미지 미리보기와 분리해 항상 보이게 한다. */
+import('./reading-dialogs-v18.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
+import('./reading-stability-v16.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden stability runtime failed',err));
+import('./reading-handwriting-state-v22.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden handwriting state runtime failed',err));
