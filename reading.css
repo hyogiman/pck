@@ -1,4 +1,4 @@
-/* 독서의 정원 v29 — SINGLE CSS SOURCE OF TRUTH
+/* 독서의 정원 v30 — SINGLE CSS SOURCE OF TRUTH
    모든 정적 스타일은 이 파일에서만 관리한다.
    JS의 <style> 주입과 theme/swipe 보조 CSS 파일은 사용하지 않는다. */
 
@@ -449,11 +449,7 @@ body{
     @media (pointer:coarse){.rg-session-delete{width:46px!important;height:46px!important;right:-5px!important;top:-4px!important}}
     @media print{.rg-session-delete{display:none!important}}
 
-/* ===== canonical helpers previously expressed as static inline styles ===== */
-.rg-relative-date{font-size:1rem}
-
-
-/* ===== v29 canonical no-inline-style rules ===== */
+/* ===== v30 canonical no-inline-style rules ===== */
 body.rg-layer-open{overflow:hidden}
 .rg-active-session-notice{margin-bottom:18px}
 .rg-relative-date{font-size:1rem}
@@ -466,30 +462,30 @@ body.rg-layer-open{overflow:hidden}
 .search-result-excerpt{margin-top:5px!important;color:var(--text)!important}
 .choice-row-author{display:block;color:var(--muted)}
 .print-cover-icon{font-size:26pt}
-.rg-level-0{--rg-level:0}
-.rg-level-1{--rg-level:1}
-.rg-level-2{--rg-level:2}
-.rg-level-3{--rg-level:3}
-.rg-level-4{--rg-level:4}
-.rg-level-5{--rg-level:5}
-.rg-level-6{--rg-level:6}
-.rg-level-7{--rg-level:7}
-.rg-level-8{--rg-level:8}
-.rg-level-9{--rg-level:9}
-.rg-level-10{--rg-level:10}
-.rg-level-11{--rg-level:11}
-.rg-level-12{--rg-level:12}
-.rg-level-13{--rg-level:13}
-.rg-level-14{--rg-level:14}
-.rg-level-15{--rg-level:15}
-.rg-level-16{--rg-level:16}
-.rg-level-17{--rg-level:17}
-.rg-level-18{--rg-level:18}
-.rg-level-19{--rg-level:19}
-.rg-level-20{--rg-level:20}
-.path-progress span{width:calc(var(--rg-level,0) * 5%)}
-.bar-col span{height:max(2px,calc(var(--rg-level,0) * 6px))}
-.hbar-fill{width:calc(var(--rg-level,0) * 5%)}
+.rg-level-0{--rg-pct:0%;--rg-bar-px:0px}
+.rg-level-1{--rg-pct:5%;--rg-bar-px:6px}
+.rg-level-2{--rg-pct:10%;--rg-bar-px:12px}
+.rg-level-3{--rg-pct:15%;--rg-bar-px:18px}
+.rg-level-4{--rg-pct:20%;--rg-bar-px:24px}
+.rg-level-5{--rg-pct:25%;--rg-bar-px:30px}
+.rg-level-6{--rg-pct:30%;--rg-bar-px:36px}
+.rg-level-7{--rg-pct:35%;--rg-bar-px:42px}
+.rg-level-8{--rg-pct:40%;--rg-bar-px:48px}
+.rg-level-9{--rg-pct:45%;--rg-bar-px:54px}
+.rg-level-10{--rg-pct:50%;--rg-bar-px:60px}
+.rg-level-11{--rg-pct:55%;--rg-bar-px:66px}
+.rg-level-12{--rg-pct:60%;--rg-bar-px:72px}
+.rg-level-13{--rg-pct:65%;--rg-bar-px:78px}
+.rg-level-14{--rg-pct:70%;--rg-bar-px:84px}
+.rg-level-15{--rg-pct:75%;--rg-bar-px:90px}
+.rg-level-16{--rg-pct:80%;--rg-bar-px:96px}
+.rg-level-17{--rg-pct:85%;--rg-bar-px:102px}
+.rg-level-18{--rg-pct:90%;--rg-bar-px:108px}
+.rg-level-19{--rg-pct:95%;--rg-bar-px:114px}
+.rg-level-20{--rg-pct:100%;--rg-bar-px:120px}
+.path-progress span{width:var(--rg-pct,0%)}
+.bar-col span{height:max(2px,var(--rg-bar-px,0px))}
+.hbar-fill{width:var(--rg-pct,0%)}
 #readHero .rg-swipe-book-content.rg-drag-left-near{transition:none;transform:translateX(-4px);opacity:.98}
 #readHero .rg-swipe-book-content.rg-drag-left-mid{transition:none;transform:translateX(-10px);opacity:.95}
 #readHero .rg-swipe-book-content.rg-drag-left-far{transition:none;transform:translateX(-16px);opacity:.92}
