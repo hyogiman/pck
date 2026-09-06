@@ -2,10 +2,10 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v32: 생각의 텃밭과 독서의 정원 도서 검색에 페이지형 더보기를 지원한다.
+   v33: 독서시간을 상위 경계로 두고 그 안에 문장·필사·생각 기록을 묶는다.
    reading.html은 단 하나의 Reading stylesheet만 직접 참조한다.
    서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v32-book-search-pagination-v83";
+const CACHE = "garden-v33-reading-timeline-folders-v84";
 const PATCH_VERSION = "20260904-1845-capture-marking-source-v78";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
@@ -15,7 +15,7 @@ const PATCH_TAGS = [
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./reading.html", "./reading.css", "./reading.js", "./reading-manifest.json",
-  "./reading-enhance-v3.js", "./reading-hotfix-v4.js", "./reading-genre-v5.js",
+  "./reading-enhance-v3.js", "./reading-genre-v5.js",
   "./reading-polish-v6.js", "./reading-pwa-v7.js", "./reading-swipe-v8.js", "./reading-detail-v12.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/reading-garden.svg", "./icons/reading-garden-maskable.svg"
 ];
@@ -62,7 +62,7 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/storage-fix.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
     url.pathname.endsWith("/reading.js")||url.pathname.endsWith("/reading.css")||
-    url.pathname.endsWith("/reading-enhance-v3.js")||url.pathname.endsWith("/reading-hotfix-v4.js")||
+    url.pathname.endsWith("/reading-enhance-v3.js")||
     url.pathname.endsWith("/reading-genre-v5.js")||url.pathname.endsWith("/reading-polish-v6.js")||
     url.pathname.endsWith("/reading-pwa-v7.js")||url.pathname.endsWith("/reading-swipe-v8.js")||
     url.pathname.endsWith("/reading-detail-v12.js")||

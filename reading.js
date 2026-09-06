@@ -29,6 +29,9 @@ const displayDateFull=v=>{const d=v?new Date(v):new Date();return new Intl.DateT
 const timeText=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?"":new Intl.DateTimeFormat("ko-KR",{hour:"2-digit",minute:"2-digit",hour12:false}).format(d)};
 const fmtMinutes=n=>{n=Math.max(0,Math.round(Number(n)||0));if(n<60)return `${n}분`;const h=Math.floor(n/60),m=n%60;return m?`${h}시간 ${m}분`:`${h}시간`};
 const safeText=v=>String(v??"").trim();
+const timelineTrashIcon=()=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function entryKindLabel(e){const handwriting=e?.inputMethod==="handwriting",quote=!!safeText(e?.quoteText||e?.confirmedText||e?.externalText),thought=!!safeText(e?.thought);if(handwriting&&thought)return "필사 · 생각";if(handwriting)return "필사";if(quote&&thought)return "문장 · 생각";if(thought)return "생각";if(quote)return "문장";return "독서 기록"}
+async function confirmReadingAction({title,message,confirmText="확인",cancelText="취소",danger=true}={}){if(typeof window.rgConfirm==="function")return await window.rgConfirm({title,message,confirmText,cancelText,danger});return window.confirm(message||title||"이 작업을 진행할까요?")}
 
 const STATUS_LABELS={wishlist:"읽고 싶음",reading:"읽는 중",paused:"잠시 멈춤",completed:"완독",dnf:"중단"};
 const FORMAT_LABELS={ebook:"전자책",paper:"종이책",pdf:"PDF",audiobook:"오디오북",other:"기타"};
@@ -290,15 +293,85 @@ async function saveProfile(){const id=$("profileSourceId").value,p=ensureProfile
 function openComplete(sourceId){state.detailBookId=sourceId;const s=sourceById(sourceId),m=bookMetrics(sourceId),c=state.readingCycles.find(x=>x.sourceId===sourceId&&!x.completedAt)||ensureCycle(sourceId);$("completeBookTitle").textContent=`${s?.title||"이 책"} 완독`;$("completeSummary").innerHTML=`${c.startedAt?displayDateFull(c.startedAt):""}<br><b>${fmtMinutes(m.mins)}</b> · ${m.days}일 동안 읽음`;$("finalReflection").value=c.finalReflection||"";$("oneLineReflection").value=c.oneLineReflection||"";$("rereadWanted").checked=!!c.rereadWanted;openDialog("completeDialog")}
 async function saveComplete(){const id=state.detailBookId,p=ensureProfile(id),c=state.readingCycles.find(x=>x.sourceId===id&&!x.completedAt)||ensureCycle(id),at=nowIso();Object.assign(c,{completedAt:at,finalReflection:safeText($("finalReflection").value),oneLineReflection:safeText($("oneLineReflection").value),rereadWanted:$("rereadWanted").checked,updatedAt:at});Object.assign(p,{status:"completed",completedAt:at,updatedAt:at});const s=sourceById(id);if(s){s.status="done";s.updatedAt=at}await Promise.all([cloudSet("readingCycles",c.id,c,{silent:true}),cloudSet("readingProfiles",p.id,p,{silent:true}),s?cloudSet("sources",s.id,s,{silent:true}):Promise.resolve()]);closeDialog("completeDialog");renderAll();if(state.detailBookId)renderBookDetail();toast("완독을 기록했습니다. ◉")}
 
+async function deleteTimelineEntry(entryId,button){
+  const entry=state.readingEntries.find(e=>e.id===entryId);if(!entry)return toast("삭제할 독서 기록을 찾지 못했습니다.");
+  if(!await confirmReadingAction({title:"독서 기록을 삭제할까요?",message:"이 문장·필사·생각 기록을 독서의 정원에서 삭제합니다.",confirmText:"기록 삭제"}))return;
+  let deleteThought=false;
+  if(entry.linkedFragmentId){deleteThought=await confirmReadingAction({title:"연결된 생각도 삭제할까요?",message:"이 기록에는 생각의 텃밭과 연결된 내 생각이 있습니다. 생각을 남기려면 ‘생각은 남기기’를 선택하세요.",confirmText:"생각도 삭제",cancelText:"생각은 남기기"})}
+  if(button)button.disabled=true;
+  try{
+    state.readingEntries=state.readingEntries.filter(e=>e.id!==entryId);
+    await cloudDelete("readingEntries",entryId);
+    if(deleteThought&&entry.linkedFragmentId){state.fragments=state.fragments.filter(f=>f.id!==entry.linkedFragmentId);await cloudDelete("fragments",entry.linkedFragmentId)}
+    if(state.idb){await Promise.all([idbDelete("files",`${entryId}:image`).catch(()=>{}),idbDelete("files",`${entryId}:strokes`).catch(()=>{})])}
+    await cacheSnapshot();renderAll();toast(deleteThought?"독서 기록과 연결된 생각을 삭제했습니다.":"독서 기록을 삭제했습니다.")
+  }catch(err){console.error("timeline entry delete failed",err);toast("삭제 중 문제가 생겼습니다. 동기화 상태를 확인해주세요.",3200);if(button)button.disabled=false}
+}
+async function deleteTimelineSession(sessionId,button){
+  const session=state.readingSessions.find(s=>s.id===sessionId);if(!session)return toast("삭제할 독서시간 기록을 찾지 못했습니다.");
+  const entries=state.readingEntries.filter(e=>e.sessionId===sessionId),source=sourceById(session.sourceId),countText=entries.length?`\n\n이 시간 안의 문장·필사·생각 ${entries.length}개는 삭제하지 않고 ‘시간 기록 없이 남긴 독서 기록’으로 보존합니다.`:"";
+  if(!await confirmReadingAction({title:"독서시간 기록을 삭제할까요?",message:`${source?.title||"이 책"} · ${timeText(session.startedAt)}${session.endedAt?`–${timeText(session.endedAt)}`:""} · ${fmtMinutes(session.finalDurationMinutes)}${countText}`,confirmText:"독서시간 삭제"}))return;
+  if(button)button.disabled=true;
+  try{
+    const at=nowIso();
+    for(const entry of entries){entry.sessionId=null;entry.updatedAt=at;await cloudSet("readingEntries",entry.id,entry,{silent:true})}
+    state.readingSessions=state.readingSessions.filter(s=>s.id!==sessionId);await cloudDelete("readingSessions",sessionId);
+    const profile=profileById(session.sourceId),remaining=state.readingSessions.filter(s=>s.sourceId===session.sourceId&&s.endedAt).sort((a,b)=>new Date(b.endedAt||b.startedAt)-new Date(a.endedAt||a.startedAt));
+    if(profile){profile.lastReadAt=remaining[0]?.endedAt||remaining[0]?.startedAt||"";if((profile.currentLocator||"")===(session.endLocator||""))profile.currentLocator=remaining[0]?.endLocator||"";profile.updatedAt=at;await cloudSet("readingProfiles",profile.id,profile,{silent:true})}
+    await cacheSnapshot();renderAll();toast(entries.length?"독서시간만 삭제했습니다. 안의 기록은 그대로 남겼습니다.":"독서시간 기록을 삭제했습니다.")
+  }catch(err){console.error("timeline session delete failed",err);toast("삭제 중 문제가 생겼습니다. 동기화 상태를 확인해주세요.",3200);if(button)button.disabled=false}
+}
+
 function renderTimelineBookOptions(){const sel=$("timelineBookFilter"),v=sel.value;sel.innerHTML=`<option value="">전체 책</option>`+state.sources.slice().sort((a,b)=>a.title.localeCompare(b.title,"ko")).map(s=>`<option value="${esc(s.id)}">${esc(s.title)}</option>`).join("");sel.value=v}
 function timelineEvents(bookId=""){const linked=new Set(state.readingEntries.map(e=>e.linkedFragmentId).filter(Boolean)),events=[];for(const s of state.readingSessions.filter(x=>x.endedAt&&(!bookId||x.sourceId===bookId)))events.push({type:"session",date:s.startedAt,session:s,entries:state.readingEntries.filter(e=>e.sessionId===s.id)});for(const e of state.readingEntries.filter(e=>!e.sessionId&&(!bookId||e.sourceId===bookId)))events.push({type:"entry",date:e.createdAt,entry:e});for(const f of state.fragments.filter(f=>f.sourceId&&sourceById(f.sourceId)&&!linked.has(f.id)&&(!bookId||f.sourceId===bookId)))events.push({type:"legacy",date:f.date||f.createdAt,fragment:f});for(const c of state.readingCycles.filter(c=>c.completedAt&&(!bookId||c.sourceId===bookId)))events.push({type:"complete",date:c.completedAt,cycle:c});return events.sort((a,b)=>new Date(b.date)-new Date(a.date))}
 function entryMatches(e,filter){if(filter==="all")return true;if(filter==="quote")return !!safeText(e.quoteText||e.confirmedText);if(filter==="handwriting")return e.inputMethod==="handwriting";if(filter==="thought")return !!safeText(e.thought);return true}
-function renderEntryHtml(e,{legacy=false}={}){const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought);return `<div class="timeline-entry" ${!legacy?`data-edit-entry="${esc(e.id)}"`:""}>${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">✍ 필사 원본 동기화 중</div>`:""}${quote?`<div class="entry-quote">${esc(quote)}</div>`:""}${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}</div>`}
+function renderEntryHtml(e,{legacy=false,deletable=true}={}){
+  const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought),canDelete=!legacy&&deletable;
+  return `<div class="timeline-entry${legacy?" is-legacy":""}" ${!legacy?`data-edit-entry="${esc(e.id)}"`:""}>
+    <div class="timeline-entry-bar">
+      <span class="timeline-entry-type">${esc(entryKindLabel(e))}</span>
+      ${canDelete?`<button class="timeline-delete-btn timeline-entry-delete" data-delete-entry="${esc(e.id)}" type="button" aria-label="${esc(entryKindLabel(e))} 삭제" title="이 기록 삭제">${timelineTrashIcon()}</button>`:""}
+    </div>
+    ${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}
+    ${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">✍ 필사 원본 동기화 중</div>`:""}
+    ${quote?`<div class="entry-quote">${esc(quote)}</div>`:""}
+    ${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}
+    ${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}
+  </div>`
+}={}){const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought);return `<div class="timeline-entry" ${!legacy?`data-edit-entry="${esc(e.id)}"`:""}>${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">✍ 필사 원본 동기화 중</div>`:""}${quote?`<div class="entry-quote">${esc(quote)}</div>`:""}${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}</div>`}
 function renderEvent(ev,filter="all"){
-  if(ev.type==="session"){const s=sourceById(ev.session.sourceId),entries=ev.entries.filter(e=>entryMatches(e,filter));if(filter!=="all"&&!entries.length)return "";return `<div class="timeline-card"><article class="timeline-session"><div class="timeline-session-head">${s?.image?`<img class="timeline-thumb" src="${esc(s.image)}" alt="">`:`<div class="timeline-thumb"></div>`}<div><h3>${esc(s?.title||"책")}</h3><p>${timeText(ev.session.startedAt)}${ev.session.endedAt?` – ${timeText(ev.session.endedAt)}`:""} · ${fmtMinutes(ev.session.finalDurationMinutes)} · ${esc(SERVICE_LABELS[ev.session.service]||"")}</p></div></div>${entries.map(e=>renderEntryHtml(e)).join("")}${ev.session.sessionNote&&filter==="all"?`<div class="session-note">“${esc(ev.session.sessionNote)}”</div>`:""}</article></div>`}
-  if(ev.type==="entry"){if(!entryMatches(ev.entry,filter))return "";const s=sourceById(ev.entry.sourceId);return `<div class="timeline-card"><article class="timeline-session"><div class="timeline-session-head"><div><h3>${esc(s?.title||"책")}</h3><p>독서 기록</p></div></div>${renderEntryHtml(ev.entry)}</article></div>`}
-  if(ev.type==="legacy"){const f=ev.fragment,e={sourceId:f.sourceId,locator:f.locator,externalText:f.externalText,thought:f.thought};if(filter==="handwriting")return "";if(filter==="quote"&&!safeText(f.externalText))return "";if(filter==="thought"&&!safeText(f.thought))return "";const s=sourceById(f.sourceId);return `<div class="timeline-card"><article class="timeline-session"><div class="timeline-session-head"><div><h3>${esc(s?.title||"책")}</h3><p>예전 독서 기록</p></div></div>${renderEntryHtml(e,{legacy:true})}</article></div>`}
-  if(ev.type==="complete"&&filter==="all"){const c=ev.cycle,s=sourceById(c.sourceId),m=bookMetrics(c.sourceId);return `<div class="timeline-card"><div class="completion-event"><div class="complete-mark">◉</div><h3>${esc(s?.title||"책")} 완독</h3><p>${c.startedAt?`${displayDateFull(c.startedAt)} → `:""}${displayDateFull(c.completedAt)}<br>${fmtMinutes(m.mins)} · ${m.days}일 독서</p>${c.oneLineReflection?`<div class="entry-thought">${esc(c.oneLineReflection)}</div>`:""}</div></div>`}return "";
+  if(ev.type==="session"){
+    const source=sourceById(ev.session.sourceId),entries=ev.entries.filter(e=>entryMatches(e,filter));
+    if(filter!=="all"&&!entries.length)return "";
+    const entryFolder=entries.length
+      ? `<div class="timeline-entry-folder"><div class="timeline-entry-folder-head"><span>이 독서시간에 남긴 기록</span><strong>${entries.length}</strong></div><div class="timeline-entry-list">${entries.map(e=>renderEntryHtml(e)).join("")}</div></div>`
+      : `<div class="timeline-entry-folder is-empty"><div class="timeline-entry-folder-head"><span>이 독서시간에 남긴 기록</span><strong>0</strong></div><div class="timeline-entry-empty">이 시간에는 따로 남긴 문장·필사·생각이 없습니다.</div></div>`;
+    return `<div class="timeline-card"><article class="timeline-session is-reading-session">
+      <div class="timeline-session-head">
+        ${source?.image?`<img class="timeline-thumb" src="${esc(source.image)}" alt="">`:`<div class="timeline-thumb"></div>`}
+        <div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>${timeText(ev.session.startedAt)}${ev.session.endedAt?` – ${timeText(ev.session.endedAt)}`:""} · ${fmtMinutes(ev.session.finalDurationMinutes)} · ${esc(SERVICE_LABELS[ev.session.service]||"")}</p></div>
+        <button class="timeline-delete-btn timeline-session-delete" data-delete-session="${esc(ev.session.id)}" type="button" aria-label="독서시간 기록 삭제" title="독서시간 기록 삭제">${timelineTrashIcon()}</button>
+      </div>
+      ${entryFolder}
+      ${ev.session.sessionNote&&filter==="all"?`<div class="session-note">“${esc(ev.session.sessionNote)}”</div>`:""}
+    </article></div>`
+  }
+  if(ev.type==="entry"){
+    if(!entryMatches(ev.entry,filter))return "";
+    const source=sourceById(ev.entry.sourceId);
+    return `<div class="timeline-card"><article class="timeline-session is-standalone-entry"><div class="timeline-session-head"><div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>시간 기록 없이 남긴 독서 기록</p></div></div><div class="timeline-entry-folder is-standalone"><div class="timeline-entry-list">${renderEntryHtml(ev.entry)}</div></div></article></div>`
+  }
+  if(ev.type==="legacy"){
+    const f=ev.fragment,e={sourceId:f.sourceId,locator:f.locator,externalText:f.externalText,thought:f.thought};
+    if(filter==="handwriting")return "";if(filter==="quote"&&!safeText(f.externalText))return "";if(filter==="thought"&&!safeText(f.thought))return "";
+    const source=sourceById(f.sourceId);
+    return `<div class="timeline-card"><article class="timeline-session is-standalone-entry is-legacy"><div class="timeline-session-head"><div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>생각의 텃밭에서 가져온 예전 기록</p></div></div><div class="timeline-entry-folder is-standalone"><div class="timeline-entry-list">${renderEntryHtml(e,{legacy:true,deletable:false})}</div></div></article></div>`
+  }
+  if(ev.type==="complete"&&filter==="all"){
+    const c=ev.cycle,source=sourceById(c.sourceId),m=bookMetrics(c.sourceId);
+    return `<div class="timeline-card"><div class="completion-event"><div class="complete-mark">◉</div><h3>${esc(source?.title||"책")} 완독</h3><p>${c.startedAt?`${displayDateFull(c.startedAt)} → `:""}${displayDateFull(c.completedAt)}<br>${fmtMinutes(m.mins)} · ${m.days}일 독서</p>${c.oneLineReflection?`<div class="entry-thought">${esc(c.oneLineReflection)}</div>`:""}</div></div>`
+  }
+  return ""
 }
 function renderTimelineHtml({bookId="",embedded=false}={}){const filter=embedded?"all":state.timelineFilter,events=timelineEvents(bookId||(!embedded?$("timelineBookFilter")?.value||"":"")),groups=new Map();for(const ev of events){const html=renderEvent(ev,filter);if(!html)continue;const d=localDate(ev.date);if(!groups.has(d))groups.set(d,[]);groups.get(d).push(html)}if(!groups.size)return `<div class="empty-card">아직 보여줄 독서 기록이 없습니다.</div>`;return [...groups.entries()].map(([d,items])=>`<section class="day-group"><div class="day-title">${displayDate(`${d}T12:00:00`)}</div>${items.join("")}</section>`).join("")}
 function renderTimeline(){$("timelineList").innerHTML=renderTimelineHtml()}
@@ -328,6 +401,8 @@ async function restoreJson(file){try{const data=JSON.parse(await file.text());if
 
 function bindEvents(){
   document.addEventListener("click",async e=>{
+    const entryDelete=e.target.closest("[data-delete-entry]");if(entryDelete){e.preventDefault();e.stopPropagation();return deleteTimelineEntry(entryDelete.dataset.deleteEntry,entryDelete)}
+    const sessionDelete=e.target.closest("[data-delete-session]");if(sessionDelete){e.preventDefault();e.stopPropagation();return deleteTimelineSession(sessionDelete.dataset.deleteSession,sessionDelete)}
     const nav=e.target.closest("[data-view-target]");if(nav)return setView(nav.dataset.viewTarget);const close=e.target.closest("[data-close-dialog]");if(close)return closeDialog(close.dataset.closeDialog);const layer=e.target.closest("[data-close-layer]");if(layer)return closeLayer(layer.dataset.closeLayer);const start=e.target.closest("[data-start-book]");if(start){if(!$("bookDetail").classList.contains("hidden"))closeLayer("bookDetail");return startSession(start.dataset.startBook)}if(e.target.closest("[data-resume-session]"))return openSession();if(e.target.closest("[data-abandon-session]"))return openEndSession();if(e.target.closest("[data-open-book-picker]")){renderBookPicker();return openDialog("bookPickerDialog")}if(e.target.closest("[data-open-book-search]"))return openBookSearch();const pick=e.target.closest("[data-pick-book]");if(pick){setCurrentBook(pick.dataset.pickBook);closeDialog("bookPickerDialog");return}const ob=e.target.closest("[data-open-book]");if(ob)return openBookDetail(ob.dataset.openBook);const os=e.target.closest("[data-open-existing-book]");if(os){closeDialog("bookSearchDialog");return openBookDetail(os.dataset.openExistingBook)}const more=e.target.closest("[data-book-search-more]");if(more)return runBookSearch({append:true});const api=e.target.closest("[data-add-api-book]");if(api)return addApiBook(Number(api.dataset.addApiBook));const st=e.target.closest("[data-library-status]");if(st){state.libraryStatus=st.dataset.libraryStatus;return renderLibrary()}const lm=e.target.closest("[data-library-mode]");if(lm){state.libraryMode=lm.dataset.libraryMode;$$('[data-library-mode]').forEach(b=>b.classList.toggle('on',b===lm));return renderLibrary()}const ef=e.target.closest("[data-entry-filter]");if(ef){state.timelineFilter=ef.dataset.entryFilter;$$('[data-entry-filter]').forEach(b=>b.classList.toggle('on',b===ef));return renderTimeline()}const rg=e.target.closest("[data-range]");if(rg){state.statsRange=rg.dataset.range;$$('[data-range]').forEach(b=>b.classList.toggle('on',b===rg));return renderStats()}const dt=e.target.closest("[data-detail-tab]");if(dt){state.detailTab=dt.dataset.detailTab;return renderBookDetail()}const ep=e.target.closest("[data-edit-profile]");if(ep)return openProfile(ep.dataset.editProfile);const cb=e.target.closest("[data-complete-book]");if(cb)return openComplete(cb.dataset.completeBook);const pb=e.target.closest("[data-print-book]");if(pb)return openExport(pb.dataset.printBook);const ee=e.target.closest("[data-edit-entry]");if(ee){const entry=state.readingEntries.find(x=>x.id===ee.dataset.editEntry);if(entry)return openRecord({entry,fromSession:false})}
   });
   $("addBookBtn").onclick=openBookSearch;$("runBookSearchBtn").onclick=runBookSearch;$("bookSearchInput").addEventListener("keydown",e=>{if(e.key==="Enter")runBookSearch()});$("librarySearch").addEventListener("input",renderLibrary);$("timelineBookFilter").addEventListener("change",renderTimeline);$("openSettings").onclick=()=>openDialog("settingsDialog");$("newPathBtn").onclick=openPathDialog;$("savePathBtn").onclick=savePath;$("bookMoreBtn").onclick=()=>$("bookMoreMenu")?.classList.toggle("hidden");$("sessionBackBtn").onclick=()=>{closeLayer("sessionLayer");renderRead()};$("openRecordBtn").onclick=()=>openRecord({fromSession:true});$("pauseSessionBtn").onclick=togglePause;$("endSessionBtn").onclick=openEndSession;$("finishSessionBtn").onclick=finishSession;$("saveEntryBtn").onclick=saveEntry;$("deleteEntryBtn").onclick=deleteCurrentEntry;$("openHandwritingBtn").onclick=openHandwriting;$("closeHandwritingBtn").onclick=()=>{closeLayer("handwritingLayer");openDialog("recordDialog")};

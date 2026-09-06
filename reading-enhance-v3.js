@@ -94,53 +94,6 @@ async function getFirebaseCtx(){
 }
 function waitForUser(auth,onAuthStateChanged){return new Promise(resolve=>{const off=onAuthStateChanged(auth,u=>{if(u){off();resolve(u)}})})}
 
-let timelineLoaded=false,timelineSessions=[],timelineSources=[];
-function timeText(v){const d=new Date(v);return new Intl.DateTimeFormat("ko-KR",{hour:"2-digit",minute:"2-digit",hour12:false}).format(d)}
-function monthDay(v){const d=new Date(v);return {month:d.getMonth()+1,day:d.getDate()}}
-function sourceTitle(id){return timelineSources.find(s=>s.id===id)?.title||""}
-async function loadTimelineDeleteData(){
-  if(timelineLoaded)return;
-  const ctx=await getFirebaseCtx(),user=ctx.auth.currentUser||await waitForUser(ctx.auth,ctx.onAuthStateChanged);
-  const [ss,src]=await Promise.all([
-    ctx.getDocs(ctx.collection(ctx.db,"users",user.uid,"readingSessions")),
-    ctx.getDocs(ctx.collection(ctx.db,"users",user.uid,"sources"))
-  ]);
-  timelineSessions=ss.docs.map(d=>({id:d.id,...d.data()})).filter(s=>s.endedAt);
-  timelineSources=src.docs.map(d=>({id:d.id,...d.data()})).filter(s=>s.type==="book");
-  timelineLoaded=true;enhanceTimeline();
-}
-function matchSession(card){
-  const head=card.querySelector(".timeline-session-head"),title=head?.querySelector("h3")?.textContent?.trim()||"",meta=head?.querySelector("p")?.textContent||"",dayTitle=card.closest(".day-group")?.querySelector(".day-title")?.textContent||"";
-  const tm=meta.match(/(\d{1,2}:\d{2})\s*[–-]/),dm=dayTitle.match(/(\d{1,2})월\s*(\d{1,2})일/);if(!title||!tm||!dm)return null;
-  const candidates=timelineSessions.filter(s=>{const md=monthDay(s.startedAt);return sourceTitle(s.sourceId)===title&&timeText(s.startedAt)===tm[1]&&md.month===Number(dm[1])&&md.day===Number(dm[2])});
-  return candidates.length===1?candidates[0]:null;
-}
-function enhanceTimeline(){
-  if(!timelineLoaded)return;
-  document.querySelectorAll(".timeline-session").forEach(card=>{
-    if(card.querySelector(".rg-session-delete"))return;const session=matchSession(card);if(!session)return;const head=card.querySelector(".timeline-session-head");if(!head)return;
-    const btn=document.createElement("button");btn.type="button";btn.className="rg-session-delete";btn.title="독서시간 기록 삭제";btn.setAttribute("aria-label","독서시간 기록 삭제");btn.textContent="✕";
-    btn.addEventListener("click",async e=>{e.stopPropagation();await deleteSession(session.id)});head.appendChild(btn);
-  });
-}
-async function deleteSession(sessionId){
-  const target=timelineSessions.find(s=>s.id===sessionId);if(!target)return;
-  const ctx=await getFirebaseCtx(),user=ctx.auth.currentUser;if(!user)return;
-  const [entriesSnap,profilesSnap]=await Promise.all([
-    ctx.getDocs(ctx.collection(ctx.db,"users",user.uid,"readingEntries")),
-    ctx.getDocs(ctx.collection(ctx.db,"users",user.uid,"readingProfiles"))
-  ]);
-  const entries=entriesSnap.docs.map(d=>({ref:d.ref,id:d.id,...d.data()})).filter(e=>e.sessionId===sessionId),profiles=profilesSnap.docs.map(d=>({ref:d.ref,id:d.id,...d.data()}));
-  const extra=entries.length?`\n\n이 세션 안의 문장·필사·생각 ${entries.length}개는 삭제하지 않고 독립 기록으로 남깁니다.`:"";
-  if(!confirm(`이 독서시간 기록을 삭제할까요?\n${sourceTitle(target.sourceId)} · ${timeText(target.startedAt)} · ${Math.round(Number(target.finalDurationMinutes)||0)}분${extra}`))return;
-  try{
-    const now=new Date().toISOString();for(const e of entries)await ctx.setDoc(e.ref,{sessionId:null,updatedAt:now},{merge:true});
-    await ctx.deleteDoc(ctx.doc(ctx.db,"users",user.uid,"readingSessions",sessionId));
-    const remaining=timelineSessions.filter(s=>s.id!==sessionId&&s.sourceId===target.sourceId&&s.endedAt).sort((a,b)=>new Date(b.endedAt||b.startedAt)-new Date(a.endedAt||a.startedAt)),profile=profiles.find(p=>p.sourceId===target.sourceId);
-    if(profile){const patch={lastReadAt:remaining[0]?.endedAt||remaining[0]?.startedAt||"",updatedAt:now};if((profile.currentLocator||"")===(target.endLocator||""))patch.currentLocator=remaining[0]?.endLocator||"";await ctx.setDoc(profile.ref,patch,{merge:true})}
-    toast(entries.length?"독서시간을 삭제했습니다. 문장과 생각은 남겨두었습니다.":"독서시간 기록을 삭제했습니다.");setTimeout(()=>location.reload(),650);
-  }catch(err){console.error(err);toast("삭제 중 문제가 생겼습니다. 기록은 그대로 유지됩니다.",3200)}
-}
 
 function normalizeGenre(raw=""){
   const x=String(raw).toLowerCase();
@@ -190,8 +143,6 @@ function addGenreTool(){
 
 function watchUi(){
   const observer=new MutationObserver(()=>{
-    const timeline=document.querySelector('[data-view="timeline"].active');
-    if(timeline){if(!timelineLoaded)loadTimelineDeleteData().catch(()=>{});else enhanceTimeline()}
     if(document.getElementById("settingsDialog")?.open)refreshGenreStatus();
   });
   observer.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:["class","open"]});
