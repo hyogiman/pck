@@ -172,12 +172,12 @@ function normalizeAladinBook(item = {}) {
   };
 }
 
-async function searchYes24Books(query, apiKey) {
+async function searchYes24Books(query, apiKey, page = 1) {
   const url = new URL("https://apis.yes24.com/v1/goods/itemList");
   url.searchParams.set("query", query);
   url.searchParams.set("category", "BOOK");
   url.searchParams.set("sort", "RELATION");
-  url.searchParams.set("page", "1");
+  url.searchParams.set("page", String(Math.max(1, Number(page) || 1)));
   url.searchParams.set("pageSize", "20");
   url.searchParams.set("detail", "Y");
 
@@ -209,13 +209,13 @@ async function searchYes24Books(query, apiKey) {
   };
 }
 
-async function searchAladinBooks(query, key) {
+async function searchAladinBooks(query, key, page = 1) {
   const url = new URL("http://www.aladin.co.kr/ttb/api/ItemSearch.aspx");
   url.searchParams.set("TTBKey", key);
   url.searchParams.set("Query", query);
   url.searchParams.set("QueryType", "Keyword");
   url.searchParams.set("MaxResults", "20");
-  url.searchParams.set("start", "1");
+  url.searchParams.set("start", String(Math.max(1, Number(page) || 1)));
   url.searchParams.set("SearchTarget", "Book");
   url.searchParams.set("Cover", "Big");
   url.searchParams.set("Output", "JS");
@@ -258,6 +258,8 @@ exports.bookSearch = onRequest(
   },
   async (req, res) => {
     const query = String(req.query.q || "").trim();
+    const requestedPage = Number.parseInt(String(req.query.page || "1"), 10);
+    const page = Math.max(1, Math.min(50, Number.isFinite(requestedPage) ? requestedPage : 1));
     if (!query) {
       res.status(400).json({ ok: false, error: "검색어가 없습니다." });
       return;
@@ -267,10 +269,12 @@ exports.bookSearch = onRequest(
     const yes24Key = process.env.YES24_API_KEY;
     if (yes24Key) {
       try {
-        const result = await searchYes24Books(query, yes24Key);
+        const result = await searchYes24Books(query, yes24Key, page);
         res.status(200).json({
           ok: true,
           provider: "YES24",
+          page,
+          pageSize: 20,
           totalResults: result.totalResults,
           items: result.items,
         });
@@ -290,12 +294,14 @@ exports.bookSearch = onRequest(
     }
 
     try {
-      const result = await searchAladinBooks(query, aladinKey);
+      const result = await searchAladinBooks(query, aladinKey, page);
       res.status(200).json({
         ok: true,
         provider: "Aladin",
         fallbackFrom: "YES24",
         yes24Error,
+        page,
+        pageSize: 20,
         totalResults: result.totalResults,
         items: result.items,
       });
