@@ -1,7 +1,7 @@
-/* 독서의 정원 v20 — 독립 PWA 설치 보조 + 안정성/모달 런타임 로드 */
+/* 독서의 정원 v21 — 독립 PWA 설치 보조 + 안정성/모달 런타임 로드 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260904-reading-v20';
+const RG_SW_VERSION='20260904-reading-v21';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -102,8 +102,8 @@ document.getElementById('openSettings')?.addEventListener('click',()=>{
 registerSharedWorker();
 
 /* 필기 성능 최적화는 reading.js 원본에 통합했다.
-   v20은 브라우저 기본 confirm/alert를 앱 모달로 통일하고,
-   필사 미리보기의 base64 복제를 막으며,
-   OCR 결과와 텍스트가 없어도 필사 이미지만 기록으로 저장할 수 있게 한다. */
-import('./reading-dialogs-v18.js?v=20260904-reading-v20').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
-import('./reading-stability-v16.js?v=20260904-reading-v20').catch(err=>console.warn('Reading Garden stability runtime failed',err));
+   v21은 브라우저 기본 confirm/alert를 앱 모달로 통일하고,
+   필사 이미지 단독 기록을 허용하며,
+   새로고침 직후에도 기존 진행 세션이 있으면 새 세션 생성을 막는다. */
+import('./reading-dialogs-v18.js?v=20260904-reading-v21').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
+import('./reading-stability-v16.js?v=20260904-reading-v21').catch(err=>console.warn('Reading Garden stability runtime failed',err));
