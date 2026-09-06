@@ -338,7 +338,7 @@ function renderEntryHtml(e,{legacy=false,deletable=true}={}){
     ${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}
     ${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}
   </div>`
-}={}){const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought);return `<div class="timeline-entry" ${!legacy?`data-edit-entry="${esc(e.id)}"`:""}>${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">✍ 필사 원본 동기화 중</div>`:""}${quote?`<div class="entry-quote">${esc(quote)}</div>`:""}${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}</div>`}
+}
 function renderEvent(ev,filter="all"){
   if(ev.type==="session"){
     const source=sourceById(ev.session.sourceId),entries=ev.entries.filter(e=>entryMatches(e,filter));
