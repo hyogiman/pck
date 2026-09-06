@@ -8,10 +8,9 @@ LEGACY_CSS = [
     "reading-theme-v5.css",
     "reading-swipe-v8.css",
 ]
-DYNAMIC_STYLE_JS = [
+INJECT_STYLE_JS = [
     "reading-detail-v12.js",
     "reading-dialogs-v18.js",
-    "reading-stability-v16.js",
     "reading-hotfix-v4.js",
 ]
 
@@ -30,11 +29,34 @@ def extract_inject_style(path):
         r"function injectStyle\(\)\{.*?\.textContent=`(?P<css>.*?)`;\s*document\.head\.appendChild\([^)]*\);\s*\}",
         re.S,
     )
-    m = pattern.search(text)
-    if not m:
-        raise SystemExit(f"could not find exactly one injectStyle CSS block in {path}")
+    matches = list(pattern.finditer(text))
+    if len(matches) != 1:
+        raise SystemExit(f"expected one injectStyle CSS block in {path}, got {len(matches)}")
+    m = matches[0]
     css = m.group("css").strip()
     text = text[:m.start()] + "function injectStyle(){}" + text[m.end():]
+    write(path, text)
+    return css
+
+
+def extract_quiet_timer_style():
+    path = "reading-stability-v16.js"
+    text = read(path)
+    pattern = re.compile(
+        r"(?P<prefix>function installQuietTimer\(\)\{\s*)"
+        r"if\(document\.getElementById\('rgQuietTimerStyle'\)\)return;\s*"
+        r"const style=document\.createElement\('style'\);\s*"
+        r"style\.id='rgQuietTimerStyle';\s*"
+        r"style\.textContent=`(?P<css>.*?)`;\s*"
+        r"document\.head\.appendChild\(style\);\s*",
+        re.S,
+    )
+    matches = list(pattern.finditer(text))
+    if len(matches) != 1:
+        raise SystemExit(f"expected one quiet-timer CSS block, got {len(matches)}")
+    m = matches[0]
+    css = m.group("css").strip()
+    text = text[:m.start()] + m.group("prefix") + text[m.end():]
     write(path, text)
     return css
 
@@ -51,9 +73,15 @@ for path in LEGACY_CSS:
     parts.append(f"\n/* ===== consolidated from {path} ===== */\n{read(path).strip()}")
 
 # Runtime-injected styles are appended in a fixed, explicit order.
-for path in DYNAMIC_STYLE_JS:
+for path in INJECT_STYLE_JS[:2]:
     css = extract_inject_style(path)
     parts.append(f"\n/* ===== consolidated from runtime styles in {path} ===== */\n{css}")
+
+quiet_css = extract_quiet_timer_style()
+parts.append(f"\n/* ===== consolidated from runtime styles in reading-stability-v16.js ===== */\n{quiet_css}")
+
+hotfix_css = extract_inject_style("reading-hotfix-v4.js")
+parts.append(f"\n/* ===== consolidated from runtime styles in reading-hotfix-v4.js ===== */\n{hotfix_css}")
 
 # Static inline declarations that were acting as tiny CSS fragments.
 parts.append("""
