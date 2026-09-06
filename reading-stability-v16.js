@@ -1,4 +1,4 @@
-/* 독서의 정원 v18 — 세션 복구 + 조용한 타이머
+/* 독서의 정원 v21 — 세션 복구 + 조용한 타이머 + 새로고침 중복 세션 방지
    필기 성능/저장 최적화는 reading.js, 확인 UI/메모리 가드는 reading-dialogs-v18.js가 담당한다. */
 import { getApps, getApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -20,6 +20,29 @@ function toast(message,ms=3200){
 function whenDomReady(fn){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fn,{once:true});
   else fn();
+}
+
+function readLocalActiveSession(){
+  const raw=localStorage.getItem(ACTIVE_SESSION_KEY);if(!raw)return null;
+  try{
+    const session=JSON.parse(raw);
+    if(!session?.id||!session?.startedAt||session.endedAt)return null;
+    return session;
+  }catch{return null}
+}
+
+/* reading.js는 Firebase 컬렉션을 다 읽은 뒤 state.activeSession을 채운다.
+   새로고침 직후 그 짧은 로딩 구간에 사용자가 다시 '읽기 시작'을 누르면
+   state는 비어 있어도 localStorage에는 기존 진행 세션이 있을 수 있다.
+   캡처 단계에서 이를 막아 새 session id 생성 가능성을 제거한다. */
+function installReloadSessionGuard(){
+  document.addEventListener('click',e=>{
+    const start=e.target.closest?.('[data-start-book]');if(!start)return;
+    const active=readLocalActiveSession();if(!active)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    toast('진행 중인 독서시간을 이어서 불러오고 있어요. 잠시 후 ‘독서 계속하기’를 눌러주세요. 🌿',3000);
+  },true);
 }
 
 function installQuietTimer(){
@@ -98,6 +121,7 @@ async function recoverRecentActiveSession(){
 }
 
 whenDomReady(()=>{
+  installReloadSessionGuard();
   installQuietTimer();
   recoverRecentActiveSession();
 });
