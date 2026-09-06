@@ -1,0 +1,42 @@
+name: reading timeline v33 fix
+
+on:
+  push:
+    paths:
+      - '.github/scripts/reading_timeline_v33_fix.py'
+      - '.github/workflows/reading-timeline-v33-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Clean exact renderer block
+        run: python .github/scripts/reading_timeline_v33_fix.py
+      - name: Verify timeline syntax and guards
+        run: |
+          node --check reading.js
+          grep -F 'timeline-entry-folder' reading.js
+          grep -F 'data-delete-session' reading.js
+          grep -F 'data-delete-entry' reading.js
+          test "$(grep -o 'function renderEntryHtml(' reading.js | wc -l)" -eq 1
+          ! grep -F '}={}){const quote=' reading.js
+          grep -F 'if(thought){' reading.js
+          grep -F 'else if(entry.linkedFragmentId)' reading.js
+      - name: Commit renderer cleanup
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading.js
+          git commit -m 'fix: clean nested timeline entry renderer'
+          git push origin main
