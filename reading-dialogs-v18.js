@@ -1,5 +1,5 @@
-/* 독서의 정원 v18 — 기본 브라우저 confirm/alert 제거 + 필사 미리보기 메모리 절약 */
-const RG_DIALOG_VERSION='20260904-reading-v18';
+/* 독서의 정원 v19 — 기본 브라우저 confirm/alert 제거 + 필사 미리보기 메모리 절약 + OCR 없는 필사 확정 */
+const RG_DIALOG_VERSION='20260904-reading-v19';
 const approvals=[];
 const replayClicks=new WeakSet();
 const replayChanges=new WeakSet();
@@ -200,6 +200,28 @@ function installHandwritingMemoryGuard(){
   });
 }
 
+function installEmptyOcrConfirm(){
+  /* reading.js 원본은 OCR 텍스트가 비어 있으면 confirmOcr()에서 return한다.
+     OCR 서버 연결 전에는 이미지 자체가 유효한 기록이므로 빈 텍스트도 통과시킨다. */
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('#confirmOcrBtn');if(!btn)return;
+    const text=(document.getElementById('ocrConfirmedText')?.value||'').trim();
+    if(text)return;
+    e.preventDefault();e.stopImmediatePropagation();
+    const ocr=document.getElementById('ocrDialog'),record=document.getElementById('recordDialog');
+    if(ocr?.open)ocr.close();
+    if(record&&!record.open)record.showModal();
+    requestAnimationFrame(syncHandwritingCard);
+    const toast=document.getElementById('toast');
+    if(toast){
+      toast.textContent='필사 이미지를 첨부했습니다. 문장은 기록 화면에서 직접 입력할 수 있어요. ✍';
+      toast.classList.add('show');
+      clearTimeout(installEmptyOcrConfirm.t);
+      installEmptyOcrConfirm.t=setTimeout(()=>toast.classList.remove('show'),3000);
+    }
+  },true);
+}
+
 function setTextIfChanged(el,text){if(el&&el.textContent!==text)el.textContent=text}
 function syncHandwritingCard(){
   const box=document.getElementById('rgHandwritingSavePreview');if(!box)return;
@@ -221,5 +243,5 @@ function installCardCleanup(){
   syncHandwritingCard();
 }
 
-function boot(){injectStyle();ensureDialog();installHandwritingMemoryGuard();installCardCleanup()}
+function boot(){injectStyle();ensureDialog();installHandwritingMemoryGuard();installEmptyOcrConfirm();installCardCleanup()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
