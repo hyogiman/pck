@@ -1,0 +1,33 @@
+name: Reading Garden v25 Vision REST
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reading-v25-vision-rest.yml'
+      - '.github/scripts/reading_v25_vision_rest.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply Vision REST patch
+        run: python .github/scripts/reading_v25_vision_rest.py
+      - name: Verify syntax
+        run: |
+          node --check functions/index.js
+          node --check functions/ai-v2-production-entry.js
+          node -e "JSON.parse(require('fs').readFileSync('functions/package.json','utf8')); console.log('package.json ok')"
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add functions/index.js functions/package.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "refactor: use Vision REST without extra dependency"
+          git push origin main
