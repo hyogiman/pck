@@ -3,6 +3,8 @@ const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https")
 const { logger } = require("firebase-functions");
 const { initializeApp, getApps } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getAuth: getAdminAuth } = require("firebase-admin/auth");
+const vision = require("@google-cloud/vision");
 const crypto = require("node:crypto");
 
 const {
@@ -12,6 +14,7 @@ const {
 
 const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
+const visionClient = new vision.ImageAnnotatorClient();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 // v74: Firebase 공식 비용 진단 + BigQuery Location 자동 추론
@@ -120,11 +123,137 @@ const STUDIO_GARDENER_GUIDE = {
   },
 };
 
+const PUBLIC_WEB_ORIGINS = [
+  "https://hyogiman.github.io",
+  "https://2nhyeok.kr",
+  "https://www.2nhyeok.kr",
+];
+
+function normalizeYes24Book(item = {}) {
+  return {
+    provider: "YES24",
+    itemId: String(item.itemId || ""),
+    title: String(item.title || ""),
+    author: String(item.author || ""),
+    publisher: String(item.publisher || ""),
+    pubDate: String(item.publishDate || ""),
+    cover: String(item.cover || "").replace(/^http:/, "https:"),
+    isbn13: String(item.isbn13 || ""),
+    isbn: String(item.isbn10 || ""),
+    link: String(item.link || ""),
+    categoryName: String(item.goodsSortNm || item.goodsType || ""),
+    subTitle: String(item.subTitle || ""),
+    pages: Number.isFinite(Number(item.pages)) ? Number(item.pages) : null,
+    starScore: Number.isFinite(Number(item.starScore)) ? Number(item.starScore) : null,
+    bookIntroduction: String(item.contentDetail?.bookIntroduction || ""),
+    bookSummary: String(item.contentDetail?.bookSummary || ""),
+    tableOfContents: String(item.contentDetail?.tableOfContents || ""),
+  };
+}
+
+function normalizeAladinBook(item = {}) {
+  return {
+    provider: "Aladin",
+    itemId: String(item.itemId || ""),
+    title: String(item.title || ""),
+    author: String(item.author || ""),
+    publisher: String(item.publisher || ""),
+    pubDate: String(item.pubDate || ""),
+    cover: String(item.cover || "").replace(/^http:/, "https:"),
+    isbn13: String(item.isbn13 || ""),
+    isbn: String(item.isbn || ""),
+    link: String(item.link || ""),
+    categoryName: String(item.categoryName || ""),
+    subTitle: String(item.subInfo?.subTitle || ""),
+    pages: null,
+    starScore: null,
+    bookIntroduction: String(item.description || ""),
+    bookSummary: "",
+    tableOfContents: "",
+  };
+}
+
+async function searchYes24Books(query, apiKey) {
+  const url = new URL("https://apis.yes24.com/v1/goods/itemList");
+  url.searchParams.set("query", query);
+  url.searchParams.set("category", "BOOK");
+  url.searchParams.set("sort", "RELATION");
+  url.searchParams.set("page", "1");
+  url.searchParams.set("pageSize", "20");
+  url.searchParams.set("detail", "Y");
+
+  const upstream = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    headers: {
+      "Accept": "application/json",
+      "X-Api-Key": apiKey,
+      "User-Agent": "ThoughtGarden/1.0",
+    },
+  });
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    throw new Error(`YES24 HTTP ${upstream.status}: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`YES24 non-JSON response: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
+  }
+  if (!data?.success) {
+    throw new Error(`YES24 API error: ${data?.message || data?.errorCode || "unknown"}`);
+  }
+  return {
+    totalResults: Number(data?.data?.totalCount || 0),
+    items: Array.isArray(data?.data?.items) ? data.data.items.map(normalizeYes24Book) : [],
+  };
+}
+
+async function searchAladinBooks(query, key) {
+  const url = new URL("http://www.aladin.co.kr/ttb/api/ItemSearch.aspx");
+  url.searchParams.set("TTBKey", key);
+  url.searchParams.set("Query", query);
+  url.searchParams.set("QueryType", "Keyword");
+  url.searchParams.set("MaxResults", "20");
+  url.searchParams.set("start", "1");
+  url.searchParams.set("SearchTarget", "Book");
+  url.searchParams.set("Cover", "Big");
+  url.searchParams.set("Output", "JS");
+  url.searchParams.set("Version", "20131101");
+
+  const upstream = await fetch(url, {
+    method: "GET",
+    redirect: "follow",
+    headers: {
+      "Accept": "application/json,text/plain,*/*",
+      "User-Agent": "ThoughtGarden/1.0",
+    },
+  });
+  const raw = await upstream.text();
+  if (!upstream.ok) {
+    throw new Error(`Aladin HTTP ${upstream.status}: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
+  }
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`Aladin non-JSON response: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
+  }
+  if (data?.errorCode || data?.errorMessage) {
+    throw new Error(`Aladin API error: ${data.errorMessage || data.errorCode}`);
+  }
+  return {
+    totalResults: Number(data?.totalResults || 0),
+    items: Array.isArray(data?.item) ? data.item.map(normalizeAladinBook) : [],
+  };
+}
+
 exports.bookSearch = onRequest(
   {
     region: "us-central1",
-    cors: ["https://hyogiman.github.io"],
-    secrets: ["ALADIN_TTB_KEY"],
+    cors: PUBLIC_WEB_ORIGINS,
+    secrets: ["YES24_API_KEY", "ALADIN_TTB_KEY"],
     timeoutSeconds: 30,
     maxInstances: 2,
   },
@@ -135,74 +264,116 @@ exports.bookSearch = onRequest(
       return;
     }
 
-    const key = process.env.ALADIN_TTB_KEY;
-    if (!key) {
-      res.status(500).json({ ok: false, error: "서버에 ALADIN_TTB_KEY Secret이 설정되지 않았습니다." });
+    let yes24Error = "";
+    const yes24Key = process.env.YES24_API_KEY;
+    if (yes24Key) {
+      try {
+        const result = await searchYes24Books(query, yes24Key);
+        res.status(200).json({
+          ok: true,
+          provider: "YES24",
+          totalResults: result.totalResults,
+          items: result.items,
+        });
+        return;
+      } catch (error) {
+        yes24Error = error?.message || "YES24 search failed";
+        logger.warn("YES24 book search failed; falling back to Aladin", yes24Error);
+      }
+    } else {
+      yes24Error = "YES24_API_KEY Secret이 설정되지 않았습니다.";
+    }
+
+    const aladinKey = process.env.ALADIN_TTB_KEY;
+    if (!aladinKey) {
+      res.status(500).json({ ok: false, error: `${yes24Error} / ALADIN_TTB_KEY도 없습니다.` });
       return;
     }
 
-    const url = new URL("http://www.aladin.co.kr/ttb/api/ItemSearch.aspx");
-    url.searchParams.set("TTBKey", key);
-    url.searchParams.set("Query", query);
-    url.searchParams.set("QueryType", "Keyword");
-    url.searchParams.set("MaxResults", "20");
-    url.searchParams.set("start", "1");
-    url.searchParams.set("SearchTarget", "Book");
-    url.searchParams.set("Cover", "Big");
-    url.searchParams.set("Output", "JS");
-    url.searchParams.set("Version", "20131101");
-
     try {
-      const upstream = await fetch(url, {
-        method: "GET",
-        redirect: "follow",
-        headers: {
-          "Accept": "application/json,text/plain,*/*",
-          "User-Agent": "ThoughtGarden/1.0",
-        },
-      });
-
-      const raw = await upstream.text();
-
-      if (!upstream.ok) {
-        logger.error("Aladin HTTP error", upstream.status, raw.slice(0, 500));
-        res.status(502).json({
-          ok: false,
-          error: `알라딘 API HTTP ${upstream.status}: ${raw.replace(/\s+/g, " ").slice(0, 180)}`,
-        });
-        return;
-      }
-
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch (e) {
-        logger.error("Aladin non-JSON response", raw.slice(0, 1000));
-        res.status(502).json({
-          ok: false,
-          error: `알라딘이 JSON이 아닌 응답을 반환했습니다: ${raw.replace(/\s+/g, " ").slice(0, 180)}`,
-        });
-        return;
-      }
-
-      if (data?.errorCode || data?.errorMessage) {
-        res.status(502).json({
-          ok: false,
-          error: `알라딘 API 오류: ${data.errorMessage || data.errorCode}`,
-        });
-        return;
-      }
-
+      const result = await searchAladinBooks(query, aladinKey);
       res.status(200).json({
         ok: true,
-        totalResults: Number(data?.totalResults || 0),
-        items: Array.isArray(data?.item) ? data.item : [],
+        provider: "Aladin",
+        fallbackFrom: "YES24",
+        yes24Error,
+        totalResults: result.totalResults,
+        items: result.items,
       });
     } catch (error) {
-      logger.error("Aladin request failed", error);
+      logger.error("Book search fallback failed", error);
       res.status(502).json({
         ok: false,
-        error: `알라딘 서버 연결 실패: ${error?.message || "unknown error"}`,
+        error: `도서 검색 실패: ${error?.message || "unknown error"}`,
+        yes24Error,
+      });
+    }
+  }
+);
+
+async function verifyFirebaseBearer(req) {
+  const auth = String(req.headers.authorization || "");
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  try {
+    return await getAdminAuth(adminApp).verifyIdToken(match[1]);
+  } catch (error) {
+    logger.warn("readingOcr invalid Firebase token", error?.message || error);
+    return null;
+  }
+}
+
+exports.readingOcr = onRequest(
+  {
+    region: "us-central1",
+    cors: PUBLIC_WEB_ORIGINS,
+    timeoutSeconds: 30,
+    maxInstances: 2,
+    memory: "512MiB",
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ ok: false, error: "POST만 지원합니다." });
+      return;
+    }
+
+    const user = await verifyFirebaseBearer(req);
+    if (!user) {
+      res.status(401).json({ ok: false, error: "로그인이 필요합니다." });
+      return;
+    }
+
+    const contentType = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+    if (!["image/webp", "image/png", "image/jpeg"].includes(contentType)) {
+      res.status(415).json({ ok: false, error: "WebP, PNG, JPEG 이미지만 인식할 수 있습니다." });
+      return;
+    }
+
+    const body = req.rawBody;
+    if (!Buffer.isBuffer(body) || !body.length) {
+      res.status(400).json({ ok: false, error: "필사 이미지가 없습니다." });
+      return;
+    }
+    if (body.length > 4 * 1024 * 1024) {
+      res.status(413).json({ ok: false, error: "필사 이미지가 너무 큽니다. 4MB 이하만 지원합니다." });
+      return;
+    }
+
+    try {
+      const [result] = await visionClient.documentTextDetection({
+        image: { content: body },
+        imageContext: { languageHints: ["ko", "en"] },
+      });
+      const rawText = String(
+        result?.fullTextAnnotation?.text || result?.textAnnotations?.[0]?.description || ""
+      ).trim();
+      res.set("Cache-Control", "no-store");
+      res.status(200).json({ ok: true, rawText });
+    } catch (error) {
+      logger.error("readingOcr Vision request failed", error);
+      res.status(502).json({
+        ok: false,
+        error: `OCR 처리 실패: ${error?.message || "unknown error"}`,
       });
     }
   }

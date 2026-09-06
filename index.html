@@ -1740,7 +1740,7 @@
     <details class="setting-section">
       <summary><span>🔎 외부 검색 서비스</span><span class="setting-state" id="apiSettingState"></span></summary>
       <div class="setting-body">
-        <div class="helper">알라딘은 연결되어 있습니다. 영상 검색에 필요한 키만 관리합니다.</div>
+        <div class="helper">YES24를 기본 도서 검색으로 사용합니다. 검색 장애 시 알라딘과 Google Books로 보완합니다.</div>
         <div class="field"><label for="tmdbKeyInput">TMDB API Token / Key</label><input class="input" id="tmdbKeyInput" placeholder="TMDB token / api key"></div>
         <div class="field"><label for="youtubeKeyInput">Google API Key · Books + YouTube</label><input class="input" id="youtubeKeyInput" placeholder="AIza..."></div>
         <button class="btn primary" id="saveApiKeys" type="button" style="margin-top:10px">API 설정 저장</button>
@@ -2597,7 +2597,7 @@ function renderApiSettings(){
   const summary=$("apiSettingState");if(summary)summary.textContent=(k.tmdb&&k.youtube)?"설정 완료":(k.tmdb||k.youtube)?"일부 설정됨":"기본 연결";
   $("tmdbKeyInput").value=k.tmdb||"";
   $("youtubeKeyInput").value=k.youtube||"";
-  $("apiStatus").innerHTML=`<span class="api-badge ok">알라딘 · Firebase Function</span><span class="api-badge ${k.youtube?"ok":""}">Google Books ${k.youtube?"키 설정됨":"Google API Key 필요"}</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
+  $("apiStatus").innerHTML=`<span class="api-badge ok">YES24 · Firebase Function</span><span class="api-badge ${k.youtube?"ok":""}">Google Books ${k.youtube?"키 설정됨":"Google API Key 필요"}</span><span class="api-badge ${k.tmdb?"ok":""}">TMDB ${k.tmdb?"설정됨":"키 필요"}</span><span class="api-badge ${k.youtube?"ok":""}">YouTube ${k.youtube?"설정됨":"키 필요"}</span>`;
 }
 function humanSize(n){if(n<1024)return n+" B";if(n<1048576)return (n/1024).toFixed(1)+" KB";return (n/1048576).toFixed(1)+" MB"}
 function validateMediaFile(file){
@@ -5406,10 +5406,10 @@ async function aladinBookSearch(query){
   let d=null;
   try{d=await r.json()}catch{}
   if(!r.ok||!d?.ok){
-    throw new Error(d?.error||`알라딘 검색 서버 ${r.status}`);
+    throw new Error(d?.error||`도서 검색 서버 ${r.status}`);
   }
   return (d.items||[]).map(x=>({
-    kind:"book",provider:"Aladin",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
+    kind:"book",provider:x.provider||d.provider||"YES24",externalId:String(x.itemId||""),title:cleanAladinTitle(x.title||""),
     creator:cleanExternalText(x.author||""),publisher:cleanExternalText(x.publisher||""),pubDate:x.pubDate||"",
     image:(x.cover||"").replace("http://","https://"),isbn13:x.isbn13||x.isbn||"",link:x.link||""
   }));
@@ -5433,8 +5433,8 @@ function renderCombinedBookResults(results,status){
   state.apiResults=results;
   const box=$("apiSearchResults");
   const aladinText=status.aladinError
-    ? `<span class="bad">알라딘 오류</span><span>${esc(status.aladinError)}</span>`
-    : `<span class="ok">알라딘 ${status.aladinCount}건</span>`;
+    ? `<span class="bad">도서 검색 오류</span><span>${esc(status.aladinError)}</span>`
+    : `<span class="ok">도서 검색 ${status.aladinCount}건</span>`;
   const googleText=status.googleError
     ? `<span class="bad">Google Books 오류</span><span>${esc(status.googleError)}</span>`
     : `<span class="ok">Google Books ${status.googleCount}건</span>`;
@@ -5452,7 +5452,7 @@ function renderCombinedBookResults(results,status){
         <span class="search-result-title">${esc(r.title||"제목 없음")}</span>
         <span class="search-result-sub">${esc([r.creator,r.publisher,r.pubDate].filter(Boolean).join(" · "))}</span>
         <span class="api-status" style="margin-top:5px">
-          <span class="api-badge ${r.provider==="Aladin"?"ok":""}">${esc(r.provider)}</span>
+          <span class="api-badge ${(r.provider==="YES24"||r.provider==="Aladin")?"ok":""}">${esc(r.provider)}</span>
           ${r.isbn13?`<span class="api-badge">ISBN ${esc(r.isbn13)}</span>`:""}
           ${dup?`<span class="api-badge ok">✓ 이미 Library에 있음</span>`:""}
         </span>
@@ -5462,7 +5462,7 @@ function renderCombinedBookResults(results,status){
 }
 async function searchBooksCombined(query){
   const box=$("apiSearchResults");
-  box.innerHTML='<div class="helper">알라딘과 Google Books를 함께 검색 중…</div>';
+  box.innerHTML='<div class="helper">YES24와 Google Books를 함께 검색 중…</div>';
 
   const aladinPromise=aladinBookSearch(query);
   const googlePromise=googleBooksSearch(query);

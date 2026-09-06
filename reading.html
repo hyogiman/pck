@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#76563d" />
   <title>독서의 정원</title>
-  <link rel="manifest" href="./reading-manifest.json?v=20260904-reading-v14" />
-  <link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=20260904-reading-v14" />
+  <link rel="manifest" href="./reading-manifest.json?v=20260906-reading-v25" />
+  <link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=20260906-reading-v25" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./reading.css?v=20260904-reading-v14" />
-  <link rel="stylesheet" href="./reading-theme-v3.css?v=20260904-reading-v14" />
-  <link rel="stylesheet" href="./reading-theme-v4.css?v=20260904-reading-v14" />
-  <link rel="stylesheet" href="./reading-theme-v5.css?v=20260904-reading-v14" />
-  <link rel="stylesheet" href="./reading-swipe-v8.css?v=20260904-reading-v14" />
+  <link rel="stylesheet" href="./reading.css?v=20260906-reading-v25" />
+  <link rel="stylesheet" href="./reading-theme-v3.css?v=20260906-reading-v25" />
+  <link rel="stylesheet" href="./reading-theme-v4.css?v=20260906-reading-v25" />
+  <link rel="stylesheet" href="./reading-theme-v5.css?v=20260906-reading-v25" />
+  <link rel="stylesheet" href="./reading-swipe-v8.css?v=20260906-reading-v25" />
 </head>
 <body>
   <div id="authGate" class="auth-gate hidden">
@@ -139,9 +139,9 @@
   </div></dialog>
 
   <dialog id="ocrDialog" class="sheet-dialog tall"><div class="sheet"><div class="sheet-grab"></div><div class="sheet-head"><div><span class="eyebrow">HANDWRITING</span><h2>필사 텍스트 확인</h2></div><button class="close-btn" data-close-dialog="ocrDialog" type="button">✕</button></div>
-    <div id="ocrNotice" class="notice">필사 원본은 저장할 준비가 됐습니다. OCR 서버 연결 전에는 아래 칸을 직접 확인·수정해 확정할 수 있습니다.</div>
+    <div id="ocrNotice" class="notice">S Pen 필사를 이미지로 준비한 뒤 글자를 인식합니다. 결과를 책의 원문과 비교해 수정한 뒤 확정해주세요.</div>
     <div class="field"><label for="ocrConfirmedText">인식 결과 · 직접 수정 가능</label><textarea id="ocrConfirmedText" class="textarea ocr-textarea" placeholder="OCR 결과가 여기에 들어옵니다. 현재는 직접 입력할 수 있습니다."></textarea></div>
-    <details class="ocr-raw"><summary>OCR 원문 보기</summary><pre id="ocrRawText">아직 실제 OCR 엔진과 연결되지 않았습니다.</pre></details>
+    <details class="ocr-raw"><summary>OCR 원문 보기</summary><pre id="ocrRawText">필사 후 인식 원문이 여기에 표시됩니다.</pre></details>
     <div class="two-actions"><button id="redoHandwritingBtn" class="btn" type="button">다시 필사</button><button id="confirmOcrBtn" class="btn primary" type="button">확정</button></div>
   </div></dialog>
 
@@ -196,13 +196,13 @@
   <div id="toast" class="toast" aria-live="polite"></div>
   <div id="printRoot" class="print-root"></div>
 
-  <script type="module" src="./reading.js?v=20260904-reading-v14"></script>
-  <script type="module" src="./reading-enhance-v3.js?v=20260904-reading-v14"></script>
-  <script type="module" src="./reading-hotfix-v4.js?v=20260904-reading-v14"></script>
-  <script type="module" src="./reading-genre-v5.js?v=20260904-reading-v14"></script>
-  <script src="./reading-polish-v6.js?v=20260904-reading-v14"></script>
-  <script src="./reading-pwa-v7.js?v=20260904-reading-v14"></script>
-  <script src="./reading-swipe-v8.js?v=20260904-reading-v14"></script>
-  <script type="module" src="./reading-detail-v12.js?v=20260904-reading-v14"></script>
+  <script type="module" src="./reading.js?v=20260906-reading-v25"></script>
+  <script type="module" src="./reading-enhance-v3.js?v=20260906-reading-v25"></script>
+  <script type="module" src="./reading-hotfix-v4.js?v=20260906-reading-v25"></script>
+  <script type="module" src="./reading-genre-v5.js?v=20260906-reading-v25"></script>
+  <script src="./reading-polish-v6.js?v=20260906-reading-v25"></script>
+  <script src="./reading-pwa-v7.js?v=20260906-reading-v25"></script>
+  <script src="./reading-swipe-v8.js?v=20260906-reading-v25"></script>
+  <script type="module" src="./reading-detail-v12.js?v=20260906-reading-v25"></script>
 </body>
 </html>
