@@ -29,26 +29,7 @@ async function confirmAction({title,message,confirmText,cancelText="취소",dang
   return window.confirm(message||title);
 }
 
-function injectStyle(){
-  if(document.getElementById("rgTimelineDeleteV26Style"))return;
-  const style=document.createElement("style");style.id="rgTimelineDeleteV26Style";style.textContent=`
-    .timeline-session-head{position:relative!important;padding-right:52px!important;min-height:42px}
-    .rg-session-delete{
-      position:absolute!important;right:-4px!important;top:-3px!important;z-index:12!important;
-      width:44px!important;height:44px!important;padding:0!important;border:0!important;border-radius:50%!important;
-      display:grid!important;place-items:center!important;background:rgba(118,86,61,.055)!important;
-      color:#8a7462!important;box-shadow:none!important;cursor:pointer!important;
-      touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
-    }
-    .rg-session-delete svg{width:19px;height:19px;display:block;pointer-events:none}
-    .rg-session-delete:hover{background:#efe3d8!important;color:var(--danger)!important}
-    .rg-session-delete:active{transform:scale(.94)!important;background:#eadbd0!important}
-    .rg-session-delete:disabled{opacity:.38!important;cursor:wait!important}
-    .timeline-entry[data-edit-entry]{cursor:pointer}
-    @media (pointer:coarse){.rg-session-delete{width:46px!important;height:46px!important;right:-5px!important;top:-4px!important}}
-    @media print{.rg-session-delete{display:none!important}}
-  `;document.head.appendChild(style);
-}
+function injectStyle(){}
 
 function openLocalDb(){return new Promise(resolve=>{const r=indexedDB.open(SNAPSHOT_DB,1);r.onerror=()=>resolve(null);r.onupgradeneeded=()=>{};r.onsuccess=()=>resolve(r.result)})}
 async function readSnapshot(){const local=await openLocalDb();if(!local)return null;return new Promise(resolve=>{if(!local.objectStoreNames.contains("meta")){local.close();resolve(null);return}const tx=local.transaction("meta","readonly"),r=tx.objectStore("meta").get("snapshot");r.onsuccess=()=>{local.close();resolve(r.result||null)};r.onerror=()=>{local.close();resolve(null)}})}

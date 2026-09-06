@@ -1,3 +1,8 @@
+/* 독서의 정원 v28 — SINGLE CSS SOURCE OF TRUTH
+   모든 정적 스타일은 이 파일에서만 관리한다.
+   JS의 <style> 주입과 theme/swipe 보조 CSS 파일은 사용하지 않는다. */
+
+
 @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap');
 :root{
   --bg:#f3f1e8;--panel:#fffdf8;--panel2:#ece9dd;--text:#25291f;--muted:#7a7d6f;--line:#e3dfd0;
@@ -35,3 +40,414 @@ body{background:radial-gradient(900px 430px at 90% -10%,rgba(55,95,71,.07),trans
 @media print{
   @page{size:A4;margin:15mm 14mm 17mm}body{background:#fff;color:#111}.app,.bottom-nav,.full-layer,dialog,.toast,.auth-gate{display:none!important}.print-root{display:block!important;font-family:"Noto Sans KR",sans-serif;font-size:10.5pt;line-height:1.65}.print-cover{text-align:center;page-break-after:always;padding-top:35mm}.print-cover h1{font-family:var(--serif);font-size:27pt;margin:10mm 0 4mm}.print-cover p{color:#555}.print-section{margin-bottom:9mm}.print-book-head{display:flex;gap:7mm;align-items:flex-start;border-bottom:1px solid #bbb;padding-bottom:6mm;margin-bottom:6mm}.print-book-head img{width:30mm;height:44mm;object-fit:cover}.print-book-head h2{font-family:var(--serif);margin:0 0 2mm;font-size:18pt}.print-day{font-family:var(--serif);font-size:13pt;border-bottom:1px solid #ddd;padding-bottom:2mm;margin:7mm 0 4mm}.print-entry{break-inside:avoid;margin:0 0 6mm;padding-left:4mm;border-left:2px solid #55725d}.print-quote{font-family:var(--serif);font-size:11.5pt;white-space:pre-wrap}.print-thought{background:#f3f6f2;padding:3mm 4mm;margin-top:3mm;white-space:pre-wrap}.print-handwriting{max-width:100%;max-height:65mm;object-fit:contain;margin:3mm 0}.print-meta{font-size:8.5pt;color:#666}.print-session{break-inside:avoid;background:#f7f7f3;padding:3mm 4mm;margin:3mm 0}.print-complete{break-inside:avoid;text-align:center;border:1px solid #bbb;padding:6mm;margin:8mm 0}
 }
+
+
+/* ===== consolidated from reading-theme-v3.css ===== */
+/* 독서의 정원 v3 — muted wood / sage / wheat palette */
+:root{
+  --bg:#f4f0e7;
+  --panel:#fffdf8;
+  --panel2:#ebe5d8;
+  --text:#3a332b;
+  --muted:#81786c;
+  --line:#e1d7c7;
+  --accent:#68765f;
+  --accent2:#e8eadf;
+  --accent3:#f0ede1;
+  --danger:#a45f58;
+  --warn:#ad965a;
+  --wood:#8d7057;
+  --wheat:#c5ad70;
+  --shadow:0 20px 52px rgba(83,69,52,.10);
+  --card-shadow:0 4px 16px rgba(83,69,52,.055);
+}
+html,body{background:var(--bg);color:var(--text)}
+body{
+  background:
+    radial-gradient(820px 420px at 92% -8%,rgba(104,118,95,.085),transparent 66%),
+    radial-gradient(620px 360px at -8% 102%,rgba(197,173,112,.07),transparent 72%),
+    var(--bg);
+}
+/* 메뉴 전환은 즉시 보이게: 기존 180ms rise 애니메이션 제거 */
+.view.active{animation:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline-color:rgba(104,118,95,.24)}
+.eyebrow{color:#7a6a54;letter-spacing:.16em}
+.brand h1{color:#3b332b}
+.btn.primary{background:linear-gradient(135deg,#718069,#5f6d58);border-color:#68765f;color:#fff;box-shadow:0 8px 20px rgba(86,104,77,.16)}
+.btn.soft{background:#eceadf;color:#66715e;border-color:#ddd9c9}
+.text-btn,.back-btn{color:#66715e}
+.input,.textarea,.select{background:#fffefa;border-color:#ded5c7}
+.input:focus,.textarea:focus,.select:focus{border-color:#aeb7a2;box-shadow:0 0 0 3px rgba(104,118,95,.08)}
+.bottom-nav{background:rgba(252,249,243,.95);border-top-color:#ded6c8;box-shadow:0 -8px 26px rgba(76,62,47,.04)}
+.nav-btn.on{background:#ece9dd;color:#66715e}
+.hero-cover{box-shadow:0 22px 48px rgba(74,59,43,.19)}
+.hero-service,.mini-tag,.session-service{background:#eceadf;color:#65705d}
+.start-btn{border-radius:16px}
+.segmented{background:#ebe5d9}.seg.on{background:#fffdf8;color:#65715d;box-shadow:0 3px 9px rgba(77,63,48,.06)}
+.chip-btn.on{background:#6b7862;border-color:#6b7862}
+.book-card,.path-card,.timeline-session,.stat-card,.chart-card,.detail-metric,.modal,.sheet{background:#fffdf8}
+.book-card{box-shadow:0 5px 18px rgba(78,63,48,.05)}
+.timeline-card{border-left-color:#d8cfbd}.timeline-card:before{background:#87927a;box-shadow:0 0 0 4px var(--bg)}
+.entry-locator{color:#7b705e}
+.entry-quote{border-left-color:#9a785d;color:#42372e}
+.entry-thought{background:#eeeee5;color:#465042}
+.entry-thought:before{color:#66745f}
+.completion-event{border-color:#ded8c7;background:linear-gradient(145deg,#fffdf8,#f0ede2)}
+.session-layer{background:radial-gradient(760px 430px at 50% 24%,rgba(104,118,95,.08),transparent 66%),var(--bg)}
+.capture-orb{border-color:#d7d3c1;background:linear-gradient(145deg,#fffefa,#e9eadf);box-shadow:0 18px 42px rgba(93,103,77,.14);color:#65715d}
+.writing-paper{border-color:#ddd5c8;background-color:#fffdf8;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(113,97,76,.115) 31px,rgba(113,97,76,.115) 32px)}
+.pen-btn.on,.feel-btn.on{background:#6b7862;border-color:#6b7862}
+.sheet-dialog::backdrop,.modal-dialog::backdrop{background:rgba(52,45,36,.40)}
+.sheet{box-shadow:0 -24px 58px rgba(68,56,43,.15)}
+.sheet-grab{background:#c9c0b2}
+.notice{background:#f4eedf;color:#76633f;border-color:#e7dbc0}
+.session-summary-card,.completion-summary{background:#efede3;border-color:#ded9c8}
+.hbar-fill,.bar-col span,.path-progress span{background:linear-gradient(90deg,#8d987d,#6c7962)}
+.toast{background:#40372e;box-shadow:0 14px 32px rgba(58,48,38,.28)}
+.auth-gate{background:var(--bg)}
+
+/* 기록 입력은 태블릿/PC에서 충분한 작업 공간을 확보한다. */
+#recordDialog .sheet{
+  height:min(96dvh,930px);
+  max-height:96dvh;
+  padding:10px 20px calc(20px + env(safe-area-inset-bottom));
+}
+#recordDialog #entryQuote{min-height:220px;font-size:1.03rem;line-height:1.76}
+#recordDialog #entryThought{min-height:200px;font-size:.96rem;line-height:1.74}
+#recordDialog .field{margin-top:18px}
+#recordDialog #saveEntryBtn{margin-top:18px;min-height:48px}
+#recordDialog #deleteEntryBtn{margin-top:5px}
+
+/* 첫 화면의 책 선택 sheet에서도 바로 새 책을 검색한다. */
+.rg-picker-new{margin:10px 0 8px;padding-bottom:11px;border-bottom:1px solid var(--line)}
+.rg-picker-new .btn{min-height:44px;background:#f3eee2;color:#725f48;border-color:#e4d9c7;box-shadow:none}
+.rg-picker-new small{display:block;margin-top:6px;color:var(--muted);font-size:.66rem;text-align:center}
+
+/* 완료된 독서 세션 삭제 */
+.timeline-session-head{position:relative;padding-right:36px}
+.rg-session-delete{
+  position:absolute;right:-3px;top:-4px;width:32px;height:32px;border:0;border-radius:50%;
+  background:transparent;color:#9b8177;font-size:.82rem;display:grid;place-items:center;box-shadow:none;
+}
+.rg-session-delete:hover{background:#f5e9e6;color:var(--danger)}
+.rg-session-delete:active{transform:scale(.94)}
+
+/* 장르 보완 도구 */
+.rg-genre-card .rg-genre-status{margin-top:8px;color:var(--muted);font-size:.72rem;line-height:1.55}
+.rg-genre-card .btn{margin-top:10px}
+
+@media(max-width:520px){
+  #recordDialog .sheet{height:94dvh;max-height:94dvh;padding-left:15px;padding-right:15px}
+  #recordDialog #entryQuote{min-height:170px}
+  #recordDialog #entryThought{min-height:155px}
+}
+@media print{.rg-session-delete,.rg-picker-new,.rg-genre-card{display:none!important}}
+
+
+/* ===== consolidated from reading-theme-v4.css ===== */
+/* 독서의 정원 v4 — warm wood / moss / muted amber overrides */
+:root{
+  --bg:#f2e9dc;
+  --panel:#fffaf2;
+  --panel2:#e8ddcf;
+  --text:#403329;
+  --muted:#817365;
+  --line:#ddcfbd;
+  --accent:#765b43;
+  --accent2:#eadfce;
+  --accent3:#eee8d8;
+  --danger:#a65e56;
+  --warn:#ad8f51;
+  --wood:#76563d;
+  --wood-dark:#5f4634;
+  --moss:#77806a;
+  --moss-soft:#e5e7dc;
+  --amber:#bea061;
+  --amber-soft:#f1e7cb;
+  --shadow:0 20px 52px rgba(78,57,39,.11);
+  --card-shadow:0 4px 16px rgba(78,57,39,.06);
+}
+html,body{background:var(--bg);color:var(--text)}
+body{
+  background:
+    radial-gradient(900px 430px at 92% -10%,rgba(118,86,61,.10),transparent 66%),
+    radial-gradient(700px 420px at -10% 108%,rgba(190,160,97,.085),transparent 70%),
+    linear-gradient(115deg,rgba(255,255,255,.10),transparent 42%),
+    var(--bg);
+}
+.eyebrow{color:#8a7356}
+.brand h1{color:#463529}
+.btn.primary{background:linear-gradient(135deg,#7c5d43,#684b36);border-color:#76563d;color:#fff;box-shadow:0 9px 22px rgba(99,69,45,.18)}
+.btn.soft{background:#eee5d7;color:#715943;border-color:#ded0bd}
+.text-btn,.back-btn{color:#745a43}
+.input,.textarea,.select{background:#fffbf5;border-color:#dccfbe}
+.input:focus,.textarea:focus,.select:focus{border-color:#bba58f;box-shadow:0 0 0 3px rgba(118,86,61,.09)}
+.bottom-nav{background:rgba(250,245,237,.96);border-top-color:#d9cbb9;box-shadow:0 -8px 26px rgba(75,54,37,.045)}
+.nav-btn.on{background:#eadfce;color:#6d523d}
+.hero-service,.mini-tag,.session-service{background:#e8e6d9;color:#68705f}
+.segmented{background:#e5dacb}.seg.on{background:#fffaf2;color:#70553f;box-shadow:0 3px 9px rgba(83,59,40,.065)}
+.chip-btn.on{background:#7b624a;border-color:#7b624a}
+.book-card,.path-card,.timeline-session,.stat-card,.chart-card,.detail-metric,.modal,.sheet{background:#fffaf2;border-color:#ddcfbd}
+.book-card{box-shadow:0 5px 18px rgba(78,57,39,.055)}
+.timeline-card{border-left-color:#cdbb9f}.timeline-card:before{background:#a9855a;box-shadow:0 0 0 4px var(--bg)}
+.entry-locator{color:#886b4d}
+.entry-quote{border-left-color:#9a6f4c;color:#47362a}
+.entry-thought{background:#e8e9df;color:#475042}
+.entry-thought:before{color:#6f7864}
+.completion-event{border-color:#d7c9b5;background:linear-gradient(145deg,#fffaf2,#eee5d7)}
+.session-layer{background:radial-gradient(780px 440px at 50% 24%,rgba(118,86,61,.095),transparent 66%),var(--bg)}
+.capture-orb{border-color:#d4c2aa;background:linear-gradient(145deg,#fffaf3,#eadfce);box-shadow:0 18px 42px rgba(112,78,51,.15);color:#71543e}
+.capture-orb span{color:#8f6948}
+.writing-paper{border-color:#d9cbbb;background-color:#fffaf3;background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,rgba(112,86,63,.12) 31px,rgba(112,86,63,.12) 32px)}
+.pen-btn.on,.feel-btn.on{background:#775d47;border-color:#775d47}
+.sheet-dialog::backdrop,.modal-dialog::backdrop{background:rgba(57,43,31,.42)}
+.sheet{box-shadow:0 -24px 58px rgba(73,52,35,.16)}
+.sheet-grab{background:#c5b49e}
+.notice{background:#f3e7ca;color:#77623c;border-color:#e5d4aa}
+.session-summary-card,.completion-summary{background:#eee6d8;border-color:#d9cbb7}
+.hbar-fill,.bar-col span,.path-progress span{background:linear-gradient(90deg,#9a7858,#74573f)}
+.chart-card:nth-child(2n) .hbar-fill{background:linear-gradient(90deg,#8c927b,#737b68)}
+.chart-card:nth-child(3n) .hbar-fill{background:linear-gradient(90deg,#c2a468,#a98d56)}
+.toast{background:#4b392c;box-shadow:0 14px 32px rgba(61,43,29,.29)}
+.auth-gate{background:var(--bg)}
+.rg-picker-new .btn{background:#eee2d1;color:#74583f;border-color:#dccbb5}
+.rg-session-delete{color:#96766a}
+.rg-session-delete:hover{background:#f3e4df;color:var(--danger)}
+/* 표지와 카드가 배경에서 살짝 떠 보이되, 과한 그림자는 피한다. */
+.hero-cover{box-shadow:0 22px 48px rgba(68,47,31,.20)}
+.stat-card strong,.detail-metric strong{color:#5d4634}
+@media print{body{background:#fff;color:#111}}
+
+
+/* ===== consolidated from reading-theme-v5.css ===== */
+/* 독서의 정원 v5 — warm wood base with quiet leaf accents */
+:root{
+  --leaf:#6f7c62;
+  --leaf-deep:#596750;
+  --leaf-soft:#e4e8dc;
+  --leaf-pale:#eef0e8;
+  --leaf-line:#cfd7c5;
+}
+
+/* 우드톤은 유지하고, 살아 있는 작은 요소만 잎색으로 돌린다. */
+.brand{position:relative}
+.brand h1::after{
+  content:"";display:inline-block;width:8px;height:12px;margin-left:8px;vertical-align:-1px;
+  border-radius:9px 2px 9px 2px;background:var(--leaf);transform:rotate(-24deg);opacity:.88;
+}
+.hero-service,.session-service{background:var(--leaf-soft);color:var(--leaf-deep)}
+.mini-tag{background:#eee6d8;color:#765b43}
+.nav-btn.on{background:#e9e1d3;color:var(--leaf-deep)}
+.nav-btn.on span{filter:saturate(.75)}
+.timeline-card:before{background:var(--leaf);}
+.entry-thought{background:var(--leaf-pale);color:#44503f;border:1px solid #dde3d6}
+.entry-thought:before{color:var(--leaf-deep)}
+.capture-orb span{color:var(--leaf-deep)}
+.capture-orb b{color:#6c5441}
+.pen-btn.on,.feel-btn.on{background:var(--leaf-deep);border-color:var(--leaf-deep)}
+.path-progress span{background:linear-gradient(90deg,#8b7257,var(--leaf))}
+.chart-card:nth-child(2n) .hbar-fill{background:linear-gradient(90deg,#88937b,#66735b)}
+.chart-card:nth-child(3n) .hbar-fill{background:linear-gradient(90deg,#c3a66b,#a98d57)}
+
+/* 장르는 독서의 정원에서만 보이는 잎색 표식으로 사용한다. */
+.rg-genre-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:4px 7px;border-radius:999px;
+  background:var(--leaf-soft);color:var(--leaf-deep);font-size:.62rem;font-weight:800;
+  border:1px solid var(--leaf-line);
+}
+.rg-genre-badge::before{content:"";width:5px;height:7px;border-radius:6px 1px 6px 1px;background:var(--leaf);transform:rotate(-20deg)}
+.rg-genre-card-v5{border-color:#d8d2c3!important;background:linear-gradient(145deg,#fffaf2,#f2eee4)}
+.rg-genre-card-v5 .rg-genre-status-v5{margin-top:8px;color:var(--muted);font-size:.72rem;line-height:1.55}
+.rg-genre-card-v5 .btn{margin-top:10px;background:var(--leaf-soft);color:var(--leaf-deep);border-color:var(--leaf-line);box-shadow:none}
+.rg-genre-card-v5 .genre-note{margin-top:8px;padding:8px 9px;border-radius:10px;background:#f5f0e5;color:#806c54;font-size:.66rem;line-height:1.5}
+
+@media print{.rg-genre-card-v5{display:none!important}}
+
+
+/* ===== consolidated from reading-swipe-v8.css ===== */
+/* 독서의 정원 v9.2 — 책만 움직이는 스와이프 + 큰 표지 + 제목/부제 정리 */
+#readHero{overscroll-behavior-x:contain;}
+#readHero .rg-swipe-stage{overflow:hidden;touch-action:pan-y;}
+#readHero .rg-swipe-book-content{
+  will-change:transform,opacity;
+  transition:transform .17s ease,opacity .17s ease;
+}
+#readHero .rg-swipe-book-content.rg-exit-left{transform:translateX(-34px);opacity:0;}
+#readHero .rg-swipe-book-content.rg-exit-right{transform:translateX(34px);opacity:0;}
+#readHero .rg-swipe-book-content.rg-enter-right{transform:translateX(26px);opacity:.12;}
+#readHero .rg-swipe-book-content.rg-enter-left{transform:translateX(-26px);opacity:.12;}
+
+/* 첫 화면은 책 표지를 조금 더 크게 보여준다. 태블릿/PC에서 특히 존재감을 키운다. */
+#readHero .hero-cover{
+  width:min(54vw,235px);
+  max-height:none;
+}
+
+/* 긴 책 제목은 가로로 퍼뜨리지 않고 한 덩어리로 모아 읽히게 한다. */
+#readHero .rg-home-title-wrap{
+  width:min(78%,430px);
+  margin:22px auto 0;
+}
+#readHero .rg-home-title-wrap .hero-title{
+  margin:0;
+  font-size:1.46rem;
+  line-height:1.42;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-wrap:balance;
+}
+#readHero .rg-home-subtitle{
+  width:min(100%,390px);
+  margin:7px auto 0;
+  color:#8a7868;
+  font-size:.76rem;
+  line-height:1.5;
+  font-weight:600;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-wrap:balance;
+}
+#readHero .rg-home-title-wrap + .hero-author{margin-top:11px;}
+
+/* 읽기 시작 이하의 컨트롤은 스와이프 중에도 같은 위치에 남는다. */
+#readHero .start-btn,
+#readHero .rg-swipe-nav,
+#readHero .switch-book{transform:none!important;opacity:1!important;}
+
+.rg-swipe-nav{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  margin:9px auto 2px;min-height:31px;color:var(--muted);
+  user-select:none;-webkit-user-select:none;
+}
+.rg-swipe-arrow{
+  width:31px;height:31px;border:0;border-radius:50%;padding:0;
+  display:grid;place-items:center;background:transparent;color:#7a6755;
+  font:500 1.55rem/1 system-ui,sans-serif;box-shadow:none;
+}
+.rg-swipe-arrow:active{background:#e8dfd0;transform:scale(.94)}
+.rg-swipe-dots{display:flex;align-items:center;justify-content:center;gap:6px;min-width:54px;height:20px}
+.rg-swipe-dots i{display:block;width:5px;height:5px;border-radius:50%;background:#c8baaa;transition:width .16s ease,background .16s ease}
+.rg-swipe-dots i.on{width:15px;border-radius:999px;background:var(--leaf,#6f7c62)}
+.rg-swipe-dots span{font-size:.66rem;font-weight:800;letter-spacing:.08em;color:#857261}
+#readHero .rg-swipe-nav + .switch-book{margin-top:2px}
+
+@media (min-width:560px){
+  #readHero .hero-cover{width:235px;}
+  #readHero .rg-home-title-wrap{width:min(72%,430px)}
+}
+@media (hover:hover) and (pointer:fine){
+  .rg-swipe-arrow:hover{background:#ece4d7;color:#5f4938}
+}
+@media(max-width:520px){
+  #readHero .hero-cover{width:min(58vw,215px)}
+  #readHero .rg-home-title-wrap{width:88%;margin-top:18px}
+  #readHero .rg-home-title-wrap .hero-title{font-size:1.3rem}
+  #readHero .rg-home-subtitle{font-size:.72rem}
+  .rg-swipe-nav{margin-top:7px;gap:9px}
+  .rg-swipe-arrow{width:29px;height:29px}
+}
+@media print{.rg-swipe-nav{display:none!important}}
+
+
+/* ===== consolidated from runtime styles in reading-detail-v12.js ===== */
+#bookDetail .layer-shell{position:relative}
+    #bookDetail .layer-head{position:relative;z-index:86}
+    #bookMoreMenu{
+      position:absolute!important;z-index:85;top:calc(62px + env(safe-area-inset-top));right:15px;
+      width:min(258px,calc(100vw - 38px));display:grid;gap:2px;padding:8px;
+      border:1px solid var(--line);border-radius:16px;background:rgba(255,250,242,.985);
+      box-shadow:0 18px 48px rgba(74,52,35,.18);backdrop-filter:blur(16px);
+    }
+    #bookMoreMenu.hidden{display:none!important}
+    #bookMoreMenu .btn{
+      width:100%;display:block;text-align:left;padding:11px 12px;border:0;border-radius:10px;
+      background:transparent;box-shadow:none;color:var(--text);font-size:.78rem;
+    }
+    #bookMoreMenu .btn:hover,#bookMoreMenu .btn:active{background:#f0e6d8;transform:none}
+    #bookMoreMenu .rg-book-remove{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:var(--danger)}
+    #bookMoreMenu .rg-book-restore{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:#65745d}
+    #bookMoreMenu .rg-menu-note{padding:5px 12px 2px;color:var(--muted);font-size:.62rem;line-height:1.45}
+
+    .rg-handwriting-save-preview{
+      margin:-1px 0 16px;padding:12px;border:1px solid rgba(118,86,61,.16);border-radius:14px;
+      background:#f7f0e6;display:flex;align-items:center;gap:12px;
+    }
+    .rg-handwriting-save-preview.hidden{display:none!important}
+    .rg-handwriting-save-preview img{
+      width:74px;height:56px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid rgba(118,86,61,.12);
+    }
+    .rg-handwriting-save-preview .rg-hw-copy{min-width:0;flex:1}
+    .rg-handwriting-save-preview strong{display:block;font-size:.76rem;color:var(--text);margin-bottom:3px}
+    .rg-handwriting-save-preview span{display:block;font-size:.66rem;line-height:1.45;color:var(--muted)}
+    .rg-handwriting-save-preview.is-saving{background:#f1eadf}
+    .rg-handwriting-save-preview.is-saving img{opacity:.68}
+    .rg-handwriting-save-preview .rg-hw-spinner{
+      width:15px;height:15px;flex:0 0 auto;border:2px solid rgba(118,86,61,.22);border-top-color:#76563d;border-radius:50%;
+      animation:rgSpin .8s linear infinite;display:none;
+    }
+    .rg-handwriting-save-preview.is-saving .rg-hw-spinner{display:block}
+    #saveEntryBtn[aria-busy="true"]{opacity:.78;cursor:wait}
+    @keyframes rgSpin{to{transform:rotate(360deg)}}
+    @media(max-width:520px){
+      #bookMoreMenu{right:12px;top:calc(59px + env(safe-area-inset-top));width:min(244px,calc(100vw - 28px))}
+      .rg-handwriting-save-preview img{width:64px;height:50px}
+    }
+
+
+/* ===== consolidated from runtime styles in reading-dialogs-v18.js ===== */
+#rgAppConfirmDialog{border:0;padding:0;background:transparent;color:var(--text)}
+    #rgAppConfirmDialog::backdrop{background:rgba(49,39,31,.42);backdrop-filter:blur(2px)}
+    #rgAppConfirmDialog .rg-confirm-card{
+      width:min(430px,calc(100vw - 34px));margin:auto;padding:24px;border:1px solid rgba(118,86,61,.16);
+      border-radius:22px;background:#fffaf2;box-shadow:0 24px 70px rgba(49,39,31,.24)
+    }
+    #rgAppConfirmDialog .rg-confirm-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#f1e7d9;font-size:1.2rem;margin-bottom:13px}
+    #rgAppConfirmDialog h3{margin:0 0 9px;font-family:var(--serif);font-size:1.16rem;color:var(--text)}
+    #rgAppConfirmDialog .rg-confirm-message{margin:0;color:var(--muted);font-size:.79rem;line-height:1.65;white-space:pre-line}
+    #rgAppConfirmDialog .rg-confirm-option{display:flex;gap:9px;align-items:flex-start;margin:17px 0 0;padding:12px;border-radius:13px;background:#f5eee4;font-size:.75rem;line-height:1.5;color:var(--text)}
+    #rgAppConfirmDialog .rg-confirm-option[hidden]{display:none!important}
+    #rgAppConfirmDialog .rg-confirm-option input{margin-top:3px;accent-color:#76563d}
+    #rgAppConfirmDialog .rg-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:21px}
+    #rgAppConfirmDialog .rg-confirm-actions.one{grid-template-columns:1fr}
+    #rgAppConfirmDialog .rg-confirm-danger{background:#8a4f43;color:white;border-color:#8a4f43}
+    #rgAppConfirmDialog .rg-confirm-danger:hover,#rgAppConfirmDialog .rg-confirm-danger:active{background:#784238}
+
+    /* 실제 이미지 썸네일을 다시 base64로 만들지 않는다. 상태 카드만 보여준다. */
+    #rgHandwritingSavePreview img{display:none!important}
+    #rgHandwritingSavePreview::before{
+      content:'✍';width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;
+      border-radius:12px;background:#fffaf2;border:1px solid rgba(118,86,61,.12);font-size:1.18rem
+    }
+
+
+/* ===== consolidated from runtime styles in reading-stability-v16.js ===== */
+#sessionLayer.rg-quiet-timer .session-clock-top{display:none!important}
+    #sessionLayer.rg-quiet-timer .session-clock{display:none!important}
+    #sessionLayer.rg-quiet-timer.rg-timer-peek .session-clock{display:block!important;opacity:.72;font-size:clamp(2rem,8vw,3.6rem)}
+    #rgTimerPeekBtn{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.76rem;padding:7px 10px;border-radius:999px;cursor:pointer}
+    #rgTimerPeekBtn:hover,#rgTimerPeekBtn:active{background:rgba(118,86,61,.08)}
+
+
+/* ===== consolidated from runtime styles in reading-hotfix-v4.js ===== */
+.timeline-session-head{position:relative!important;padding-right:52px!important;min-height:42px}
+    .rg-session-delete{
+      position:absolute!important;right:-4px!important;top:-3px!important;z-index:12!important;
+      width:44px!important;height:44px!important;padding:0!important;border:0!important;border-radius:50%!important;
+      display:grid!important;place-items:center!important;background:rgba(118,86,61,.055)!important;
+      color:#8a7462!important;box-shadow:none!important;cursor:pointer!important;
+      touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;
+    }
+    .rg-session-delete svg{width:19px;height:19px;display:block;pointer-events:none}
+    .rg-session-delete:hover{background:#efe3d8!important;color:var(--danger)!important}
+    .rg-session-delete:active{transform:scale(.94)!important;background:#eadbd0!important}
+    .rg-session-delete:disabled{opacity:.38!important;cursor:wait!important}
+    .timeline-entry[data-edit-entry]{cursor:pointer}
+    @media (pointer:coarse){.rg-session-delete{width:46px!important;height:46px!important;right:-5px!important;top:-4px!important}}
+    @media print{.rg-session-delete{display:none!important}}
+
+/* ===== canonical helpers previously expressed as static inline styles ===== */
+.rg-relative-date{font-size:1rem}

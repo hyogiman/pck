@@ -2,10 +2,10 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v25: Capture marking을 본체로 통합하고 런타임 주입을 제거한다.
-   독서의 정원은 reading.html 자체가 현재 CSS/JS를 직접 참조한다.
+   v28: 독서의 정원 CSS를 reading.css 하나로 통합한다.
+   reading.html은 단 하나의 Reading stylesheet만 직접 참조한다.
    서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v25-capture-marking-source-v78";
+const CACHE = "garden-v28-reading-css-single-source-v79";
 const PATCH_VERSION = "20260904-1845-capture-marking-source-v78";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
@@ -15,9 +15,8 @@ const PATCH_TAGS = [
 const SHELL = [
   "./", "./index.html", "./manifest.json",
   "./reading.html", "./reading.css", "./reading.js", "./reading-manifest.json",
-  "./reading-theme-v3.css", "./reading-enhance-v3.js", "./reading-theme-v4.css", "./reading-hotfix-v4.js",
-  "./reading-theme-v5.css", "./reading-genre-v5.js", "./reading-polish-v6.js", "./reading-pwa-v7.js",
-  "./reading-swipe-v8.css", "./reading-swipe-v8.js", "./reading-detail-v12.js",
+  "./reading-enhance-v3.js", "./reading-hotfix-v4.js", "./reading-genre-v5.js",
+  "./reading-polish-v6.js", "./reading-pwa-v7.js", "./reading-swipe-v8.js", "./reading-detail-v12.js",
   "./icons/icon-192.png", "./icons/icon-512.png", "./icons/reading-garden.svg", "./icons/reading-garden-maskable.svg"
 ];
 
@@ -63,11 +62,9 @@ self.addEventListener("fetch", (e) => {
     url.pathname.endsWith("/storage-fix.js")||
     url.pathname.endsWith("/ai-v2-test-runtime.js")||url.pathname.endsWith("/blooming-v2-runtime.js")||
     url.pathname.endsWith("/reading.js")||url.pathname.endsWith("/reading.css")||
-    url.pathname.endsWith("/reading-theme-v3.css")||url.pathname.endsWith("/reading-enhance-v3.js")||
-    url.pathname.endsWith("/reading-theme-v4.css")||url.pathname.endsWith("/reading-hotfix-v4.js")||
-    url.pathname.endsWith("/reading-theme-v5.css")||url.pathname.endsWith("/reading-genre-v5.js")||
-    url.pathname.endsWith("/reading-polish-v6.js")||url.pathname.endsWith("/reading-pwa-v7.js")||
-    url.pathname.endsWith("/reading-swipe-v8.css")||url.pathname.endsWith("/reading-swipe-v8.js")||
+    url.pathname.endsWith("/reading-enhance-v3.js")||url.pathname.endsWith("/reading-hotfix-v4.js")||
+    url.pathname.endsWith("/reading-genre-v5.js")||url.pathname.endsWith("/reading-polish-v6.js")||
+    url.pathname.endsWith("/reading-pwa-v7.js")||url.pathname.endsWith("/reading-swipe-v8.js")||
     url.pathname.endsWith("/reading-detail-v12.js")||
     url.pathname.endsWith("/reading-garden.svg")||url.pathname.endsWith("/reading-garden-maskable.svg");
 

@@ -46,18 +46,6 @@ function installReloadSessionGuard(){
 }
 
 function installQuietTimer(){
-  if(document.getElementById('rgQuietTimerStyle'))return;
-  const style=document.createElement('style');
-  style.id='rgQuietTimerStyle';
-  style.textContent=`
-    #sessionLayer.rg-quiet-timer .session-clock-top{display:none!important}
-    #sessionLayer.rg-quiet-timer .session-clock{display:none!important}
-    #sessionLayer.rg-quiet-timer.rg-timer-peek .session-clock{display:block!important;opacity:.72;font-size:clamp(2rem,8vw,3.6rem)}
-    #rgTimerPeekBtn{border:0;background:transparent;color:var(--muted);font:inherit;font-size:.76rem;padding:7px 10px;border-radius:999px;cursor:pointer}
-    #rgTimerPeekBtn:hover,#rgTimerPeekBtn:active{background:rgba(118,86,61,.08)}
-  `;
-  document.head.appendChild(style);
-
   const layer=document.getElementById('sessionLayer');
   const stateText=document.getElementById('sessionStateText');
   if(!layer||!stateText)return;

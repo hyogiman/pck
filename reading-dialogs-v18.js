@@ -1,42 +1,12 @@
 /* 독서의 정원 v26 — 앱 모달(confirm/alert 대체) + 타임라인 삭제 확인 정리 */
-const RG_DIALOG_VERSION='20260906-reading-v26';
+const RG_DIALOG_VERSION='20260906-reading-v28';
 const approvals=[];
 const replayClicks=new WeakSet();
 const replayChanges=new WeakSet();
 let activeDialogResolve=null;
 let infoQueued=false;
 
-function injectStyle(){
-  if(document.getElementById('rgDialogV18Style'))return;
-  const style=document.createElement('style');
-  style.id='rgDialogV18Style';
-  style.textContent=`
-    #rgAppConfirmDialog{border:0;padding:0;background:transparent;color:var(--text)}
-    #rgAppConfirmDialog::backdrop{background:rgba(49,39,31,.42);backdrop-filter:blur(2px)}
-    #rgAppConfirmDialog .rg-confirm-card{
-      width:min(430px,calc(100vw - 34px));margin:auto;padding:24px;border:1px solid rgba(118,86,61,.16);
-      border-radius:22px;background:#fffaf2;box-shadow:0 24px 70px rgba(49,39,31,.24)
-    }
-    #rgAppConfirmDialog .rg-confirm-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:50%;background:#f1e7d9;font-size:1.2rem;margin-bottom:13px}
-    #rgAppConfirmDialog h3{margin:0 0 9px;font-family:var(--serif);font-size:1.16rem;color:var(--text)}
-    #rgAppConfirmDialog .rg-confirm-message{margin:0;color:var(--muted);font-size:.79rem;line-height:1.65;white-space:pre-line}
-    #rgAppConfirmDialog .rg-confirm-option{display:flex;gap:9px;align-items:flex-start;margin:17px 0 0;padding:12px;border-radius:13px;background:#f5eee4;font-size:.75rem;line-height:1.5;color:var(--text)}
-    #rgAppConfirmDialog .rg-confirm-option[hidden]{display:none!important}
-    #rgAppConfirmDialog .rg-confirm-option input{margin-top:3px;accent-color:#76563d}
-    #rgAppConfirmDialog .rg-confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:21px}
-    #rgAppConfirmDialog .rg-confirm-actions.one{grid-template-columns:1fr}
-    #rgAppConfirmDialog .rg-confirm-danger{background:#8a4f43;color:white;border-color:#8a4f43}
-    #rgAppConfirmDialog .rg-confirm-danger:hover,#rgAppConfirmDialog .rg-confirm-danger:active{background:#784238}
-
-    /* 실제 이미지 썸네일을 다시 base64로 만들지 않는다. 상태 카드만 보여준다. */
-    #rgHandwritingSavePreview img{display:none!important}
-    #rgHandwritingSavePreview::before{
-      content:'✍';width:46px;height:46px;flex:0 0 46px;display:grid;place-items:center;
-      border-radius:12px;background:#fffaf2;border:1px solid rgba(118,86,61,.12);font-size:1.18rem
-    }
-  `;
-  document.head.appendChild(style);
-}
+function injectStyle(){}
 
 function ensureDialog(){
   let dialog=document.getElementById('rgAppConfirmDialog');

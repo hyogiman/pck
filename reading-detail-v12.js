@@ -7,53 +7,7 @@ const SNAPSHOT_DB="readingGarden_v1";
 const CURRENT_BOOK_KEY="readingGarden_currentBook_v1";
 let busy=false;
 
-function injectStyle(){
-  if(document.getElementById('rgDetailMenuStyle'))return;
-  const s=document.createElement('style');s.id='rgDetailMenuStyle';s.textContent=`
-    #bookDetail .layer-shell{position:relative}
-    #bookDetail .layer-head{position:relative;z-index:86}
-    #bookMoreMenu{
-      position:absolute!important;z-index:85;top:calc(62px + env(safe-area-inset-top));right:15px;
-      width:min(258px,calc(100vw - 38px));display:grid;gap:2px;padding:8px;
-      border:1px solid var(--line);border-radius:16px;background:rgba(255,250,242,.985);
-      box-shadow:0 18px 48px rgba(74,52,35,.18);backdrop-filter:blur(16px);
-    }
-    #bookMoreMenu.hidden{display:none!important}
-    #bookMoreMenu .btn{
-      width:100%;display:block;text-align:left;padding:11px 12px;border:0;border-radius:10px;
-      background:transparent;box-shadow:none;color:var(--text);font-size:.78rem;
-    }
-    #bookMoreMenu .btn:hover,#bookMoreMenu .btn:active{background:#f0e6d8;transform:none}
-    #bookMoreMenu .rg-book-remove{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:var(--danger)}
-    #bookMoreMenu .rg-book-restore{margin-top:4px;padding-top:12px;border-top:1px solid var(--line);border-radius:0 0 10px 10px;color:#65745d}
-    #bookMoreMenu .rg-menu-note{padding:5px 12px 2px;color:var(--muted);font-size:.62rem;line-height:1.45}
-
-    .rg-handwriting-save-preview{
-      margin:-1px 0 16px;padding:12px;border:1px solid rgba(118,86,61,.16);border-radius:14px;
-      background:#f7f0e6;display:flex;align-items:center;gap:12px;
-    }
-    .rg-handwriting-save-preview.hidden{display:none!important}
-    .rg-handwriting-save-preview img{
-      width:74px;height:56px;object-fit:contain;border-radius:9px;background:#fff;border:1px solid rgba(118,86,61,.12);
-    }
-    .rg-handwriting-save-preview .rg-hw-copy{min-width:0;flex:1}
-    .rg-handwriting-save-preview strong{display:block;font-size:.76rem;color:var(--text);margin-bottom:3px}
-    .rg-handwriting-save-preview span{display:block;font-size:.66rem;line-height:1.45;color:var(--muted)}
-    .rg-handwriting-save-preview.is-saving{background:#f1eadf}
-    .rg-handwriting-save-preview.is-saving img{opacity:.68}
-    .rg-handwriting-save-preview .rg-hw-spinner{
-      width:15px;height:15px;flex:0 0 auto;border:2px solid rgba(118,86,61,.22);border-top-color:#76563d;border-radius:50%;
-      animation:rgSpin .8s linear infinite;display:none;
-    }
-    .rg-handwriting-save-preview.is-saving .rg-hw-spinner{display:block}
-    #saveEntryBtn[aria-busy="true"]{opacity:.78;cursor:wait}
-    @keyframes rgSpin{to{transform:rotate(360deg)}}
-    @media(max-width:520px){
-      #bookMoreMenu{right:12px;top:calc(59px + env(safe-area-inset-top));width:min(244px,calc(100vw - 28px))}
-      .rg-handwriting-save-preview img{width:64px;height:50px}
-    }
-  `;document.head.appendChild(s);
-}
+function injectStyle(){}
 
 function openDb(){return new Promise(resolve=>{const r=indexedDB.open(SNAPSHOT_DB,1);r.onerror=()=>resolve(null);r.onupgradeneeded=()=>{};r.onsuccess=()=>resolve(r.result)})}
 async function readSnapshot(){const db=await openDb();if(!db)return null;return new Promise(resolve=>{if(!db.objectStoreNames.contains('meta')){db.close();resolve(null);return}const tx=db.transaction('meta','readonly'),r=tx.objectStore('meta').get('snapshot');r.onsuccess=()=>{db.close();resolve(r.result||null)};r.onerror=()=>{db.close();resolve(null)}})}

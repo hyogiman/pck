@@ -56,7 +56,7 @@ function pickCachedBook(snapshot){
 function cachedHeroHtml(book,profile){
   const cover=book.image?`<img class="hero-cover" src="${esc(book.image)}" alt="${esc(book.title)} 표지" />`:`<div class="hero-cover placeholder">📕</div>`;
   const service=profile?.service==="millie"?"밀리의 서재":profile?.service==="yes24"?"YES24":profile?.service==="paper"?"종이책":inferService(book.platform);
-  const recent=profile?.lastReadAt?`<div class="hero-locator"><small>최근 독서</small><strong style="font-size:1rem">${esc(relativeDate(profile.lastReadAt))}</strong></div>`:"";
+  const recent=profile?.lastReadAt?`<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${esc(relativeDate(profile.lastReadAt))}</strong></div>`:"";
   return `<div class="read-hero-inner">${cover}<h2 class="hero-title">${esc(book.title)}</h2><p class="hero-author">${esc(book.creator||"")}</p><span class="hero-service">${esc(service||"독서")}</span>${recent}<button class="btn primary block start-btn" data-start-book="${esc(book.id)}" type="button">▶ 읽기 시작</button><button class="text-btn switch-book" data-open-book-picker type="button">다른 책 선택 ›</button></div>`;
 }
 async function showCachedHeroImmediately(){

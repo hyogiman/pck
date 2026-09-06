@@ -125,7 +125,7 @@ function rgBookContentHtml(book,direction=0){
   const extra=isPhysical&&locator
     ? `<div class="hero-locator"><small>지난번 위치</small><strong>${rgEsc(locator)}</strong></div>`
     : p.lastReadAt
-      ? `<div class="hero-locator"><small>최근 독서</small><strong style="font-size:1rem">${rgEsc(rgRelativeDate(p.lastReadAt))}</strong></div>`
+      ? `<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${rgEsc(rgRelativeDate(p.lastReadAt))}</strong></div>`
       : '';
   const genreHtml=genre?`<span class="hero-service rg-home-genre rg-genre-badge">${rgEsc(genre)}</span>`:'';
   return `<div class="rg-swipe-book-content ${direction>0?'rg-enter-right':direction<0?'rg-enter-left':''}" data-rg-book-content data-rg-full-title="${rgEsc(title.full)}">
