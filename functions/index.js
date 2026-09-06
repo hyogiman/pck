@@ -1,10 +1,9 @@
 // Thought Garden v63 · Existing Between Thoughts answer context backfill
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
-const { initializeApp, getApps } = require("firebase-admin/app");
+const { initializeApp, getApps, applicationDefault } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth: getAdminAuth } = require("firebase-admin/auth");
-const vision = require("@google-cloud/vision");
 const crypto = require("node:crypto");
 
 const {
@@ -14,7 +13,7 @@ const {
 
 const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
-const visionClient = new vision.ImageAnnotatorClient();
+const cloudCredential = applicationDefault();
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 // v74: Firebase 공식 비용 진단 + BigQuery Location 자동 추론
@@ -360,12 +359,33 @@ exports.readingOcr = onRequest(
     }
 
     try {
-      const [result] = await visionClient.documentTextDetection({
-        image: { content: body },
-        imageContext: { languageHints: ["ko", "en"] },
+      const access = await cloudCredential.getAccessToken();
+      const accessToken = access?.access_token;
+      if (!accessToken) throw new Error("Google Cloud access token을 가져오지 못했습니다.");
+      const projectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || adminApp.options.projectId || "idea-pocket-56063";
+      const visionResponse = await fetch("https://vision.googleapis.com/v1/images:annotate", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json; charset=utf-8",
+          "x-goog-user-project": projectId,
+        },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: body.toString("base64") },
+            features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+            imageContext: { languageHints: ["ko", "en"] },
+          }],
+        }),
       });
+      const result = await visionResponse.json().catch(() => null);
+      if (!visionResponse.ok) {
+        throw new Error(result?.error?.message || `Vision API HTTP ${visionResponse.status}`);
+      }
+      const annotation = result?.responses?.[0] || {};
+      if (annotation.error) throw new Error(annotation.error.message || "Vision annotation error");
       const rawText = String(
-        result?.fullTextAnnotation?.text || result?.textAnnotations?.[0]?.description || ""
+        annotation?.fullTextAnnotation?.text || annotation?.textAnnotations?.[0]?.description || ""
       ).trim();
       res.set("Cache-Control", "no-store");
       res.status(200).json({ ok: true, rawText });
