@@ -1,0 +1,38 @@
+name: Reading Garden v25 OCR and YES24
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reading-v25-services.yml'
+      - '.github/scripts/reading_v25_services.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply integration patch
+        run: python .github/scripts/reading_v25_services.py
+      - name: Verify JavaScript syntax
+        run: |
+          node --check reading.js
+          node --check reading-pwa-v7.js
+          node --check functions/index.js
+          node --check functions/ai-v2-production-entry.js
+          node -e "JSON.parse(require('fs').readFileSync('functions/package.json','utf8')); console.log('package.json ok')"
+      - name: Commit generated changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reading.js reading.html reading-pwa-v7.js index.html functions/index.js functions/package.json
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "feat: add Cloud Vision OCR and YES24 book search"
+          git push origin main
