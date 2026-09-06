@@ -97,7 +97,9 @@ document.getElementById('openSettings')?.addEventListener('click',()=>{
 registerSharedWorker();
 
 /* 필기 성능 최적화는 reading.js 원본에 통합했다.
-   v22는 필사 원본 첨부 상태를 이미지 미리보기와 분리해 항상 보이게 한다. */
-import('./reading-dialogs-v18.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
+   필사 상태 모듈을 먼저 설치한 뒤 빈 OCR 우회 모듈을 로드해,
+   OCR 결과가 없어도 '필사 원본 첨부됨' 상태가 반드시 기록 화면에 남게 한다. */
+import('./reading-handwriting-state-v22.js?v=20260904-reading-v22')
+  .then(()=>import('./reading-dialogs-v18.js?v=20260904-reading-v22'))
+  .catch(err=>console.warn('Reading Garden handwriting/dialog runtime failed',err));
 import('./reading-stability-v16.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden stability runtime failed',err));
-import('./reading-handwriting-state-v22.js?v=20260904-reading-v22').catch(err=>console.warn('Reading Garden handwriting state runtime failed',err));
