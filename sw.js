@@ -2,10 +2,10 @@
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
    생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
 
-   v30: 독서의 정원 CSS와 화면 스타일을 reading.css 하나로 통합하고 진행률 표현 호환성을 고정한다.
+   v31: 독서의 정원 UI는 유지하고 Firestore 조회 범위를 책 데이터로 제한한다.
    reading.html은 단 하나의 Reading stylesheet만 직접 참조한다.
    서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v30-reading-style-single-source-v81";
+const CACHE = "garden-v31-reading-read-scope-v82";
 const PATCH_VERSION = "20260904-1845-capture-marking-source-v78";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
