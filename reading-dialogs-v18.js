@@ -1,5 +1,5 @@
 /* 독서의 정원 v26 — 앱 모달(confirm/alert 대체) + 타임라인 삭제 확인 정리 */
-const RG_DIALOG_VERSION='20260906-reading-v28';
+const RG_DIALOG_VERSION='20260906-reading-v29';
 const approvals=[];
 const replayClicks=new WeakSet();
 const replayChanges=new WeakSet();

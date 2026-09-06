@@ -6,6 +6,7 @@ let rgSwipeSnapshot=null;
 let rgSwipeBusy=false;
 let rgSwipeQueued=false;
 const rgEphemeralBooks=new Map();
+const RG_DRAG_CLASSES=['rg-drag-left-near','rg-drag-left-mid','rg-drag-left-far','rg-drag-right-near','rg-drag-right-mid','rg-drag-right-far'];
 
 const rgEsc=(v='')=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[c]));
 const rgSafe=v=>String(v??'').trim();
@@ -204,9 +205,9 @@ function rgBindHeroPointer(){
     if(Math.abs(dx)>10&&Math.abs(dx)>Math.abs(dy)*1.15)rgPointer.dragging=true;
     if(!rgPointer.dragging)return;
     const content=hero.querySelector('[data-rg-book-content]');
-    if(content){content.style.transition='none';content.style.transform=`translateX(${Math.max(-58,Math.min(58,dx*.28))}px)`;content.style.opacity=String(Math.max(.8,1-Math.abs(dx)/720))}
+    if(content){const mag=Math.abs(dx)>=44?'far':Math.abs(dx)>=24?'mid':'near';content.classList.remove(...RG_DRAG_CLASSES);content.classList.add(`rg-drag-${dx<0?'left':'right'}-${mag}`)}
   });
-  const reset=()=>{const content=hero.querySelector('[data-rg-book-content]');if(content){content.style.transition='';content.style.transform='';content.style.opacity=''}};
+  const reset=()=>{const content=hero.querySelector('[data-rg-book-content]');if(content)content.classList.remove(...RG_DRAG_CLASSES)};
   const finish=e=>{
     if(!rgPointer||e.pointerId!==rgPointer.id)return;
     const dx=e.clientX-rgPointer.x,dy=e.clientY-rgPointer.y,dragging=rgPointer.dragging;

@@ -1,7 +1,7 @@
-/* 독서의 정원 v28 — 독립 PWA 설치 보조 + 안정성/모달 런타임 로드 */
+/* 독서의 정원 v29 — 독립 PWA 설치 보조 + 안정성/모달 런타임 로드 */
 let deferredInstallPrompt=null;
 const READING_INSTALL_MARK='readingGarden_pwa_installed_v1';
-const RG_SW_VERSION='20260906-reading-v28';
+const RG_SW_VERSION='20260906-reading-v29';
 
 function rgToast(message,ms=2800){
   const el=document.getElementById('toast');
@@ -99,5 +99,5 @@ registerSharedWorker();
 /* 필기 성능 최적화는 reading.js 원본에 통합했다.
    v23은 v22의 별도 필사상태 런타임을 제거해,
    실제로 동작하던 v21의 텍스트 변환 흐름으로 되돌린다. */
-import('./reading-dialogs-v18.js?v=20260906-reading-v28').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
-import('./reading-stability-v16.js?v=20260906-reading-v28').catch(err=>console.warn('Reading Garden stability runtime failed',err));
+import('./reading-dialogs-v18.js?v=20260906-reading-v29').catch(err=>console.warn('Reading Garden dialog runtime failed',err));
+import('./reading-stability-v16.js?v=20260906-reading-v29').catch(err=>console.warn('Reading Garden stability runtime failed',err));

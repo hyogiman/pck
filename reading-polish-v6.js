@@ -17,7 +17,7 @@ function syncHomeGenreBadge(){
 
   const sourceId=hero.querySelector('[data-start-book]')?.dataset.startBook||'';
   if(!sourceId){
-    badge.style.display='none';
+    badge.classList.add('hidden');
     badge.classList.remove('rg-home-genre');
     return;
   }
@@ -28,13 +28,13 @@ function syncHomeGenreBadge(){
 
   /* 캐시가 먼저 뜰 때 source.platform(과거 오염값: 출판사 등)이나 '기타'가 잠깐 보이지 않게 한다. */
   if(!GENRES.has(genre)){
-    badge.style.display='none';
+    badge.classList.add('hidden');
     badge.classList.remove('rg-home-genre');
     return;
   }
 
   badge.textContent=genre;
-  badge.style.display='inline-flex';
+  badge.classList.remove('hidden');
   badge.classList.add('rg-home-genre','rg-genre-badge');
 }
 
