@@ -3,7 +3,7 @@ name: book search pagination v32
 on:
   push:
     paths:
-      - '.github/scripts/book_search_pagination_v32.py'
+      - '.github/scripts/book_search_pagination_v32b.py'
       - '.github/workflows/book-search-pagination-v32.yml'
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Apply pagination patch
-        run: python .github/scripts/book_search_pagination_v32.py
+        run: python .github/scripts/book_search_pagination_v32b.py
       - name: Verify syntax
         run: |
           node --check reading.js
@@ -55,5 +55,3 @@ jobs:
           git add functions/index.js index.html reading.js reading.html reading-pwa-v7.js sw.js
           git commit -m 'feat: add more results to shared book search'
           git push origin main
-
-# one-time trigger
