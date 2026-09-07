@@ -183,7 +183,7 @@ function serviceText(p){
 function coverHtml(s,cls="hero-cover"){return s?.image?`<img class="${cls}" src="${esc(s.image)}" alt="${esc(s.title)} 표지" />`:`<div class="${cls} placeholder">📕</div>`}
 if("scrollRestoration" in history)history.scrollRestoration="manual";
 function resetMainScroll(){window.scrollTo(0,0)}
-function setView(view){state.currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===view));$$('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.viewTarget===view));if(view==="read"){renderRead();requestAnimationFrame(resetMainScroll)}if(view==="library")renderLibrary();if(view==="timeline")renderTimeline();if(view==="stats")renderStats()}
+function setView(view){const detail=$("bookDetail");if(detail&&!detail.classList.contains("hidden"))closeLayer("bookDetail");state.currentView=view;$$('.view').forEach(v=>v.classList.toggle('active',v.dataset.view===view));$$('.nav-btn').forEach(b=>b.classList.toggle('on',b.dataset.viewTarget===view));if(view==="read"){renderRead();requestAnimationFrame(resetMainScroll)}if(view==="library")renderLibrary();if(view==="timeline")renderTimeline();if(view==="stats")renderStats()}
 function renderAll(){renderRead();renderLibrary();renderTimeline();renderStats();renderTimelineBookOptions();renderPaths()}
 
 function renderRead(){
@@ -207,11 +207,25 @@ function bookMetrics(sourceId){const ss=state.readingSessions.filter(s=>s.source
 function openBookDetail(id){state.detailBookId=id;state.detailTab="timeline";renderBookDetail();openLayer("bookDetail")}
 function openBookInfo(id){state.detailBookId=id;state.detailTab="info";renderBookDetail();openLayer("bookDetail");void ensureBookInfo(id).then(changed=>{if(changed&&state.detailBookId===id&&state.detailTab==="info")renderBookDetail()})}
 function renderBookDetail(){const s=sourceById(state.detailBookId);if(!s)return;const p=getProfile(s.id),m=bookMetrics(s.id),detailTimeline=renderTimelineHtml({bookId:s.id,embedded:true}),tabBody=state.detailTab==="timeline"?detailTimeline:state.detailTab==="stats"?renderBookStatsHtml(s.id):renderBookInfoHtml(s);$("bookDetailBody").innerHTML=`<div class="detail-hero">${coverHtml(s,"detail-cover")}<div class="detail-meta"><h2>${esc(s.title)}</h2><p>${esc(s.creator||"")}</p><div class="detail-tags"><span class="mini-tag">${esc(STATUS_LABELS[p.status])}</span><span class="mini-tag">${esc(serviceText(p))}</span>${p.currentLocator?`<span class="mini-tag">${esc(p.currentLocator)}</span>`:""}</div></div></div><button class="btn primary block detail-start" data-start-book="${esc(s.id)}" type="button">▶ 읽기 시작</button><div class="detail-metrics"><div class="detail-metric"><small>총 독서시간</small><strong>${fmtMinutes(m.mins)}</strong></div><div class="detail-metric"><small>읽은 날</small><strong>${m.days}일</strong></div></div><div id="bookMoreMenu" class="more-menu hidden"><button class="btn" data-edit-profile="${esc(s.id)}" type="button">읽기 설정 수정</button><button class="btn" data-complete-book="${esc(s.id)}" type="button">◉ 완독 처리</button><button class="btn" data-print-book="${esc(s.id)}" type="button">📄 이 책 기록 PDF / 인쇄</button></div><div class="segmented detail-tabs"><button class="seg ${state.detailTab==="timeline"?"on":""}" data-detail-tab="timeline" type="button">기록</button><button class="seg ${state.detailTab==="stats"?"on":""}" data-detail-tab="stats" type="button">통계</button><button class="seg ${state.detailTab==="info"?"on":""}" data-detail-tab="info" type="button">책 정보</button></div><div id="detailTabBody">${tabBody}</div>`}
+const BOOK_INFO_RICH_TAGS=new Set(["B","STRONG","I","EM","U","S","BR","P","DIV","UL","OL","LI","SUP","SUB","SMALL","H1","H2","H3","H4","H5","H6"]);
+function safeBookRichHtml(raw=""){
+  const template=document.createElement("template");template.innerHTML=String(raw??"");
+  const render=node=>{
+    if(node.nodeType===3)return esc(node.nodeValue||"");
+    if(node.nodeType!==1)return "";
+    const tag=node.tagName.toUpperCase();
+    if(["SCRIPT","STYLE","IFRAME","OBJECT","EMBED","SVG","MATH"].includes(tag))return "";
+    const body=[...node.childNodes].map(render).join("");
+    if(!BOOK_INFO_RICH_TAGS.has(tag))return body;
+    const out=tag.toLowerCase();return out==="br"?"<br>":`<${out}>${body}</${out}>`;
+  };
+  return [...template.content.childNodes].map(render).join("");
+}
 function renderBookInfoHtml(s){
   const facts=[["출판사",safeText(s.publisher)],["출간일",safeText(s.pubDate)],["분량",s.pages?`${Number(s.pages)}쪽`:""],["ISBN",safeText(s.isbn13||s.isbn)]].filter(x=>x[1]);
   const intro=safeText(s.bookIntroduction),summary=safeText(s.bookSummary),toc=safeText(s.tableOfContents),sub=safeText(s.subTitle||s.subtitle),provider=safeText(s.provider);
   const empty=!intro&&!summary&&!toc;
-  return `<section class="book-info-panel">${sub?`<p class="book-info-subtitle">${esc(sub)}</p>`:""}${facts.length?`<dl class="book-info-facts">${facts.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`:""}${intro?`<article class="book-info-section"><h3>책 소개</h3><div>${esc(intro)}</div></article>`:""}${summary&&summary!==intro?`<article class="book-info-section"><h3>책 요약</h3><div>${esc(summary)}</div></article>`:""}${toc?`<details class="book-info-toc"><summary>목차 펼치기</summary><div>${esc(toc)}</div></details>`:""}${empty?`<div class="book-info-empty">${state.bookInfoLoading.has(s.id)?"YES24에서 책 정보를 확인하고 있어요…":"저장된 상세 정보가 없습니다. 설정의 ‘책 정보 갱신’에서 다시 확인할 수 있어요."}</div>`:""}${provider?`<p class="book-info-source">정보 출처 · ${esc(provider)}</p>`:""}</section>`
+  return `<section class="book-info-panel">${sub?`<p class="book-info-subtitle">${esc(sub)}</p>`:""}${facts.length?`<dl class="book-info-facts">${facts.map(([k,v])=>`<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`:""}${intro?`<article class="book-info-section"><h3>책 소개</h3><div class="book-info-rich">${safeBookRichHtml(intro)}</div></article>`:""}${summary&&summary!==intro?`<article class="book-info-section"><h3>책 요약</h3><div class="book-info-rich">${safeBookRichHtml(summary)}</div></article>`:""}${toc?`<details class="book-info-toc"><summary>목차 펼치기</summary><div class="book-info-rich">${safeBookRichHtml(toc)}</div></details>`:""}${empty?`<div class="book-info-empty">${state.bookInfoLoading.has(s.id)?"YES24에서 책 정보를 확인하고 있어요…":"저장된 상세 정보가 없습니다. 설정의 ‘책 정보 갱신’에서 다시 확인할 수 있어요."}</div>`:""}${provider?`<p class="book-info-source">정보 출처 · ${esc(provider)}</p>`:""}</section>`
 }
 function renderBookStatsHtml(id){const m=bookMetrics(id);return `<div class="stats-summary"><div class="stat-card"><small>총 시간</small><strong>${fmtMinutes(m.mins)}</strong></div><div class="stat-card"><small>세션</small><strong>${m.sessions}회</strong></div><div class="stat-card"><small>필사</small><strong>${m.handwriting}</strong></div><div class="stat-card"><small>생각</small><strong>${m.thoughts}</strong></div></div>`}
 

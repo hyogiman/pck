@@ -512,3 +512,18 @@ body.rg-layer-open{overflow:hidden}
 /* v41 · 첫 화면 책 정보 + 책 상세 정보 */
 .hero-meta-actions{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:12px;flex-wrap:wrap}.hero-meta-actions .hero-service{margin-top:0}.hero-info-btn{border:1px solid var(--line);background:var(--panel);color:#765f4b;border-radius:999px;padding:6px 10px;font-size:.7rem;font-weight:800;box-shadow:var(--card-shadow)}.hero-info-btn:active{transform:scale(.97)}
 .detail-tabs{grid-template-columns:repeat(3,1fr)}.book-info-panel{display:grid;gap:14px;margin-top:16px}.book-info-subtitle{margin:0;color:var(--muted);font-family:var(--serif);font-size:.9rem;line-height:1.6}.book-info-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}.book-info-facts>div{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:10px}.book-info-facts dt{font-size:.64rem;color:var(--muted);font-weight:800}.book-info-facts dd{margin:4px 0 0;font-size:.78rem;line-height:1.45}.book-info-section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px}.book-info-section h3{font-family:var(--serif);font-size:.95rem;margin:0 0 9px}.book-info-section div,.book-info-toc div{white-space:pre-wrap;font-family:var(--serif);font-size:.86rem;line-height:1.75;color:#4e5048}.book-info-toc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:13px 15px}.book-info-toc summary{cursor:pointer;font-weight:800;font-size:.78rem;color:#765f4b}.book-info-toc div{padding-top:12px}.book-info-empty{border:1px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted);font-size:.76rem;line-height:1.6}.book-info-source{margin:0;text-align:right;color:var(--muted);font-size:.64rem}
+
+
+/* v42 · 책 상세 하단 메뉴 유지 + YES24 안전 서식 */
+#bookDetail{z-index:35}
+#bookDetail .layer-shell{padding-bottom:calc(var(--nav) + 30px + env(safe-area-inset-bottom))}
+.book-info-rich{white-space:pre-wrap;font-family:var(--serif);font-size:.86rem;line-height:1.75;color:#4e5048}
+.book-info-rich b,.book-info-rich strong{font-weight:700}
+.book-info-rich i,.book-info-rich em{font-style:italic}
+.book-info-rich u{text-decoration:underline;text-underline-offset:2px}
+.book-info-rich s{text-decoration:line-through}
+.book-info-rich p,.book-info-rich div{margin:.45em 0}
+.book-info-rich ul,.book-info-rich ol{margin:.55em 0;padding-left:1.5em}
+.book-info-rich li{margin:.22em 0}
+.book-info-rich h1,.book-info-rich h2,.book-info-rich h3,.book-info-rich h4,.book-info-rich h5,.book-info-rich h6{font-family:var(--serif);font-size:.95rem;line-height:1.55;margin:.8em 0 .35em;font-weight:700}
+.book-info-rich sup,.book-info-rich sub{font-size:.72em}
