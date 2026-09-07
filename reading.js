@@ -122,6 +122,15 @@ async function flushSync(){
 }
 async function updateSyncInfo(){if(!state.idb)return;const [ops,files]=await Promise.all([idbGetAll("outbox"),idbGetAll("files")]);const n=ops.length+files.length;if($("syncInfo"))$("syncInfo").textContent=n?`☁️ 동기화 대기 ${n}건 · 기기에 안전하게 보관 중`:state.cloudReady&&navigator.onLine?"☁️ 동기화 완료":"☁️ 오프라인 저장 중"}
 
+function restoreLocalReadingState(){
+  const activeRaw=localStorage.getItem(ACTIVE_SESSION_KEY);
+  if(activeRaw){
+    try{const session=JSON.parse(activeRaw);state.activeSession=session&&!session.endedAt?session:null;if(!state.activeSession)localStorage.removeItem(ACTIVE_SESSION_KEY)}
+    catch{state.activeSession=null;localStorage.removeItem(ACTIVE_SESSION_KEY)}
+  }
+  const savedBook=localStorage.getItem(CURRENT_BOOK_KEY);if(savedBook)state.currentBookId=savedBook;
+}
+
 async function initFirebase(){
   const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app);state.db=getFirestore(app);state.storage=getStorage(app);
   try{await setPersistence(auth,browserLocalPersistence)}catch{}
@@ -143,8 +152,9 @@ async function loadCloudData(){
   state.loading=true;
   const sources=await loadBookSources();if(sources)state.sources=sources;else await loadSnapshot();
   const fragments=await loadBookFragments(state.sources.map(s=>s.id));if(fragments)state.fragments=fragments;
-  for(const name of COLLECTIONS){const data=await loadCollection(name);if(data)state[name]=data}
-  const activeRaw=localStorage.getItem(ACTIVE_SESSION_KEY);if(activeRaw){try{state.activeSession=JSON.parse(activeRaw)}catch{localStorage.removeItem(ACTIVE_SESSION_KEY)}}state.currentBookId=localStorage.getItem(CURRENT_BOOK_KEY)||chooseCurrentBookId();state.loading=false;await cacheSnapshot();updateSyncInfo();
+  const loaded=await Promise.all(COLLECTIONS.map(async name=>[name,await loadCollection(name)]));
+  for(const [name,data] of loaded)if(data)state[name]=data;
+  if(!state.currentBookId)state.currentBookId=chooseCurrentBookId();state.loading=false;await cacheSnapshot();updateSyncInfo();
 }
 
 function inferService(platform=""){const p=String(platform).toLowerCase();if(p.includes("밀리"))return "millie";if(p.includes("yes24")||p.includes("예스24"))return "yes24";if(p.includes("종이"))return "paper";return "other"}
@@ -162,8 +172,9 @@ function setView(view){state.currentView=view;$$('.view').forEach(v=>v.classList
 function renderAll(){renderRead();renderLibrary();renderTimeline();renderStats();renderTimelineBookOptions();renderPaths()}
 
 function renderRead(){
-  const box=$("readHero");if(state.loading){box.innerHTML=`<div class="empty-hero"><p>서재를 불러오고 있어요…</p></div>`;return}
-  if(state.activeSession&&!state.activeSession.endedAt){const s=sourceById(state.activeSession.sourceId);box.innerHTML=`<div class="read-hero-inner"><div class="notice rg-active-session-notice">진행 중이던 독서가 있어요.</div>${coverHtml(s)}<h2 class="hero-title">${esc(s?.title||"읽던 책")}</h2><p class="hero-author">${esc(s?.creator||"")}</p><button class="btn primary block start-btn" data-resume-session type="button">▶ 독서 계속하기</button><button class="text-btn switch-book" data-abandon-session type="button">종료 처리하기</button></div>`;return}
+  const box=$("readHero");
+  if(state.activeSession&&!state.activeSession.endedAt){const s=sourceById(state.activeSession.sourceId),paused=!!state.activeSession.pauseStartedAt;box.innerHTML=`<div class="read-hero-inner"><div class="notice rg-active-session-notice">${paused?"일시정지 중인 독서가 있어요.":"진행 중이던 독서가 있어요."}</div>${coverHtml(s)}<h2 class="hero-title">${esc(s?.title||"읽던 책")}</h2><p class="hero-author">${esc(s?.creator||"")}</p><button class="btn primary block start-btn" data-resume-session type="button">${paused?"▶ 다시 읽기":"▶ 독서 계속하기"}</button><button class="text-btn switch-book" data-abandon-session type="button">종료 처리하기</button></div>`;return}
+  if(state.loading){box.innerHTML=`<div class="empty-hero"><p>서재를 불러오고 있어요…</p></div>`;return}
   const s=sourceById(state.currentBookId)||sourceById(chooseCurrentBookId());if(!s){box.innerHTML=`<div class="empty-hero"><div class="empty-icon">📚</div><h2>읽을 책을 골라볼까요?</h2><p>생각의 텃밭에 등록한 책이 있으면 같은 서재에서 자동으로 불러옵니다.</p><button class="btn primary" data-open-book-search type="button">＋ 책 추가</button></div>`;return}
   state.currentBookId=s.id;const p=getProfile(s.id),isPhysical=p?.format==="paper"||p?.format==="pdf",locator=safeText(p?.currentLocator);
   box.innerHTML=`<div class="read-hero-inner">${coverHtml(s)}<h2 class="hero-title">${esc(s.title)}</h2><p class="hero-author">${esc(s.creator||"")}</p><span class="hero-service">${esc(serviceText(p))}</span>${isPhysical&&locator?`<div class="hero-locator"><small>지난번 위치</small><strong>${esc(nextLocator(locator,p.format))}</strong></div>`:p?.lastReadAt?`<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${esc(relativeDate(p.lastReadAt))}</strong></div>`:""}<button class="btn primary block start-btn" data-start-book="${esc(s.id)}" type="button">▶ 읽기 시작</button><button class="text-btn switch-book" data-open-book-picker type="button">다른 책 선택 ›</button></div>`;
@@ -198,7 +209,7 @@ async function finishSession(){
 function ensureHandwritingAttachmentCard(){
   const quote=$("entryQuote"),field=quote?.closest(".field");if(!field)return null;
   let box=$("rgHandwritingSavePreview");
-  if(!box){box=document.createElement("div");box.id="rgHandwritingSavePreview";box.className="rg-handwriting-save-preview hidden";box.innerHTML='<div class="rg-hw-copy"><strong>✍ 필사 원본 첨부됨</strong><span>작성한 필사 이미지가 이 기록과 함께 저장됩니다.</span></div><i class="rg-hw-spinner" aria-hidden="true"></i>';field.insertAdjacentElement("afterend",box)}
+  if(!box){box=document.createElement("div");box.id="rgHandwritingSavePreview";box.className="rg-handwriting-save-preview hidden";box.innerHTML='<div class="rg-hw-copy"><strong>📝 필사 원본 첨부됨</strong><span>작성한 필사 이미지가 이 기록과 함께 저장됩니다.</span></div><i class="rg-hw-spinner" aria-hidden="true"></i>';field.insertAdjacentElement("afterend",box)}
   return box
 }
 function syncHandwritingAttachmentCard(){
@@ -206,10 +217,10 @@ function syncHandwritingAttachmentCard(){
   const editing=state.editingEntryId?state.readingEntries.find(e=>e.id===state.editingEntryId):null;
   const attached=!!state.handwriting.draft||editing?.inputMethod==="handwriting";
   box.classList.toggle("hidden",!attached);box.classList.toggle("is-saving",attached&&state.entrySaving);
-  if(attached){const strong=box.querySelector("strong"),copy=box.querySelector("span");if(strong)strong.textContent=state.entrySaving?"필사 원본 보관 중…":"✍ 필사 원본 첨부됨";if(copy)copy.textContent=state.entrySaving?"기록은 먼저 저장하고, 필사 이미지는 이어서 동기화합니다.":"작성한 필사 이미지가 이 기록과 함께 저장됩니다."}
+  if(attached){const strong=box.querySelector("strong"),copy=box.querySelector("span");if(strong)strong.textContent=state.entrySaving?"필사 원본 보관 중…":"📝 필사 원본 첨부됨";if(copy)copy.textContent=state.entrySaving?"기록은 먼저 저장하고, 필사 이미지는 이어서 동기화합니다.":"작성한 필사 이미지가 이 기록과 함께 저장됩니다."}
 }
 function setEntrySaving(saving){
-  state.entrySaving=!!saving;const btn=$("saveEntryBtn");if(btn){btn.disabled=!!saving;btn.setAttribute("aria-busy",saving?"true":"false");if(saving){if(!btn.dataset.originalText)btn.dataset.originalText=btn.textContent||"기록 저장";btn.textContent=state.handwriting.draft?.imageBlob?"✍ 필사 기록 저장 중…":"기록 저장 중…"}else if(btn.dataset.originalText){btn.textContent=btn.dataset.originalText;delete btn.dataset.originalText}}syncHandwritingAttachmentCard()
+  state.entrySaving=!!saving;const btn=$("saveEntryBtn");if(btn){btn.disabled=!!saving;btn.setAttribute("aria-busy",saving?"true":"false");if(saving){if(!btn.dataset.originalText)btn.dataset.originalText=btn.textContent||"기록 저장";btn.textContent=state.handwriting.draft?.imageBlob?"📝 필사 기록 저장 중…":"기록 저장 중…"}else if(btn.dataset.originalText){btn.textContent=btn.dataset.originalText;delete btn.dataset.originalText}}syncHandwritingAttachmentCard()
 }
 function openRecord({entry=null,fromSession=true}={}){state.recordReturnToSession=fromSession;state.editingEntryId=entry?.id||null;$("entryLocator").value=entry?.locator||(state.activeSession?getProfile(state.activeSession.sourceId)?.currentLocator||"":"");$("entryQuote").value=entry?.quoteText||entry?.confirmedText||"";$("entryThought").value=entry?.thought||"";$("deleteEntryBtn").classList.toggle("hidden",!entry);$("saveEntryBtn").textContent=entry?"수정 저장":"기록 저장";state.handwriting.draft=entry?.inputMethod==="handwriting"?{rawOcrText:entry.rawOcrText||"",suggestedText:entry.suggestedText||"",confirmedText:entry.confirmedText||entry.quoteText||"",existing:true}:null;setEntrySaving(false);syncHandwritingAttachmentCard();openDialog("recordDialog")}
 async function saveEntry(){
@@ -244,7 +255,7 @@ async function saveEntry(){
 
     const i=state.readingEntries.findIndex(e=>e.id===entry.id);if(i>=0)state.readingEntries[i]=entry;else state.readingEntries.push(entry);
     if(d?.imageBlob&&!d.existing){entry.handwritingPending=true;await saveHandwritingFiles(entry)}else await cloudSet("readingEntries",entry.id,entry,{silent:true});
-    await cacheSnapshot();closeDialog("recordDialog");state.editingEntryId=null;state.handwriting.draft=null;renderTimeline();if(state.detailBookId)renderBookDetail();toast(hasHandwriting?"기록했습니다. 필사 이미지는 이어서 동기화합니다. ✍":"기록했습니다 🌱")
+    await cacheSnapshot();closeDialog("recordDialog");state.editingEntryId=null;state.handwriting.draft=null;renderTimeline();if(state.detailBookId)renderBookDetail();toast(hasHandwriting?"기록했습니다. 필사 이미지는 이어서 동기화합니다. 📝":"기록했습니다 🌱")
   }catch(err){console.error("saveEntry failed",err);toast("기록 저장에 실패했습니다. 다시 시도해주세요.",3200)}finally{setEntrySaving(false)}
 }
 async function deleteCurrentEntry(){const e=state.readingEntries.find(x=>x.id===state.editingEntryId);if(!e)return;if(!confirm("이 독서 기록을 삭제할까요?"))return;state.readingEntries=state.readingEntries.filter(x=>x.id!==e.id);await cloudDelete("readingEntries",e.id);if(e.linkedFragmentId&&confirm("연결된 생각의 텃밭 생각도 함께 삭제할까요?")){state.fragments=state.fragments.filter(f=>f.id!==e.linkedFragmentId);await cloudDelete("fragments",e.linkedFragmentId)}closeDialog("recordDialog");renderAll();toast("기록을 삭제했습니다.")}
@@ -288,7 +299,7 @@ async function saveHandwritingImageOnly(){
     d.rawOcrText="";d.suggestedText="";d.confirmedText="";
     state.handwriting.draft=d;state.handwriting.strokes=[];state.handwriting.current=null;
     closeLayer("handwritingLayer");syncHandwritingAttachmentCard();openDialog("recordDialog");
-    toast("필사 이미지를 추가했습니다. 저장하면 이미지 그대로 기록됩니다. ✍")
+    toast("필사 이미지를 추가했습니다. 저장하면 이미지 그대로 기록됩니다. 📝")
   }catch(err){console.error("saveHandwritingImageOnly failed",err);toast("필사 이미지를 준비하지 못했습니다. 다시 시도해주세요.",3200)}
   finally{if(btn){btn.disabled=false;btn.textContent="이미지만 저장"}}
 }
@@ -366,7 +377,7 @@ function renderEntryHtml(e,{legacy=false,deletable=true}={}){
       ${canDelete?`<button class="timeline-delete-btn timeline-entry-delete" data-delete-entry="${esc(e.id)}" type="button" aria-label="${esc(entryKindLabel(e))} 삭제" title="이 기록 삭제">${timelineTrashIcon()}</button>`:""}
     </div>
     ${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}
-    ${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">✍ 필사 원본 동기화 중</div>`:""}
+    ${e.handwritingImageUrl?`<img class="handwriting-preview" src="${esc(e.handwritingImageUrl)}" alt="필사 원본">`:e.inputMethod==="handwriting"&&e.handwritingPending?`<div class="notice">📝 필사 원본 동기화 중</div>`:""}
     ${quote?`<div class="entry-quote">${esc(quote)}</div>`:""}
     ${thought?`<div class="entry-thought">${esc(thought)}</div>`:""}
     ${legacy?`<span class="legacy-badge">생각의 텃밭에서 남긴 기록</span>`:""}
@@ -385,8 +396,8 @@ function renderEvent(ev,filter="all"){
         <div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>${timeText(ev.session.startedAt)}${ev.session.endedAt?` – ${timeText(ev.session.endedAt)}`:""} · ${fmtMinutes(ev.session.finalDurationMinutes)} · ${esc(SERVICE_LABELS[ev.session.service]||"")}</p></div>
         <button class="timeline-delete-btn timeline-session-delete" data-delete-session="${esc(ev.session.id)}" type="button" aria-label="독서시간 기록 삭제" title="독서시간 기록 삭제">${timelineTrashIcon()}</button>
       </div>
-      ${entryFolder}
       ${ev.session.sessionNote&&filter==="all"?`<div class="session-note">“${esc(ev.session.sessionNote)}”</div>`:""}
+      ${entryFolder}
     </article></div>`
   }
   if(ev.type==="entry"){
@@ -442,5 +453,5 @@ function bindEvents(){
   $$('[data-pen-width]').forEach(b=>b.onclick=()=>{state.handwriting.width=Number(b.dataset.penWidth);state.handwriting.eraser=false;$$('[data-pen-width]').forEach(x=>x.classList.toggle('on',x===b));$("eraserBtn").classList.remove("on")});$("eraserBtn").onclick=()=>{state.handwriting.eraser=!state.handwriting.eraser;$("eraserBtn").classList.toggle("on",state.handwriting.eraser);if(state.handwriting.eraser)$$('[data-pen-width]').forEach(x=>x.classList.remove('on'))};$("undoStrokeBtn").onclick=()=>{state.handwriting.strokes.pop();redrawWriting()};$("saveHandwritingImageBtn").onclick=saveHandwritingImageOnly;$("convertHandwritingBtn").onclick=convertHandwriting;$("redoHandwritingBtn").onclick=()=>{closeDialog("ocrDialog");openHandwriting()};$("confirmOcrBtn").onclick=confirmOcr;$$('.feel-btn').forEach(b=>b.onclick=()=>{state.selectedFeel=b.dataset.feel;$$('.feel-btn').forEach(x=>x.classList.toggle('on',x===b))});$("saveProfileBtn").onclick=saveProfile;$("saveCompleteBtn").onclick=saveComplete;$("timelineSearchBtn").onclick=()=>{openDialog("searchDialog");setTimeout(()=>$("globalSearchInput").focus(),50)};$("globalSearchInput").addEventListener("input",renderSearch);$("timelineExportBtn").onclick=()=>openExport();$("printBtn").onclick=doPrint;$("jsonBackupBtn").onclick=backupJson;$("jsonRestoreInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)restoreJson(f);e.target.value=""});window.addEventListener("online",()=>{toast("인터넷에 연결되었습니다. 동기화를 확인합니다.");flushSync()});window.addEventListener("offline",()=>{toast("오프라인입니다. 기록은 기기에 안전하게 저장됩니다.");updateSyncInfo()});
 }
 function renderBookPicker(){const books=readingBooks();$("bookPickerList").innerHTML=books.length?books.map(s=>{const p=getProfile(s.id);return `<div class="picker-row">${s.image?`<img src="${esc(s.image)}" alt="">`:`<div class="picker-cover-placeholder"></div>`}<div><h3>${esc(s.title)}</h3><p>${esc(s.creator||"")} · ${esc(serviceText(p))}${p.currentLocator?` · ${esc(p.currentLocator)}`:""}</p></div><button class="btn soft" data-pick-book="${esc(s.id)}" type="button">선택</button></div>`}).join(""):`<div class="empty-card">읽는 중인 책이 없습니다.</div>`}
-async function boot(){state.idb=await openIdb();await loadSnapshot();bindEvents();setupHandwriting();renderAll();updateSyncInfo();initFirebase().catch(err=>{console.error(err);$("authGate").classList.remove("hidden");$("authGateStatus").textContent=`Firebase 연결 실패: ${err.message}`})}
+async function boot(){restoreLocalReadingState();bindEvents();setupHandwriting();renderRead();state.idb=await openIdb();await loadSnapshot();if(!state.currentBookId)state.currentBookId=chooseCurrentBookId();state.loading=false;renderAll();updateSyncInfo();initFirebase().catch(err=>{console.error(err);$("authGate").classList.remove("hidden");$("authGateStatus").textContent=`Firebase 연결 실패: ${err.message}`})}
 boot();
