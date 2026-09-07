@@ -8,9 +8,9 @@ js=js_path.read_text(encoding='utf-8')
 css=css_path.read_text(encoding='utf-8')
 html=html_path.read_text(encoding='utf-8')
 
-# 1) Keep bottom navigation useful while book detail is open: any bottom-nav view change closes detail first.
-old='function setView(view){state.currentView=view;$$\'.view\'.forEach(v=>v.classList.toggle(\'active\',v.dataset.view===view));$$\'.nav-btn\'.forEach(b=>b.classList.toggle(\'on\',b.dataset.viewTarget===view));if(view==="read"){renderRead();requestAnimationFrame(resetMainScroll)}if(view==="library")renderLibrary();if(view==="timeline")renderTimeline();if(view==="stats")renderStats()}'
-new='function setView(view){const detail=$("bookDetail");if(detail&&!detail.classList.contains("hidden"))closeLayer("bookDetail");state.currentView=view;$$\'.view\'.forEach(v=>v.classList.toggle(\'active\',v.dataset.view===view));$$\'.nav-btn\'.forEach(b=>b.classList.toggle(\'on\',b.dataset.viewTarget===view));if(view==="read"){renderRead();requestAnimationFrame(resetMainScroll)}if(view==="library")renderLibrary();if(view==="timeline")renderTimeline();if(view==="stats")renderStats()}'
+# 1) Bottom navigation remains visible/useful while a book detail layer is open.
+old='function setView(view){state.currentView=view;'
+new='function setView(view){const detail=$("bookDetail");if(detail&&!detail.classList.contains("hidden"))closeLayer("bookDetail");state.currentView=view;'
 if old not in js:
     raise SystemExit('setView marker not found')
 js=js.replace(old,new,1)
@@ -28,13 +28,13 @@ if old not in js:
     raise SystemExit('book info output marker not found')
 js=js.replace(old,new,1)
 
-# 3) Book detail stays below the persistent bottom navigation; session/handwriting layers remain above it.
+# 3) Only the book detail layer sits below persistent bottom nav. Session/handwriting stay modal-fullscreen.
 css_add='''\n\n/* v42 · 책 상세 하단 메뉴 유지 + YES24 안전 서식 */\n#bookDetail{z-index:35}\n#bookDetail .layer-shell{padding-bottom:calc(var(--nav) + 30px + env(safe-area-inset-bottom))}\n.book-info-rich{white-space:pre-wrap;font-family:var(--serif);font-size:.86rem;line-height:1.75;color:#4e5048}\n.book-info-rich b,.book-info-rich strong{font-weight:700}\n.book-info-rich i,.book-info-rich em{font-style:italic}\n.book-info-rich u{text-decoration:underline;text-underline-offset:2px}\n.book-info-rich s{text-decoration:line-through}\n.book-info-rich p,.book-info-rich div{margin:.45em 0}\n.book-info-rich ul,.book-info-rich ol{margin:.55em 0;padding-left:1.5em}\n.book-info-rich li{margin:.22em 0}\n.book-info-rich h1,.book-info-rich h2,.book-info-rich h3,.book-info-rich h4,.book-info-rich h5,.book-info-rich h6{font-family:var(--serif);font-size:.95rem;line-height:1.55;margin:.8em 0 .35em;font-weight:700}\n.book-info-rich sup,.book-info-rich sub{font-size:.72em}\n'''
 if '/* v42 · 책 상세 하단 메뉴 유지 + YES24 안전 서식 */' in css:
     raise SystemExit('v42 CSS already exists')
 css += css_add
 
-# 4) Cache-bust only files changed in this patch.
+# 4) Cache-bust changed runtime files.
 for oldv,newv in [
     ('./reading.css?v=20260908-reading-v41','./reading.css?v=20260908-reading-v42'),
     ('./reading.js?v=20260908-reading-v41','./reading.js?v=20260908-reading-v42'),
