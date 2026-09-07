@@ -178,8 +178,8 @@ function renderRead(){
   if(state.activeSession&&!state.activeSession.endedAt){const s=sourceById(state.activeSession.sourceId),paused=!!state.activeSession.pauseStartedAt;box.innerHTML=`<div class="read-hero-inner"><div class="notice rg-active-session-notice">${paused?"일시정지 중인 독서가 있어요.":"진행 중이던 독서가 있어요."}</div>${coverHtml(s)}<h2 class="hero-title">${esc(s?.title||"읽던 책")}</h2><p class="hero-author">${esc(s?.creator||"")}</p><button class="btn primary block start-btn" data-resume-session type="button">${paused?"▶ 다시 읽기":"▶ 독서 계속하기"}</button><button class="text-btn switch-book" data-abandon-session type="button">종료 처리하기</button></div>`;return}
   if(state.loading){box.innerHTML=`<div class="empty-hero"><p>서재를 불러오고 있어요…</p></div>`;return}
   const s=sourceById(state.currentBookId)||sourceById(chooseCurrentBookId());if(!s){box.innerHTML=`<div class="empty-hero"><div class="empty-icon">📚</div><h2>읽을 책을 골라볼까요?</h2><p>생각의 텃밭에 등록한 책이 있으면 같은 서재에서 자동으로 불러옵니다.</p><button class="btn primary" data-open-book-search type="button">＋ 책 추가</button></div>`;return}
-  state.currentBookId=s.id;const p=getProfile(s.id),isPhysical=p?.format==="paper"||p?.format==="pdf",locator=safeText(p?.currentLocator);
-  box.innerHTML=`<div class="read-hero-inner">${coverHtml(s)}<h2 class="hero-title">${esc(s.title)}</h2><p class="hero-author">${esc(s.creator||"")}</p><span class="hero-service">${esc(serviceText(p))}</span>${isPhysical&&locator?`<div class="hero-locator"><small>지난번 위치</small><strong>${esc(nextLocator(locator,p.format))}</strong></div>`:p?.lastReadAt?`<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${esc(relativeDate(p.lastReadAt))}</strong></div>`:""}<button class="btn primary block start-btn" data-start-book="${esc(s.id)}" type="button">▶ 읽기 시작</button><button class="text-btn switch-book" data-open-book-picker type="button">다른 책 선택 ›</button></div>`;
+  state.currentBookId=s.id;const p=getProfile(s.id),isPhysical=p?.format==="paper"||p?.format==="pdf",locator=safeText(p?.currentLocator),resumeLabel=isPhysical&&locator?`▶ ${nextLocator(locator,p.format)} 읽기 시작`:"▶ 읽기 시작";
+  box.innerHTML=`<div class="read-hero-inner">${coverHtml(s)}<h2 class="hero-title">${esc(s.title)}</h2><p class="hero-author">${esc(s.creator||"")}</p><span class="hero-service">${esc(serviceText(p))}</span>${!isPhysical&&p?.lastReadAt?`<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${esc(relativeDate(p.lastReadAt))}</strong></div>`:""}<button class="btn primary block start-btn" data-start-book="${esc(s.id)}" type="button">${resumeLabel}</button><button class="text-btn switch-book" data-open-book-picker type="button">다른 책 선택 ›</button></div>`;
 }
 function nextLocator(locator,format){if(format!=="paper"&&format!=="pdf")return locator;const m=String(locator).match(/(?:p\.\s*)?(\d+)/i);return m?`p.${Number(m[1])+1}부터`:locator}
 function relativeDate(v){const d=new Date(v),today=new Date();today.setHours(0,0,0,0);const x=new Date(d);x.setHours(0,0,0,0);const days=Math.round((today-x)/86400000);return days===0?"오늘":days===1?"어제":`${days}일 전`}
@@ -369,15 +369,21 @@ async function deleteTimelineSession(sessionId,button){
 }
 
 function renderTimelineBookOptions(){const sel=$("timelineBookFilter"),v=sel.value;sel.innerHTML=`<option value="">전체 책</option>`+state.sources.slice().sort((a,b)=>a.title.localeCompare(b.title,"ko")).map(s=>`<option value="${esc(s.id)}">${esc(s.title)}</option>`).join("");sel.value=v}
-function entryCreatedMs(e){const t=new Date(e?.createdAt||e?.updatedAt||0).getTime();return Number.isFinite(t)?t:0}
-function sortEntriesChronologically(entries){return entries.slice().sort((a,b)=>entryCreatedMs(a)-entryCreatedMs(b)||String(a.id||"").localeCompare(String(b.id||"")))}
+function entryCreatedMs(e){const v=e?.createdAt||e?.updatedAt||0;if(v?.toMillis)return v.toMillis();const t=new Date(v).getTime();return Number.isFinite(t)?t:0}
+function sortEntriesChronologically(entries){return entries.slice().sort((a,b)=>entryCreatedMs(b)-entryCreatedMs(a)||String(b.id||"").localeCompare(String(a.id||"")))}
+function entryInputTime(v){
+  if(!v)return "";
+  if(typeof v==="string"&&!/[T ]\d{1,2}:\d{2}/.test(v))return "";
+  const d=v?.toDate?v.toDate():new Date(v);if(!d||Number.isNaN(d.getTime()))return "";
+  return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`
+}
 function timelineEvents(bookId=""){const linked=new Set(state.readingEntries.map(e=>e.linkedFragmentId).filter(Boolean)),events=[];for(const s of state.readingSessions.filter(x=>x.endedAt&&(!bookId||x.sourceId===bookId)))events.push({type:"session",date:s.startedAt,session:s,entries:sortEntriesChronologically(state.readingEntries.filter(e=>e.sessionId===s.id))});for(const e of state.readingEntries.filter(e=>!e.sessionId&&(!bookId||e.sourceId===bookId)))events.push({type:"entry",date:e.createdAt,entry:e});for(const f of state.fragments.filter(f=>f.sourceId&&sourceById(f.sourceId)&&!linked.has(f.id)&&(!bookId||f.sourceId===bookId)))events.push({type:"legacy",date:f.date||f.createdAt,fragment:f});for(const c of state.readingCycles.filter(c=>c.completedAt&&(!bookId||c.sourceId===bookId)))events.push({type:"complete",date:c.completedAt,cycle:c});return events.sort((a,b)=>new Date(b.date)-new Date(a.date))}
 function entryMatches(e,filter){if(filter==="all")return true;if(filter==="quote")return !!safeText(e.quoteText||e.confirmedText);if(filter==="handwriting")return e.inputMethod==="handwriting";if(filter==="thought")return !!safeText(e.thought);return true}
 function renderEntryHtml(e,{legacy=false,deletable=true}={}){
-  const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought),canDelete=!legacy&&deletable;
+  const quote=safeText(e.quoteText||e.confirmedText||e.externalText),thought=safeText(e.thought),canDelete=!legacy&&deletable,inputTime=entryInputTime(e.createdAt);
   return `<div class="timeline-entry${legacy?" is-legacy":""}" ${!legacy?`data-edit-entry="${esc(e.id)}"`:""}>
     <div class="timeline-entry-bar">
-      <span class="timeline-entry-type">${esc(entryKindLabel(e))}</span>
+      <span class="timeline-entry-type">${esc(entryKindLabel(e))}${inputTime?` · ${esc(inputTime)}`:""}</span>
       ${canDelete?`<button class="timeline-delete-btn timeline-entry-delete" data-delete-entry="${esc(e.id)}" type="button" aria-label="${esc(entryKindLabel(e))} 삭제" title="이 기록 삭제">${timelineTrashIcon()}</button>`:""}
     </div>
     ${e.locator?`<div class="entry-locator">${esc(e.locator)}</div>`:""}
@@ -410,7 +416,7 @@ function renderEvent(ev,filter="all"){
     return `<div class="timeline-card"><article class="timeline-session is-standalone-entry"><div class="timeline-session-head"><div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>시간 기록 없이 남긴 독서 기록</p></div></div><div class="timeline-entry-folder is-standalone"><div class="timeline-entry-list">${renderEntryHtml(ev.entry)}</div></div></article></div>`
   }
   if(ev.type==="legacy"){
-    const f=ev.fragment,e={sourceId:f.sourceId,locator:f.locator,externalText:f.externalText,thought:f.thought};
+    const f=ev.fragment,e={sourceId:f.sourceId,locator:f.locator,externalText:f.externalText,thought:f.thought,createdAt:f.createdAt||f.date};
     if(filter==="handwriting")return "";if(filter==="quote"&&!safeText(f.externalText))return "";if(filter==="thought"&&!safeText(f.thought))return "";
     const source=sourceById(f.sourceId);
     return `<div class="timeline-card"><article class="timeline-session is-standalone-entry is-legacy"><div class="timeline-session-head"><div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>생각의 텃밭에서 가져온 예전 기록</p></div></div><div class="timeline-entry-folder is-standalone"><div class="timeline-entry-list">${renderEntryHtml(e,{legacy:true,deletable:false})}</div></div></article></div>`

@@ -118,14 +118,13 @@ function rgPagerHtml(index,total){
   </div>`;
 }
 
+function rgNextLocator(locator,format){if(format!=="paper"&&format!=="pdf")return locator;const m=String(locator).match(/(?:p\.\s*)?(\d+)/i);return m?`p.${Number(m[1])+1}부터`:locator}
+function rgStartLabel(book){const p=rgProfileFor(rgSwipeSnapshot,book.id)||{},locator=rgSafe(p.currentLocator),physical=p.format==='paper'||p.format==='pdf';return physical&&locator?`▶ ${rgNextLocator(locator,p.format)} 읽기 시작`:'▶ 읽기 시작'}
 function rgBookContentHtml(book,direction=0){
   const p=rgProfileFor(rgSwipeSnapshot,book.id)||{};
   const genre=rgGenre(book),title=rgTitleParts(book);
   const isPhysical=p.format==='paper'||p.format==='pdf';
-  const locator=rgSafe(p.currentLocator);
-  const extra=isPhysical&&locator
-    ? `<div class="hero-locator"><small>지난번 위치</small><strong>${rgEsc(locator)}</strong></div>`
-    : p.lastReadAt
+  const extra=!isPhysical&&p.lastReadAt
       ? `<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${rgEsc(rgRelativeDate(p.lastReadAt))}</strong></div>`
       : '';
   const genreHtml=genre?`<span class="hero-service rg-home-genre rg-genre-badge">${rgEsc(genre)}</span>`:'';
@@ -144,7 +143,7 @@ function rgRenderBook(book,index,total,direction=0){
   const hero=document.getElementById('readHero');if(!hero||!book)return;
   hero.innerHTML=`<div class="read-hero-inner" data-rg-swipe-ready>
     <div class="rg-swipe-stage">${rgBookContentHtml(book,direction)}</div>
-    <button class="btn primary block start-btn" data-start-book="${rgEsc(book.id)}" type="button">▶ 읽기 시작</button>
+    <button class="btn primary block start-btn" data-start-book="${rgEsc(book.id)}" type="button">${rgEsc(rgStartLabel(book))}</button>
     ${rgPagerHtml(index,total)}
     <button class="text-btn switch-book" data-open-book-picker type="button">다른 책 선택 ›</button>
   </div>`;
@@ -154,7 +153,7 @@ function rgRenderBook(book,index,total,direction=0){
 
 function rgUpdateFixedControls(book,index,total){
   const hero=document.getElementById('readHero');if(!hero)return;
-  const start=hero.querySelector('[data-start-book]');if(start&&start.dataset.startBook!==book.id)start.dataset.startBook=book.id;
+  const start=hero.querySelector('[data-start-book]');if(start){if(start.dataset.startBook!==book.id)start.dataset.startBook=book.id;const label=rgStartLabel(book);if(start.textContent!==label)start.textContent=label}
   const nav=hero.querySelector('.rg-swipe-nav');
   if(total<2){nav?.remove();return}
   if(nav&&Number(nav.dataset.rgIndex)===index&&Number(nav.dataset.rgTotal)===total)return;
