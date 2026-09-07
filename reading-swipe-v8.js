@@ -119,7 +119,7 @@ function rgPagerHtml(index,total){
 }
 
 function rgNextLocator(locator,format){if(format!=="paper"&&format!=="pdf")return locator;const m=String(locator).match(/(?:p\.\s*)?(\d+)/i);return m?`p.${Number(m[1])+1}부터`:locator}
-function rgStartLabel(book){const p=rgProfileFor(rgSwipeSnapshot,book.id)||{},locator=rgSafe(p.currentLocator),physical=p.format==='paper'||p.format==='pdf';return physical&&locator?`▶ ${rgNextLocator(locator,p.format)} 읽기 시작`:'▶ 읽기 시작'}
+function rgStartLabel(book){const p=rgProfileFor(rgSwipeSnapshot,book.id)||{},locator=rgSafe(p.currentLocator),physical=p.format==='paper'||p.format==='pdf';return physical&&locator?`▶ 읽기 시작 (${rgNextLocator(locator,p.format)})`:'▶ 읽기 시작'}
 function rgBookContentHtml(book,direction=0){
   const p=rgProfileFor(rgSwipeSnapshot,book.id)||{};
   const genre=rgGenre(book),title=rgTitleParts(book);
