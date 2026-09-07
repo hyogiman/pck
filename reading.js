@@ -166,7 +166,20 @@ function ensureProfile(sourceId){let p=profileById(sourceId);if(p)return p;const
 function readingBooks(){return state.sources.filter(s=>getProfile(s.id)?.status==="reading")}
 function chooseCurrentBookId(){const books=readingBooks();books.sort((a,b)=>new Date(getProfile(b.id)?.lastReadAt||b.updatedAt||0)-new Date(getProfile(a.id)?.lastReadAt||a.updatedAt||0));return books[0]?.id||state.sources[0]?.id||null}
 function setCurrentBook(id){state.currentBookId=id;localStorage.setItem(CURRENT_BOOK_KEY,id);renderRead()}
-function serviceText(p){return SERVICE_LABELS[p?.service]||FORMAT_LABELS[p?.format]||"독서"}
+function serviceText(p){
+  const format=p?.format||"",service=p?.service||"";
+  if(format==="paper"||service==="paper")return "종이책";
+  if(format==="pdf")return "PDF";
+  if(format==="audiobook")return "오디오북";
+  if(format==="ebook"){
+    if(service==="millie")return "밀리의 서재";
+    if(service==="yes24")return "YES24";
+    return "전자책";
+  }
+  if(service==="millie")return "밀리의 서재";
+  if(service==="yes24")return "YES24";
+  return FORMAT_LABELS[format]||"독서";
+}
 function coverHtml(s,cls="hero-cover"){return s?.image?`<img class="${cls}" src="${esc(s.image)}" alt="${esc(s.title)} 표지" />`:`<div class="${cls} placeholder">📕</div>`}
 if("scrollRestoration" in history)history.scrollRestoration="manual";
 function resetMainScroll(){window.scrollTo(0,0)}
@@ -403,7 +416,7 @@ function renderEvent(ev,filter="all"){
     return `<div class="timeline-card"><article class="timeline-session is-reading-session">
       <div class="timeline-session-head">
         ${source?.image?`<img class="timeline-thumb" src="${esc(source.image)}" alt="">`:`<div class="timeline-thumb"></div>`}
-        <div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>${timeText(ev.session.startedAt)}${ev.session.endedAt?` – ${timeText(ev.session.endedAt)}`:""} · ${fmtMinutes(ev.session.finalDurationMinutes)} · ${esc(SERVICE_LABELS[ev.session.service]||"")}</p></div>
+        <div class="timeline-session-main"><h3>${esc(source?.title||"책")}</h3><p>${timeText(ev.session.startedAt)}${ev.session.endedAt?` – ${timeText(ev.session.endedAt)}`:""} · ${fmtMinutes(ev.session.finalDurationMinutes)} · ${esc(serviceText(ev.session))}</p></div>
         <button class="timeline-delete-btn timeline-session-delete" data-delete-session="${esc(ev.session.id)}" type="button" aria-label="독서시간 기록 삭제" title="독서시간 기록 삭제">${timelineTrashIcon()}</button>
       </div>
       ${ev.session.sessionNote&&filter==="all"?`<div class="session-note">“${esc(ev.session.sessionNote)}”</div>`:""}
