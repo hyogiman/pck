@@ -1,0 +1,65 @@
+name: reading v38 record time home
+
+on:
+  push:
+    paths:
+      - '.github/scripts/reading_v38_record_time_home_compact.py'
+      - '.github/workflows/reading-v38-record-time-home.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Reading v38 patch
+        run: python .github/scripts/reading_v38_record_time_home_compact.py
+      - name: Verify JavaScript syntax
+        run: |
+          node --check reading.js
+          node --check reading-swipe-v8.js
+      - name: Verify requested behavior and boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          s=Path('reading.js').read_text(encoding='utf-8')
+          w=Path('reading-swipe-v8.js').read_text(encoding='utf-8')
+          h=Path('reading.html').read_text(encoding='utf-8')
+          assert 'entryCreatedMs(b)-entryCreatedMs(a)' in s
+          assert 'function entryInputTime(v)' in s
+          assert 'inputTime=entryInputTime(e.createdAt)' in s
+          assert '· ${esc(inputTime)}' in s
+          assert 'createdAt:f.createdAt||f.date' in s
+          assert 'resumeLabel=isPhysical&&locator' in s
+          assert '지난번 위치' not in s[s.index('function renderRead(){'):s.index('function nextLocator',s.index('function renderRead(){'))]
+          assert 'function rgStartLabel(book)' in w
+          assert 'rgNextLocator(locator,p.format)' in w
+          assert '지난번 위치' not in w
+          assert 'start.textContent!==label' in w
+          assert './reading.js?v=20260908-reading-v38' in h
+          assert './reading-swipe-v8.js?v=20260908-reading-v38' in h
+          save=s[s.index('async function saveEntry(){'):s.index('async function deleteCurrentEntry()',s.index('async function saveEntry(){'))]
+          assert 'const thoughtChanged=!previousFragmentId||thought!==previousThought;' in save
+          assert 'if(thoughtChanged){' in save
+          print('PASS: session cards are newest-first')
+          print('PASS: original createdAt time renders as HH:mm:ss')
+          print('PASS: past records with createdAt are supported without migration')
+          print('PASS: physical resume position moved into start button in core + swipe UI')
+          print('PASS: Thought Garden thought-only sync boundary preserved')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading.js reading-swipe-v8.js reading.html
+          git commit -m 'fix: refine Reading record chronology and compact home'
+          git push origin main
