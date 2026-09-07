@@ -128,6 +128,7 @@ function rgBookContentHtml(book,direction=0){
       ? `<div class="hero-locator"><small>최근 독서</small><strong class="rg-relative-date">${rgEsc(rgRelativeDate(p.lastReadAt))}</strong></div>`
       : '';
   const genreHtml=genre?`<span class="hero-service rg-home-genre rg-genre-badge">${rgEsc(genre)}</span>`:'';
+  const metaHtml=`<div class="hero-meta-actions">${genreHtml}<button class="hero-info-btn" data-open-book-info="${rgEsc(book.id)}" type="button">ⓘ 책 정보</button></div>`;
   return `<div class="rg-swipe-book-content ${direction>0?'rg-enter-right':direction<0?'rg-enter-left':''}" data-rg-book-content data-rg-full-title="${rgEsc(title.full)}">
     ${rgCover(book)}
     <div class="rg-home-title-wrap" title="${rgEsc(title.full)}">
@@ -135,7 +136,7 @@ function rgBookContentHtml(book,direction=0){
       ${title.subtitle?`<p class="rg-home-subtitle">${rgEsc(title.subtitle)}</p>`:''}
     </div>
     <p class="hero-author">${rgEsc(book.creator||'')}</p>
-    ${genreHtml}${extra}
+    ${metaHtml}${extra}
   </div>`;
 }
 

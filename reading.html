@@ -8,7 +8,7 @@
   <link rel="manifest" href="./reading-manifest.json?v=20260907-reading-v33" />
   <link rel="icon" type="image/svg+xml" href="./icons/reading-garden.svg?v=20260907-reading-v33" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
-  <link rel="stylesheet" href="./reading.css?v=20260908-reading-v40" />
+  <link rel="stylesheet" href="./reading.css?v=20260908-reading-v41" />
 </head>
 <body>
   <div id="authGate" class="auth-gate hidden">
@@ -183,21 +183,20 @@
   </div></dialog>
 
   <dialog id="settingsDialog" class="modal-dialog"><div class="modal"><div class="modal-head"><div><span class="eyebrow">SETTINGS</span><h2>설정</h2></div><button class="close-btn" data-close-dialog="settingsDialog" type="button">✕</button></div>
-    <div class="setting-card"><b>계정 · 동기화</b><div id="accountInfo" class="helper">확인 중…</div><div id="syncInfo" class="sync-line">☁️ 연결 확인 중</div></div>
-    <div class="setting-card"><b>데이터</b><div class="setting-actions"><button id="jsonBackupBtn" class="btn" type="button">💾 JSON 백업</button><label class="btn file-btn">♻ JSON 복원<input id="jsonRestoreInput" type="file" accept="application/json" /></label></div></div>
-    <div class="setting-card"><b>Thought Garden</b><p class="helper">책과 생각은 같은 Firebase 계정을 사용합니다.</p><a class="btn soft block link-btn" href="index.html">생각의 텃밭 열기</a></div>
-    <button id="signOutBtn" class="text-btn danger-text" type="button">로그아웃</button>
+    <div class="setting-card"><b>계정 · 동기화</b><div id="accountInfo" class="helper">확인 중…</div><div id="syncInfo" class="sync-line">☁️ 연결 확인 중</div><button id="signOutBtn" class="text-btn danger-text" type="button">로그아웃</button></div>
+    <div class="setting-card"><b>책 정보 갱신</b><p id="bookInfoRefreshStatus" class="helper">등록된 책의 소개·요약·목차를 YES24 기준으로 다시 확인합니다.</p><button id="refreshBookInfoBtn" class="btn soft block" type="button">서재 책 정보 갱신</button></div>
+    <div class="setting-card"><b>데이터 백업</b><div class="setting-actions"><button id="jsonBackupBtn" class="btn" type="button">💾 JSON 백업</button><label class="btn file-btn">♻ JSON 복원<input id="jsonRestoreInput" type="file" accept="application/json" /></label></div></div>
   </div></dialog>
 
   <div id="toast" class="toast" aria-live="polite"></div>
   <div id="printRoot" class="print-root"></div>
 
-  <script type="module" src="./reading.js?v=20260908-reading-v40"></script>
+  <script type="module" src="./reading.js?v=20260908-reading-v41"></script>
   <script type="module" src="./reading-enhance-v3.js?v=20260907-reading-v33"></script>
   <script type="module" src="./reading-genre-v5.js?v=20260907-reading-v33"></script>
   <script src="./reading-polish-v6.js?v=20260907-reading-v33"></script>
-  <script src="./reading-pwa-v7.js?v=20260907-reading-v33"></script>
-  <script src="./reading-swipe-v8.js?v=20260908-reading-v40"></script>
+  <script src="./reading-pwa-v7.js?v=20260908-reading-v41"></script>
+  <script src="./reading-swipe-v8.js?v=20260908-reading-v41"></script>
   <script type="module" src="./reading-detail-v12.js?v=20260907-reading-v33"></script>
 </body>
 </html>
