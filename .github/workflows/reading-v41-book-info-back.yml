@@ -1,0 +1,77 @@
+name: reading v41 book info back
+
+on:
+  push:
+    paths:
+      - '.github/scripts/reading_v41_book_info_back.py'
+      - '.github/workflows/reading-v41-book-info-back.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply Reading v41 patch
+        run: python .github/scripts/reading_v41_book_info_back.py
+      - name: Verify JavaScript syntax
+        run: |
+          node --check reading.js
+          node --check reading-swipe-v8.js
+          node --check reading-pwa-v7.js
+      - name: Verify requested behavior and boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          js=Path('reading.js').read_text(encoding='utf-8')
+          html=Path('reading.html').read_text(encoding='utf-8')
+          css=Path('reading.css').read_text(encoding='utf-8')
+          swipe=Path('reading-swipe-v8.js').read_text(encoding='utf-8')
+          pwa=Path('reading-pwa-v7.js').read_text(encoding='utf-8')
+
+          assert 'data-open-book-info' in js and 'data-open-book-info' in swipe
+          assert 'data-detail-tab="info"' in js
+          assert 'function renderBookInfoHtml' in js
+          assert 'bookIntroduction' in js and 'bookSummary' in js and 'tableOfContents' in js
+          assert 'function refreshAllBookInfo' in js and 'refreshBookInfoBtn' in js
+          assert '책 정보 갱신' in html and '데이터 백업' in html and '계정 · 동기화' in html
+          assert html.index('계정 · 동기화') < html.index('책 정보 갱신') < html.index('데이터 백업')
+          settings=html[html.index('id="settingsDialog"'):html.index('</dialog>',html.index('id="settingsDialog"'))]
+          assert 'Thought Garden' not in settings
+          assert '생각의 텃밭 열기' not in settings
+          assert 'rg-install-card' not in pwa and 'beforeinstallprompt' not in pwa
+          assert 'rgReadingGuard' in pwa and '한 번 더 뒤로가면 앱을 닫습니다.' in pwa
+          assert '.hero-meta-actions' in css and '.book-info-panel' in css and '.detail-tabs{grid-template-columns:repeat(3,1fr)}' in css
+          assert './reading.js?v=20260908-reading-v41' in html
+          assert './reading.css?v=20260908-reading-v41' in html
+          assert './reading-pwa-v7.js?v=20260908-reading-v41' in html
+          assert './reading-swipe-v8.js?v=20260908-reading-v41' in html
+          # CSS single-source guard
+          assert 'createElement("style")' not in js and "createElement('style')" not in js
+          assert 'createElement("style")' not in swipe and "createElement('style')" not in swipe
+          # Thought Garden boundary must remain intact
+          save=js[js.index('async function saveEntry(){'):js.index('async function deleteCurrentEntry()',js.index('async function saveEntry(){'))]
+          assert 'const thoughtChanged=!previousFragmentId||thought!==previousThought;' in save
+          assert 'if(thoughtChanged){' in save
+          print('PASS: home book-info button + info tab')
+          print('PASS: legacy/all-book YES24 refresh path')
+          print('PASS: settings reduced to requested three sections')
+          print('PASS: double-back exit guard installed')
+          print('PASS: CSS and Thought Garden boundaries preserved')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add reading.js reading.css reading.html reading-swipe-v8.js reading-pwa-v7.js
+          git commit -m 'feat: add Reading book info and back guard'
+          git push origin main
