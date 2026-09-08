@@ -6,11 +6,15 @@ on:
     paths:
       - 'reading*'
       - 'sw.js'
+      - 'functions/index.js'
+      - 'functions/ai-v2-production-entry.js'
       - '.github/workflows/reading-style-guard.yml'
   pull_request:
     paths:
       - 'reading*'
       - 'sw.js'
+      - 'functions/index.js'
+      - 'functions/ai-v2-production-entry.js'
       - '.github/workflows/reading-style-guard.yml'
 
 jobs:
@@ -62,6 +66,47 @@ jobs:
           print('PASS: no inline/dynamic JS/HTML style declarations')
           print('PASS: no stale Reading CSS files/references')
           print('PASS: canonical progress/chart CSS uses compatible values')
+          PY
+      - name: Verify Reading to Thought Garden AI contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          js=Path('reading.js').read_text(encoding='utf-8')
+          backend=Path('functions/index.js').read_text(encoding='utf-8')
+          production=Path('functions/ai-v2-production-entry.js').read_text(encoding='utf-8')
+
+          # Reading must initialize the same production callable as Thought Garden.
+          assert 'firebase-functions.js' in js
+          assert 'thoughtIndexCallable=httpsCallable(state.functions,"thoughtIndexFragment")' in js
+          assert 'aiIndexOutbox' in js
+          assert 'async function flushThoughtIndexQueue()' in js
+          assert 'async function queueMissingReadingThoughtIndexes()' in js
+
+          # Sacred boundary: the AI job is enqueued only when the user's own thought changed.
+          start=js.index('const thoughtChanged=!previousFragmentId||thought!==previousThought;')
+          end=js.index('}else if(previousFragmentId){', start)
+          thought_block=js[start:end]
+          assert 'await cloudSet("fragments",fragmentId,fragment,{silent:true});' in thought_block
+          assert 'await queueThoughtIndex(fragmentId);' in thought_block
+          assert js.count('await queueThoughtIndex(fragmentId);') == 1
+
+          # Reading-only changes must never trigger a new AI analysis.
+          image_start=js.index('async function saveHandwritingImageOnly()')
+          image_end=js.index('async function convertHandwriting()', image_start)
+          assert 'queueThoughtIndex' not in js[image_start:image_end]
+          assert 'origin:"reading-garden",readingEntryId:entry.id' in thought_block
+
+          # The deployed production entry must retain the legacy callable, and the
+          # callable must meter both structured thought indexing and embeddings.
+          assert '...legacy' in production
+          assert 'exports.thoughtIndexFragment = onCall' in backend
+          assert 'thoughtIndexGenerations: FieldValue.increment(count)' in backend
+          assert 'fragmentEmbeddingCount: FieldValue.increment(1)' in backend
+
+          print('PASS: Reading thought -> shared Fragment -> Thought Garden AI contract is intact')
+          print('PASS: quote/locator/OCR/handwriting-only edits cannot retrigger Thought Garden AI')
+          print('PASS: backend AI usage metering remains connected')
           PY
       - name: Verify Reading JavaScript syntax
         run: |
