@@ -2,6 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { getFirestore, collection, getDocs, query, where, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
 
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyAZwvHGXmi_m_a8KqZbxELHAlV0ah1SWO8",
@@ -16,7 +17,7 @@ const READING_OCR_PROXY="https://us-central1-idea-pocket-56063.cloudfunctions.ne
 const ACTIVE_SESSION_KEY="readingGarden_activeSession_v1";
 const CURRENT_BOOK_KEY="readingGarden_currentBook_v1";
 const SNAPSHOT_DB="readingGarden_v1";
-const DB_VERSION=1;
+const DB_VERSION=2;
 const COLLECTIONS=["readingProfiles","readingCycles","readingSessions","readingEntries","readingPaths"];
 const $=id=>document.getElementById(id);
 const $$=sel=>[...document.querySelectorAll(sel)];
@@ -38,13 +39,13 @@ const FORMAT_LABELS={ebook:"전자책",paper:"종이책",pdf:"PDF",audiobook:"�
 const SERVICE_LABELS={millie:"밀리의 서재",yes24:"YES24",paper:"종이책",other:"기타"};
 
 const state={
-  user:null,db:null,storage:null,cloudReady:false,loading:true,
+  user:null,db:null,storage:null,functions:null,thoughtIndexCallable:null,cloudReady:false,loading:true,
   sources:[],fragments:[],readingProfiles:[],readingCycles:[],readingSessions:[],readingEntries:[],readingPaths:[],
   currentView:"read",libraryMode:"books",libraryStatus:"reading",timelineFilter:"all",statsRange:"month",
   currentBookId:null,detailBookId:null,detailTab:"timeline",activeSession:null,timerHandle:null,selectedFeel:"",
   editingEntryId:null,recordReturnToSession:true,
   handwriting:{strokes:[],current:null,width:2.5,eraser:false,draft:null,dpr:1},
-  idb:null,syncing:false,bookApiResults:[],bookSearch:{query:"",page:0,total:0,hasMore:false,loading:false},entrySaving:false,bookInfoLoading:new Set()
+  idb:null,syncing:false,aiIndexSyncing:false,bookApiResults:[],bookSearch:{query:"",page:0,total:0,hasMore:false,loading:false},entrySaving:false,bookInfoLoading:new Set()
 };
 
 function toast(msg,ms=2400){const e=$("toast");e.textContent=msg;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("show"),ms)}
@@ -61,6 +62,7 @@ async function openIdb(){
       if(!db.objectStoreNames.contains("outbox"))db.createObjectStore("outbox",{keyPath:"id"});
       if(!db.objectStoreNames.contains("files"))db.createObjectStore("files",{keyPath:"id"});
       if(!db.objectStoreNames.contains("meta"))db.createObjectStore("meta",{keyPath:"key"});
+      if(!db.objectStoreNames.contains("aiIndexOutbox"))db.createObjectStore("aiIndexOutbox",{keyPath:"id"});
     };
     req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);
   });
@@ -70,6 +72,62 @@ function idbPut(store,val){return new Promise((resolve,reject)=>{const r=idbTx(s
 function idbDelete(store,key){return new Promise((resolve,reject)=>{const r=idbTx(store,"readwrite").delete(key);r.onsuccess=()=>resolve();r.onerror=()=>reject(r.error)})}
 function idbGetAll(store){return new Promise((resolve,reject)=>{const r=idbTx(store).getAll();r.onsuccess=()=>resolve(r.result||[]);r.onerror=()=>reject(r.error)})}
 function idbGet(store,key){return new Promise((resolve,reject)=>{const r=idbTx(store).get(key);r.onsuccess=()=>resolve(r.result||null);r.onerror=()=>reject(r.error)})}
+
+async function queueThoughtIndex(fragmentId){
+  if(!fragmentId)return;
+  if(!state.idb){
+    if(state.cloudReady&&navigator.onLine&&state.thoughtIndexCallable){
+      void state.thoughtIndexCallable({fragmentId}).catch(err=>console.warn("Reading thought index request failed",fragmentId,err?.code||err?.message||err));
+    }
+    return;
+  }
+  await idbPut("aiIndexOutbox",{id:fragmentId,fragmentId,queuedAt:nowIso()});
+  updateSyncInfo();
+  /* flushSync writes any queued Fragment first; its finally block then starts AI indexing. */
+  void flushSync();
+}
+async function cancelThoughtIndex(fragmentId){
+  if(!state.idb||!fragmentId)return;
+  try{await idbDelete("aiIndexOutbox",fragmentId)}catch{}
+}
+async function flushThoughtIndexQueue(){
+  if(state.aiIndexSyncing||!state.cloudReady||!navigator.onLine||!state.idb||!state.thoughtIndexCallable)return;
+  state.aiIndexSyncing=true;
+  try{
+    const tasks=await idbGetAll("aiIndexOutbox");
+    for(const task of tasks){
+      try{
+        await state.thoughtIndexCallable({fragmentId:task.fragmentId});
+        await idbDelete("aiIndexOutbox",task.id);
+      }catch(err){
+        /* Keep the task durable. The callable is hash-idempotent, so retrying is safe. */
+        console.warn("Reading thought index queued for retry",task.fragmentId,err?.code||err?.message||err);
+        break;
+      }
+    }
+  }finally{
+    state.aiIndexSyncing=false;
+    updateSyncInfo();
+  }
+}
+function fragmentHasCompleteAiIndex(fragment){
+  return !!(fragment&&fragment.embeddingTextHash&&fragment.embeddingVersion&&fragment.aiIndex);
+}
+async function queueMissingReadingThoughtIndexes(){
+  if(!state.idb)return 0;
+  const linkedIds=[...new Set(state.readingEntries
+    .filter(entry=>entry.linkedFragmentId&&safeText(entry.thought))
+    .map(entry=>entry.linkedFragmentId))];
+  let queued=0;
+  for(const fragmentId of linkedIds){
+    const fragment=state.fragments.find(item=>item.id===fragmentId);
+    if(!fragment||!safeText(fragment.thought)||fragmentHasCompleteAiIndex(fragment))continue;
+    await idbPut("aiIndexOutbox",{id:fragmentId,fragmentId,queuedAt:nowIso(),reason:"reading-history-backfill-v1"});
+    queued++;
+  }
+  if(queued)updateSyncInfo();
+  return queued;
+}
 
 async function cacheSnapshot(){
   if(!state.idb)return;
@@ -94,6 +152,7 @@ async function cloudSet(collectionName,docId,data,{silent=false}={}){
   catch(err){console.warn("cloudSet queued",collectionName,err);await queueOp(collectionName,docId,clean,"set");if(!silent)toast("기기에 안전하게 저장했습니다. 동기화를 다시 시도합니다.");return false}
 }
 async function cloudDelete(collectionName,docId){
+  if(collectionName==="fragments")await cancelThoughtIndex(docId);
   if(!state.cloudReady||!navigator.onLine){await queueOp(collectionName,docId,null,"delete");return false}
   try{await deleteDoc(doc(state.db,"users",state.user.uid,collectionName,docId));return true}catch(err){await queueOp(collectionName,docId,null,"delete");return false}
 }
@@ -118,9 +177,9 @@ async function flushSync(){
     for(const f of files){try{const url=await uploadAsset(f);(byEntry[f.entryId]??={})[f.kind==="image"?"handwritingImageUrl":"strokeFileUrl"]=url;await idbDelete("files",f.id);doneFiles++}catch(err){console.warn("sync file failed",f,err);break}}
     for(const [entryId,patch] of Object.entries(byEntry)){const e=state.readingEntries.find(x=>x.id===entryId);if(e)Object.assign(e,patch,{handwritingPending:false,updatedAt:nowIso()});await setDoc(doc(state.db,"users",state.user.uid,"readingEntries",entryId),{...patch,handwritingPending:false,updatedAt:nowIso()},{merge:true})}
     if(doneDocs||doneFiles)toast(`☁️ ${doneDocs?`기록 ${doneDocs}건`:""}${doneDocs&&doneFiles?" · ":""}${doneFiles?`필사 이미지 ${doneFiles}개`:""} 동기화되었습니다.`);
-  }finally{state.syncing=false;updateSyncInfo();cacheSnapshot()}
+  }finally{state.syncing=false;updateSyncInfo();cacheSnapshot();void flushThoughtIndexQueue()}
 }
-async function updateSyncInfo(){if(!state.idb)return;const [ops,files]=await Promise.all([idbGetAll("outbox"),idbGetAll("files")]);const n=ops.length+files.length;if($("syncInfo"))$("syncInfo").textContent=n?`☁️ 동기화 대기 ${n}건 · 기기에 안전하게 보관 중`:state.cloudReady&&navigator.onLine?"☁️ 동기화 완료":"☁️ 오프라인 저장 중"}
+async function updateSyncInfo(){if(!state.idb)return;const [ops,files,aiTasks]=await Promise.all([idbGetAll("outbox"),idbGetAll("files"),idbGetAll("aiIndexOutbox")]);const n=ops.length+files.length+aiTasks.length;if($("syncInfo"))$("syncInfo").textContent=n?`☁️ 동기화 대기 ${n}건 · 기기에 안전하게 보관 중`:state.cloudReady&&navigator.onLine?"☁️ 동기화 완료":"☁️ 오프라인 저장 중"}
 
 function restoreLocalReadingState(){
   const activeRaw=localStorage.getItem(ACTIVE_SESSION_KEY);
@@ -132,11 +191,11 @@ function restoreLocalReadingState(){
 }
 
 async function initFirebase(){
-  const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app);state.db=getFirestore(app);state.storage=getStorage(app);
+  const app=initializeApp(FIREBASE_CONFIG),auth=getAuth(app);state.db=getFirestore(app);state.storage=getStorage(app);state.functions=getFunctions(app,"us-central1");state.thoughtIndexCallable=httpsCallable(state.functions,"thoughtIndexFragment");
   try{await setPersistence(auth,browserLocalPersistence)}catch{}
   $("googleLoginBtn").addEventListener("click",async()=>{try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(err){$("authGateStatus").textContent=`로그인 실패: ${err.message}`}});
   $("signOutBtn").addEventListener("click",async()=>signOut(auth));
-  onAuthStateChanged(auth,async user=>{state.user=user;if(!user){state.cloudReady=false;$("authGate").classList.remove("hidden");$("authGateStatus").textContent="생각의 텃밭에서 쓰는 Google 계정으로 연결해주세요.";return}$("authGate").classList.add("hidden");state.cloudReady=true;$("accountInfo").textContent=user.displayName||user.email||"Google 계정 연결됨";await loadCloudData();await flushSync();renderAll()});
+  onAuthStateChanged(auth,async user=>{state.user=user;if(!user){state.cloudReady=false;$("authGate").classList.remove("hidden");$("authGateStatus").textContent="생각의 텃밭에서 쓰는 Google 계정으로 연결해주세요.";return}$("authGate").classList.add("hidden");state.cloudReady=true;$("accountInfo").textContent=user.displayName||user.email||"Google 계정 연결됨";await loadCloudData();await queueMissingReadingThoughtIndexes();await flushSync();void flushThoughtIndexQueue();renderAll()});
 }
 async function loadCollection(name){try{const snap=await getDocs(collection(state.db,"users",state.user.uid,name));return snap.docs.map(d=>({id:d.id,...d.data()}))}catch(err){console.warn("load collection failed",name,err);return null}}
 async function loadBookSources(){
@@ -279,9 +338,10 @@ async function saveEntry(){
       entry.linkedFragmentId=fragmentId;
       const thoughtChanged=!previousFragmentId||thought!==previousThought;
       if(thoughtChanged){
-        const old=state.fragments.find(f=>f.id===fragmentId),fragment={id:fragmentId,type:"source",sourceId,externalText:quote,locator,thought,threadIds:old?.threadIds||[],date:localDate(entry.createdAt),createdAt:old?.createdAt||entry.createdAt,updatedAt:nowIso()},fi=state.fragments.findIndex(f=>f.id===fragmentId);
+        const old=state.fragments.find(f=>f.id===fragmentId),fragment={id:fragmentId,type:"source",sourceId,externalText:quote,locator,thought,threadIds:old?.threadIds||[],origin:"reading-garden",readingEntryId:entry.id,date:localDate(entry.createdAt),createdAt:old?.createdAt||entry.createdAt,updatedAt:nowIso()},fi=state.fragments.findIndex(f=>f.id===fragmentId);
         if(fi>=0)state.fragments[fi]=fragment;else state.fragments.push(fragment);
         await cloudSet("fragments",fragmentId,fragment,{silent:true});
+        await queueThoughtIndex(fragmentId);
       }
     }else if(previousFragmentId){
       await cloudDelete("fragments",previousFragmentId);
@@ -522,7 +582,7 @@ function bindEvents(){
     const bookInfo=e.target.closest("[data-open-book-info]");if(bookInfo){e.preventDefault();e.stopPropagation();return openBookInfo(bookInfo.dataset.openBookInfo)}const nav=e.target.closest("[data-view-target]");if(nav)return setView(nav.dataset.viewTarget);const close=e.target.closest("[data-close-dialog]");if(close)return closeDialog(close.dataset.closeDialog);const layer=e.target.closest("[data-close-layer]");if(layer)return closeLayer(layer.dataset.closeLayer);const start=e.target.closest("[data-start-book]");if(start){if(!$("bookDetail").classList.contains("hidden"))closeLayer("bookDetail");return startSession(start.dataset.startBook)}if(e.target.closest("[data-resume-session]"))return openSession();if(e.target.closest("[data-abandon-session]"))return openEndSession();if(e.target.closest("[data-open-book-picker]")){renderBookPicker();return openDialog("bookPickerDialog")}if(e.target.closest("[data-open-book-search]"))return openBookSearch();const pick=e.target.closest("[data-pick-book]");if(pick){setCurrentBook(pick.dataset.pickBook);closeDialog("bookPickerDialog");return}const ob=e.target.closest("[data-open-book]");if(ob)return openBookDetail(ob.dataset.openBook);const os=e.target.closest("[data-open-existing-book]");if(os){closeDialog("bookSearchDialog");return openBookDetail(os.dataset.openExistingBook)}const more=e.target.closest("[data-book-search-more]");if(more)return runBookSearch({append:true});const api=e.target.closest("[data-add-api-book]");if(api)return addApiBook(Number(api.dataset.addApiBook));const st=e.target.closest("[data-library-status]");if(st){state.libraryStatus=st.dataset.libraryStatus;return renderLibrary()}const lm=e.target.closest("[data-library-mode]");if(lm){state.libraryMode=lm.dataset.libraryMode;$$('[data-library-mode]').forEach(b=>b.classList.toggle('on',b===lm));return renderLibrary()}const ef=e.target.closest("[data-entry-filter]");if(ef){state.timelineFilter=ef.dataset.entryFilter;$$('[data-entry-filter]').forEach(b=>b.classList.toggle('on',b===ef));return renderTimeline()}const rg=e.target.closest("[data-range]");if(rg){state.statsRange=rg.dataset.range;$$('[data-range]').forEach(b=>b.classList.toggle('on',b===rg));return renderStats()}const dt=e.target.closest("[data-detail-tab]");if(dt){state.detailTab=dt.dataset.detailTab;renderBookDetail();if(state.detailTab==="info")void ensureBookInfo(state.detailBookId).then(changed=>{if(changed&&state.detailTab==="info")renderBookDetail()});return}const ep=e.target.closest("[data-edit-profile]");if(ep)return openProfile(ep.dataset.editProfile);const cb=e.target.closest("[data-complete-book]");if(cb)return openComplete(cb.dataset.completeBook);const pb=e.target.closest("[data-print-book]");if(pb)return openExport(pb.dataset.printBook);const ee=e.target.closest("[data-edit-entry]");if(ee){const entry=state.readingEntries.find(x=>x.id===ee.dataset.editEntry);if(entry)return openRecord({entry,fromSession:false})}
   });
   $("addBookBtn").onclick=openBookSearch;$("runBookSearchBtn").onclick=runBookSearch;$("bookSearchInput").addEventListener("keydown",e=>{if(e.key==="Enter")runBookSearch()});$("librarySearch").addEventListener("input",renderLibrary);$("timelineBookFilter").addEventListener("change",renderTimeline);$("openSettings").onclick=()=>openDialog("settingsDialog");$("refreshBookInfoBtn").onclick=refreshAllBookInfo;$("newPathBtn").onclick=openPathDialog;$("savePathBtn").onclick=savePath;$("bookMoreBtn").onclick=()=>$("bookMoreMenu")?.classList.toggle("hidden");$("sessionBackBtn").onclick=()=>{closeLayer("sessionLayer");renderRead()};$("openRecordBtn").onclick=()=>openRecord({fromSession:true});$("pauseSessionBtn").onclick=togglePause;$("endSessionBtn").onclick=openEndSession;$("finishSessionBtn").onclick=finishSession;$("saveEntryBtn").onclick=saveEntry;$("deleteEntryBtn").onclick=deleteCurrentEntry;$("openHandwritingBtn").onclick=openHandwriting;$("closeHandwritingBtn").onclick=()=>{closeLayer("handwritingLayer");openDialog("recordDialog")};
-  $$('[data-pen-width]').forEach(b=>b.onclick=()=>{state.handwriting.width=Number(b.dataset.penWidth);state.handwriting.eraser=false;$$('[data-pen-width]').forEach(x=>x.classList.toggle('on',x===b));$("eraserBtn").classList.remove("on")});$("eraserBtn").onclick=()=>{state.handwriting.eraser=!state.handwriting.eraser;$("eraserBtn").classList.toggle("on",state.handwriting.eraser);if(state.handwriting.eraser)$$('[data-pen-width]').forEach(x=>x.classList.remove('on'))};$("undoStrokeBtn").onclick=()=>{state.handwriting.strokes.pop();redrawWriting()};$("saveHandwritingImageBtn").onclick=saveHandwritingImageOnly;$("convertHandwritingBtn").onclick=convertHandwriting;$("redoHandwritingBtn").onclick=()=>{closeDialog("ocrDialog");openHandwriting()};$("confirmOcrBtn").onclick=confirmOcr;$$('.feel-btn').forEach(b=>b.onclick=()=>{state.selectedFeel=b.dataset.feel;$$('.feel-btn').forEach(x=>x.classList.toggle('on',x===b))});$("saveProfileBtn").onclick=saveProfile;$("saveCompleteBtn").onclick=saveComplete;$("timelineSearchBtn").onclick=()=>{openDialog("searchDialog");setTimeout(()=>$("globalSearchInput").focus(),50)};$("globalSearchInput").addEventListener("input",renderSearch);$("timelineExportBtn").onclick=()=>openExport();$("printBtn").onclick=doPrint;$("jsonBackupBtn").onclick=backupJson;$("jsonRestoreInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)restoreJson(f);e.target.value=""});window.addEventListener("online",()=>{toast("인터넷에 연결되었습니다. 동기화를 확인합니다.");flushSync()});window.addEventListener("offline",()=>{toast("오프라인입니다. 기록은 기기에 안전하게 저장됩니다.");updateSyncInfo()});
+  $$('[data-pen-width]').forEach(b=>b.onclick=()=>{state.handwriting.width=Number(b.dataset.penWidth);state.handwriting.eraser=false;$$('[data-pen-width]').forEach(x=>x.classList.toggle('on',x===b));$("eraserBtn").classList.remove("on")});$("eraserBtn").onclick=()=>{state.handwriting.eraser=!state.handwriting.eraser;$("eraserBtn").classList.toggle("on",state.handwriting.eraser);if(state.handwriting.eraser)$$('[data-pen-width]').forEach(x=>x.classList.remove('on'))};$("undoStrokeBtn").onclick=()=>{state.handwriting.strokes.pop();redrawWriting()};$("saveHandwritingImageBtn").onclick=saveHandwritingImageOnly;$("convertHandwritingBtn").onclick=convertHandwriting;$("redoHandwritingBtn").onclick=()=>{closeDialog("ocrDialog");openHandwriting()};$("confirmOcrBtn").onclick=confirmOcr;$$('.feel-btn').forEach(b=>b.onclick=()=>{state.selectedFeel=b.dataset.feel;$$('.feel-btn').forEach(x=>x.classList.toggle('on',x===b))});$("saveProfileBtn").onclick=saveProfile;$("saveCompleteBtn").onclick=saveComplete;$("timelineSearchBtn").onclick=()=>{openDialog("searchDialog");setTimeout(()=>$("globalSearchInput").focus(),50)};$("globalSearchInput").addEventListener("input",renderSearch);$("timelineExportBtn").onclick=()=>openExport();$("printBtn").onclick=doPrint;$("jsonBackupBtn").onclick=backupJson;$("jsonRestoreInput").addEventListener("change",e=>{const f=e.target.files?.[0];if(f)restoreJson(f);e.target.value=""});window.addEventListener("online",()=>{toast("인터넷에 연결되었습니다. 동기화를 확인합니다.");flushSync();flushThoughtIndexQueue()});window.addEventListener("offline",()=>{toast("오프라인입니다. 기록은 기기에 안전하게 저장됩니다.");updateSyncInfo()});
 }
 function renderBookPicker(){const books=readingBooks();$("bookPickerList").innerHTML=books.length?books.map(s=>{const p=getProfile(s.id);return `<div class="picker-row">${s.image?`<img src="${esc(s.image)}" alt="">`:`<div class="picker-cover-placeholder"></div>`}<div><h3>${esc(s.title)}</h3><p>${esc(s.creator||"")} · ${esc(serviceText(p))}${p.currentLocator?` · ${esc(p.currentLocator)}`:""}</p></div><button class="btn soft" data-pick-book="${esc(s.id)}" type="button">선택</button></div>`}).join(""):`<div class="empty-card">읽는 중인 책이 없습니다.</div>`}
 async function boot(){resetMainScroll();restoreLocalReadingState();bindEvents();setupHandwriting();renderRead();state.idb=await openIdb();await loadSnapshot();if(!state.currentBookId)state.currentBookId=chooseCurrentBookId();state.loading=false;renderAll();updateSyncInfo();initFirebase().catch(err=>{console.error(err);$("authGate").classList.remove("hidden");$("authGateStatus").textContent=`Firebase 연결 실패: ${err.message}`})}
