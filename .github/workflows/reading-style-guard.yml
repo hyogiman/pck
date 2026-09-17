@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'index.html'
       - 'reading*'
       - 'sw.js'
       - 'functions/index.js'
@@ -12,6 +13,7 @@ on:
       - '.github/workflows/reading-style-guard.yml'
   pull_request:
     paths:
+      - 'index.html'
       - 'reading*'
       - 'sw.js'
       - 'functions/index.js'
@@ -68,6 +70,28 @@ jobs:
           print('PASS: no inline/dynamic JS/HTML style declarations')
           print('PASS: no stale Reading CSS files/references')
           print('PASS: canonical progress/chart CSS uses compatible values')
+          PY
+      - name: Verify shared service worker stability
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          thought=Path('index.html').read_text(encoding='utf-8')
+          reading=Path('reading-pwa-v7.js').read_text(encoding='utf-8')
+          sw=Path('sw.js').read_text(encoding='utf-8')
+
+          # Both apps share one origin/scope, so they must register the exact same
+          # service-worker script URL. Query-versioning one side causes update ping-pong.
+          assert 'serviceWorker.register("sw.js")' in thought
+          assert "serviceWorker.register('./sw.js'" in reading
+          assert 'sw.js?v=' not in reading
+
+          # Activating an updated worker must never force-navigate every open app tab.
+          assert 'client.navigate(' not in sw
+          assert 'self.clients.claim()' in sw
+
+          print('PASS: Thought Garden and Reading Garden register one stable shared worker URL')
+          print('PASS: service-worker activation cannot force-reload open app tabs')
           PY
       - name: Verify Reading to Thought Garden AI contract
         run: |
