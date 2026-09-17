@@ -1,11 +1,10 @@
 /* 생각의 텃밭 + 독서의 정원 — shared service worker
    두 앱의 껍데기를 캐시해 두어 네트워크가 없어도 화면을 다시 열 수 있게 합니다.
-   생각의 텃밭과 독서의 정원은 같은 origin을 쓰지만 manifest ID와 앱 scope는 분리합니다.
+   생각의 텃밭과 독서의 정원은 같은 origin과 같은 service worker registration을 공유합니다.
 
-   v33: 독서시간을 상위 경계로 두고 그 안에 문장·필사·생각 기록을 묶는다.
-   reading.html은 단 하나의 Reading stylesheet만 직접 참조한다.
-   서비스워커 주입에 의존하지 않고, 최신 파일은 network-first로 확인한다. */
-const CACHE = "garden-v33-reading-timeline-folders-v84";
+   v44: 두 앱이 서로 다른 service worker URL을 등록하며 업데이트를 핑퐁하던 문제를 막고,
+   worker activate 시 열린 창을 강제로 navigate하지 않는다. */
+const CACHE = "garden-v44-shared-worker-v85";
 const PATCH_VERSION = "20260904-1845-capture-marking-source-v78";
 const PATCH_TAGS = [
   `<script src="./storage-fix.js?v=${PATCH_VERSION}"></script>`,
@@ -31,8 +30,6 @@ self.addEventListener("activate", (e) => {
     const keys=await caches.keys();
     await Promise.all(keys.filter((k)=>k!==CACHE).map((k)=>caches.delete(k)));
     await self.clients.claim();
-    const windows=await self.clients.matchAll({type:"window",includeUncontrolled:true});
-    await Promise.all(windows.map(async(client)=>{try{await client.navigate(client.url)}catch(_){}}));
   })());
 });
 
