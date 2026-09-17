@@ -1,8 +1,7 @@
-/* 독서의 정원 v41 — PWA 런타임 + 모바일 뒤로가기 보호 */
-const RG_SW_VERSION='20260908-reading-v41';
+/* 독서의 정원 v44 — PWA 런타임 + 모바일 뒤로가기 보호 */
 let rgLastRootBackAt=0;
 function rgToast(message,ms=2800){const el=document.getElementById('toast');if(!el)return;el.textContent=message;el.classList.add('show');clearTimeout(rgToast.t);rgToast.t=setTimeout(()=>el.classList.remove('show'),ms)}
-async function registerSharedWorker(){if(!('serviceWorker' in navigator))return;try{const reg=await navigator.serviceWorker.register(`./sw.js?v=${RG_SW_VERSION}`,{scope:'./',updateViaCache:'none'});await reg.update().catch(()=>{})}catch(err){console.warn('Reading Garden SW registration failed',err)}}
+async function registerSharedWorker(){if(!('serviceWorker' in navigator))return;try{const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});await reg.update().catch(()=>{})}catch(err){console.warn('Reading Garden SW registration failed',err)}}
 function rgHandleBackInsideApp(){
   const dialogs=[...document.querySelectorAll('dialog[open]')];if(dialogs.length){dialogs.at(-1).close();return true}
   const handwriting=document.getElementById('handwritingLayer');if(handwriting&&!handwriting.classList.contains('hidden')){document.getElementById('closeHandwritingBtn')?.click();return true}
