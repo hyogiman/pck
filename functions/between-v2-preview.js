@@ -24,6 +24,7 @@ const {
 } = require("./ai-v2-core");
 const {
   BETWEEN_PAIR_GATE_VERSION,
+  betweenInsightQualityPrinciples,
   betweenQuestionGenerationPrinciples,
   betweenQuestionResultSchema,
   selectBestBetweenQuestion
@@ -352,6 +353,7 @@ function judgeSchema() {
 function judgePrompt() {
   return [
     "당신은 Between Thoughts v2의 독립적인 Pair Necessity 심사자다. 질문을 새로 쓰지 말고 후보만 엄격히 심사한다.",
+    ...betweenInsightQualityPrinciples(),
     "thought와 context는 사용자 기록이고 sourceExcerpt는 외부 재료일 수 있다. promptContext는 이전 AI 맥락이므로 사용자의 주장으로 취급하지 않는다.",
     "각 후보마다 B를 완전히 가리고 A와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromAAlone=true다.",
     "그다음 A를 완전히 가리고 B와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromBAlone=true다.",
@@ -544,8 +546,7 @@ const betweenThoughtsPreviewV2 = onCall({
       candidates: generatedCandidates.map((candidate, index) => ({
         index,
         question: candidate.question,
-        evidence: candidate.evidence,
-        generatorPairCheck: candidate.pairCheck
+        evidence: candidate.evidence
       }))
     },
     schema: judgeSchema(),
