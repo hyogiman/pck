@@ -153,9 +153,22 @@ function selectBestBetweenQuestion(result, { sources, pairJudges } = {}) {
   };
 }
 
+// Shared by the generator and the independent judge. These are outcome
+// criteria, not a request to reveal intermediate reasoning or invent motives.
+function betweenInsightQualityPrinciples() {
+  return [
+    "깊이의 기준: 답하면서 두 기록에 함께 적용할 새 기준, 개념의 구분, 또는 기준이 달라지는 조건을 하나 발견할 수 있어야 한다. 두 글을 다시 요약하는 것만으로 답이 끝나면 thirdThoughtPotential은 2 이하이며 createsThirdThought=false다.",
+    "질문은 원문의 구체적인 말·장면을 붙잡고, 아직 답하지 않은 한 지점만 연다. '왜 다를까요'나 '어떤 의미인가요'만 붙여 깊이를 대신하지 않는다. 문장이 짧아도 무엇을 새로 생각할지 바로 잡혀야 한다.",
+    "원문에 실제 대비가 있으면 기준의 적용 범위나 예외를 살핀다. 대비가 없더라도 두 경험이 한 개념의 서로 다른 면을 드러내면 그 개념을 넓혀볼 수 있다. 매번 모순·갈등이나 양자택일을 만들 필요는 없다.",
+    "새 해석은 사용자가 검토할 열린 가능성으로 다룬다. 특정 숨은 감정·동기를 정답으로 심거나 원문에 없는 관계를 '혹시'로 포장하지 않는다. 어려운 철학 용어, 추상적인 명사, 긴 문장 자체는 깊이의 근거가 아니다.",
+    "thirdThoughtPotential 4~5점은 두 기록이 함께 있어야 열리는 새 기준·구분·조건이 질문에서 구체적으로 보일 때만 준다. 원문에 이미 적힌 이유를 다시 묻거나, 한쪽의 결론을 다른 쪽에 적용하라는 조언이면 2 이하로 준다."
+  ];
+}
+
 function betweenQuestionGenerationPrinciples() {
   return [
     ...questionGenerationPrinciples("between"),
+    ...betweenInsightQualityPrinciples(),
     "각 질문 후보에는 pairCheck를 작성한다.",
     "pairCheck.requiresBoth는 A와 B를 둘 다 읽어야 질문의 중심이 성립할 때만 true다.",
     "먼저 A만 남기고 B를 가렸다고 상상한다. 거의 같은 질문을 자연스럽게 만들 수 있으면 worksFromAAlone=true이고 그 후보는 실패다.",
@@ -172,7 +185,12 @@ function betweenQuestionGenerationPrinciples() {
     "두 기록의 차이가 상황에 따라 달라지는 선택·감정·행동이라면 사물의 조건을 묻는 데 그치지 말고, 그 상황에서 사용자의 기준이 무엇 때문에 달라지는지를 탐색한다.",
     "질문을 읽었을 때 사용자가 '왜 이 두 기록을 같이 보여줬는지'를 설명 없이 느낄 수 있어야 한다. 연결 설명이 빠지면 성립하지 않는 질문은 약한 질문이다.",
     "중요: 둘을 억지로 연결하기 위해 원문에 없는 새 목표나 의무를 만들지 않는다. 예를 들어 한 감정이 다른 감정을 '바꾸지 않게 해야 한다', 둘을 '구분해둘 필요가 있다', 한쪽을 '지켜야 한다' 같은 관리·보존 과제를 사용자가 말하지 않았다면 질문의 전제로 발명하지 않는다. 이런 연결은 createsThirdThought가 아니다.",
-    "pairNecessity와 thirdThoughtPotential은 엄격하게 채점한다. 둘 중 하나라도 4점 미만이면 후보로 내지 않는 편이 낫다."
+    "pairNecessity와 thirdThoughtPotential은 엄격하게 채점한다. 둘 중 하나라도 4점 미만이면 후보로 내지 않는 편이 낫다.",
+    "후보가 둘 이상이면 같은 질문의 표현만 바꾸지 않는다. 원문이 허용할 때 서로 다른 생각의 방향을 검토하고, 하나만 유용하면 하나만 남긴다. 후보 수를 채우지 않는다.",
+    "아래는 질문 수준을 보여주는 가상 예시이며 현재 사용자의 기록이 아니다. 예시의 문장·사건·결론을 현재 질문이나 evidence로 옮기지 말고, 현재 입력의 두 원문만 근거로 사용한다. 좋은 예시의 문장 틀도 기계적으로 반복하지 않는다.",
+    "예시 1 — A: '혼자 공부할 때는 모르는 부분을 만나면 책을 덮곤 했다.' B: '스터디에서는 모르는 부분을 말하면 다음에 찾아볼 내용이 생겼다.' 약한 질문: '공부는 어떤 의미인가요?' 더 나은 질문: '스터디에서는 다음에 찾아볼 거리가 되는 모르는 부분이, 혼자일 때는 멈출 이유가 되는 차이는 어디서 생길까요?' 두 상황이 배움의 막힘을 다르게 만드는 조건을 열되, 성격이나 불안을 원인으로 정하지 않는다.",
+    "예시 2 — A: '일기에는 그날 있었던 일을 빠짐없이 남기려고 한다.' B: '몇 달 전 일기를 다시 읽으니 사건의 순서보다 몇 줄에 남은 그날의 기분이 떠올랐다.' 약한 질문: '일기를 왜 쓰시나요?' 더 나은 질문: '빠짐없이 적는 것과 그날을 다시 떠올릴 수 있게 적는 것은, 어디까지 같은 일일까요?' 기록의 완전함과 다시 읽을 때의 가치를 함께 살펴보되 어느 쪽이 옳다고 정하지 않는다.",
+    "예시 3 — A: '메모 앱의 글자 크기를 키웠다. 이제 읽기 편하다.' B: '저녁 산책 중에 본 노을이 예뻤다.' 결과: silent. 둘 다 '잘 보였다'는 식의 공통점을 새로 붙여 관찰력이나 삶의 태도를 캐묻지 않는다."
   ];
 }
 
@@ -258,6 +276,7 @@ module.exports = {
   validatePairJudge,
   validateBetweenCandidate,
   selectBestBetweenQuestion,
+  betweenInsightQualityPrinciples,
   betweenQuestionGenerationPrinciples,
   betweenQuestionResultSchema,
   betweenPairJudgeSchema

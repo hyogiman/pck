@@ -12,6 +12,7 @@ const { logger } = require("firebase-functions");
 const { MODEL_ROUTES, AI_V2_VERSION, QUESTION_GATE_VERSION } = require("./ai-v2-core");
 const {
   BETWEEN_PAIR_GATE_VERSION,
+  betweenInsightQualityPrinciples,
   betweenQuestionGenerationPrinciples,
   betweenQuestionResultSchema,
   selectBestBetweenQuestion
@@ -158,6 +159,7 @@ function judgeSchema() {
 function judgePrompt() {
   return [
     "당신은 Between Thoughts의 독립적인 Pair Necessity 심사자다. 질문을 새로 쓰지 말고 주어진 후보만 엄격하게 심사한다.",
+    ...betweenInsightQualityPrinciples(),
     "평가 대상은 후보가 두 원문에서 영감을 받았는지가 아니라, 최종 질문의 의미 중심이 두 원문을 실제로 필요로 하는지다.",
     "각 후보마다 먼저 B를 완전히 가리고 A와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromAAlone=true다.",
     "그다음 A를 완전히 가리고 B와 질문만 본다. 거의 같은 질문을 자연스럽게 물을 수 있으면 worksFromBAlone=true다.",
@@ -253,8 +255,7 @@ async function callCase(testCase) {
       candidates: candidates.map((candidate, index) => ({
         index,
         question: candidate.question,
-        evidence: candidate.evidence,
-        generatorPairCheck: candidate.pairCheck
+        evidence: candidate.evidence
       }))
     },
     schema: judgeSchema(),
