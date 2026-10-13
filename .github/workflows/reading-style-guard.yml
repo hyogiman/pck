@@ -139,6 +139,44 @@ jobs:
           print('PASS: quote/locator/OCR/handwriting-only edits cannot retrigger Thought Garden AI')
           print('PASS: production entry and backend AI usage metering remain connected')
           PY
+      - name: Verify YES24-only search and Secret Manager budget contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          backend=Path('functions/index.js').read_text(encoding='utf-8')
+          book=backend.split('exports.bookSearch = onRequest(', 1)[1].split('async function verifyFirebaseBearer(', 1)[0]
+          cost=backend.split('exports.firebaseOfficialCost = onCall(', 1)[1].split('async (request) =>', 1)[0]
+
+          # Do not reintroduce Aladin as a runtime secret or a hidden fallback.
+          assert 'ALADIN_TTB_KEY' not in backend
+          assert 'searchAladinBooks' not in backend
+          assert 'normalizeAladinBook' not in backend
+          assert 'secrets: ["YES24_API_KEY"]' in book
+          assert 'provider: "YES24"' in book
+          assert 'searchYes24Books(query, yes24Key, page)' in book
+
+          # These are deployment parameters, never Secret Manager bindings.
+          for key in ('GCP_BILLING_EXPORT_TABLE', 'GCP_BILLING_EXPORT_LOCATION',
+                      'COST_DASHBOARD_ALLOWED_EMAIL'):
+              assert f'defineString("{key}"' in backend
+              assert f'{key}.value()' in backend
+              assert key not in cost
+          assert 'serviceAccount: "thought-garden-cost-reader@idea-pocket-56063.iam.gserviceaccount.com"' in cost
+          assert 'requireCostDashboardOwner(request)' in backend
+          assert 'exports.firebaseOfficialCost = onCall(' in backend
+
+          # Never accidentally commit the generated Firebase parameter values.
+          assert 'functions/.env*' in Path('.gitignore').read_text(encoding='utf-8')
+
+          print('PASS: bookSearch uses YES24 only; retired Aladin secret not bound')
+          print('PASS: billing configuration uses ordinary params; owner authorization stays active')
+          print('PASS: Firebase param values remain untracked')
+          PY
+      - name: Verify Functions JavaScript syntax
+        run: |
+          node --check functions/index.js
+          node --check functions/ai-v2-production-entry.js
       - name: Verify Reading JavaScript syntax
         run: |
           for f in reading*.js sw.js; do node --check "$f"; done
