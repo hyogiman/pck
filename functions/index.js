@@ -1,6 +1,7 @@
 // Thought Garden v63 · Existing Between Thoughts answer context backfill
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
+const { defineString } = require("firebase-functions/params");
 const { initializeApp, getApps, applicationDefault } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { getAuth: getAdminAuth } = require("firebase-admin/auth");
@@ -14,6 +15,19 @@ const {
 const adminApp = getApps().length ? getApps()[0] : initializeApp();
 const db = getFirestore();
 const cloudCredential = applicationDefault();
+
+// Ordinary deployment parameters (not API keys). Firebase CLI prompts for the
+// existing values on the first deployment and stores them in a gitignored .env.
+// Never migrate real credentials to these plain-text parameters.
+const GCP_BILLING_EXPORT_TABLE = defineString("GCP_BILLING_EXPORT_TABLE", {
+  description: "Existing BigQuery standard billing-export table: project.dataset.table",
+});
+const GCP_BILLING_EXPORT_LOCATION = defineString("GCP_BILLING_EXPORT_LOCATION", {
+  description: "Existing BigQuery dataset region (e.g. US); keep original value",
+});
+const COST_DASHBOARD_ALLOWED_EMAIL = defineString("COST_DASHBOARD_ALLOWED_EMAIL", {
+  description: "Existing authorized account email(s), comma-separated",
+});
 
 const EMBEDDING_MODEL = "text-embedding-3-small";
 // v74: Firebase 공식 비용 진단 + BigQuery Location 자동 추론
@@ -150,28 +164,6 @@ function normalizeYes24Book(item = {}) {
   };
 }
 
-function normalizeAladinBook(item = {}) {
-  return {
-    provider: "Aladin",
-    itemId: String(item.itemId || ""),
-    title: String(item.title || ""),
-    author: String(item.author || ""),
-    publisher: String(item.publisher || ""),
-    pubDate: String(item.pubDate || ""),
-    cover: String(item.cover || "").replace(/^http:/, "https:"),
-    isbn13: String(item.isbn13 || ""),
-    isbn: String(item.isbn || ""),
-    link: String(item.link || ""),
-    categoryName: String(item.categoryName || ""),
-    subTitle: String(item.subInfo?.subTitle || ""),
-    pages: null,
-    starScore: null,
-    bookIntroduction: String(item.description || ""),
-    bookSummary: "",
-    tableOfContents: "",
-  };
-}
-
 async function searchYes24Books(query, apiKey, page = 1) {
   const url = new URL("https://apis.yes24.com/v1/goods/itemList");
   url.searchParams.set("query", query);
@@ -209,50 +201,12 @@ async function searchYes24Books(query, apiKey, page = 1) {
   };
 }
 
-async function searchAladinBooks(query, key, page = 1) {
-  const url = new URL("http://www.aladin.co.kr/ttb/api/ItemSearch.aspx");
-  url.searchParams.set("TTBKey", key);
-  url.searchParams.set("Query", query);
-  url.searchParams.set("QueryType", "Keyword");
-  url.searchParams.set("MaxResults", "20");
-  url.searchParams.set("start", String(Math.max(1, Number(page) || 1)));
-  url.searchParams.set("SearchTarget", "Book");
-  url.searchParams.set("Cover", "Big");
-  url.searchParams.set("Output", "JS");
-  url.searchParams.set("Version", "20131101");
-
-  const upstream = await fetch(url, {
-    method: "GET",
-    redirect: "follow",
-    headers: {
-      "Accept": "application/json,text/plain,*/*",
-      "User-Agent": "ThoughtGarden/1.0",
-    },
-  });
-  const raw = await upstream.text();
-  if (!upstream.ok) {
-    throw new Error(`Aladin HTTP ${upstream.status}: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
-  }
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    throw new Error(`Aladin non-JSON response: ${raw.replace(/\s+/g, " ").slice(0, 180)}`);
-  }
-  if (data?.errorCode || data?.errorMessage) {
-    throw new Error(`Aladin API error: ${data.errorMessage || data.errorCode}`);
-  }
-  return {
-    totalResults: Number(data?.totalResults || 0),
-    items: Array.isArray(data?.item) ? data.item.map(normalizeAladinBook) : [],
-  };
-}
-
 exports.bookSearch = onRequest(
   {
     region: "us-central1",
     cors: PUBLIC_WEB_ORIGINS,
-    secrets: ["YES24_API_KEY", "ALADIN_TTB_KEY"],
+    // YES24 is the only provider. Do not bind or bill the retired Aladin key.
+    secrets: ["YES24_API_KEY"],
     timeoutSeconds: 30,
     maxInstances: 2,
   },
@@ -265,57 +219,31 @@ exports.bookSearch = onRequest(
       return;
     }
 
-    let yes24Error = "";
     const yes24Key = process.env.YES24_API_KEY;
-    if (yes24Key) {
-      try {
-        const result = await searchYes24Books(query, yes24Key, page);
-        res.status(200).json({
-          ok: true,
-          provider: "YES24",
-          page,
-          pageSize: 20,
-          totalResults: result.totalResults,
-          items: result.items,
-        });
-        return;
-      } catch (error) {
-        yes24Error = error?.message || "YES24 search failed";
-        logger.warn("YES24 book search failed; falling back to Aladin", yes24Error);
-      }
-    } else {
-      yes24Error = "YES24_API_KEY Secret이 설정되지 않았습니다.";
-    }
-
-    const aladinKey = process.env.ALADIN_TTB_KEY;
-    if (!aladinKey) {
-      res.status(500).json({ ok: false, error: `${yes24Error} / ALADIN_TTB_KEY도 없습니다.` });
+    if (!yes24Key) {
+      res.status(503).json({ ok: false, error: "YES24_API_KEY가 설정되지 않았습니다." });
       return;
     }
 
     try {
-      const result = await searchAladinBooks(query, aladinKey, page);
+      const result = await searchYes24Books(query, yes24Key, page);
       res.status(200).json({
         ok: true,
-        provider: "Aladin",
-        fallbackFrom: "YES24",
-        yes24Error,
+        provider: "YES24",
         page,
         pageSize: 20,
         totalResults: result.totalResults,
         items: result.items,
       });
     } catch (error) {
-      logger.error("Book search fallback failed", error);
+      logger.error("YES24 book search failed", { message: error?.message || "unknown error" });
       res.status(502).json({
         ok: false,
-        error: `도서 검색 실패: ${error?.message || "unknown error"}`,
-        yes24Error,
+        error: "YES24 도서 검색이 일시적으로 실패했습니다. 잠시 후 다시 시도해 주세요.",
       });
     }
   }
 );
-
 async function verifyFirebaseBearer(req) {
   const auth = String(req.headers.authorization || "");
   const match = auth.match(/^Bearer\s+(.+)$/i);
@@ -4684,7 +4612,7 @@ function maskBillingTable(table) {
 
 function sanitizeCostLogText(value) {
   let text = String(value || "").slice(0, 1000);
-  const configuredTable = String(process.env.GCP_BILLING_EXPORT_TABLE || "")
+  const configuredTable = String(GCP_BILLING_EXPORT_TABLE.value() || "")
     .trim()
     .replace(/^`|`$/g, "");
   const tableParts = configuredTable.split(".");
@@ -4766,7 +4694,7 @@ function requireCostDashboardOwner(request) {
     );
   }
 
-  const allowed = String(process.env.COST_DASHBOARD_ALLOWED_EMAIL || "")
+  const allowed = String(COST_DASHBOARD_ALLOWED_EMAIL.value() || "")
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
@@ -5214,11 +5142,7 @@ let firebaseCostMemoryCache = null;
 exports.firebaseOfficialCost = onCall(
   {
     region: "us-central1",
-    secrets: [
-      "GCP_BILLING_EXPORT_TABLE",
-      "GCP_BILLING_EXPORT_LOCATION",
-      "COST_DASHBOARD_ALLOWED_EMAIL",
-    ],
+    // Non-secret billing configuration uses Firebase parameters (not Secret Manager).
     serviceAccount: "thought-garden-cost-reader@idea-pocket-56063.iam.gserviceaccount.com",
     timeoutSeconds: 60,
     memory: "256MiB",
@@ -5245,8 +5169,8 @@ exports.firebaseOfficialCost = onCall(
       currentStage = "owner-ok";
       firebaseCostLog("info", currentStage, { runId, userTag });
 
-      const table = parseBillingExportTable(process.env.GCP_BILLING_EXPORT_TABLE);
-      location = validateBillingLocation(process.env.GCP_BILLING_EXPORT_LOCATION || "US");
+      const table = parseBillingExportTable(GCP_BILLING_EXPORT_TABLE.value());
+      location = validateBillingLocation(GCP_BILLING_EXPORT_LOCATION.value() || "US");
       maskedTable = maskBillingTable(table);
       const firebaseProjectId = "idea-pocket-56063";
       const range = koreaBillingRange();
